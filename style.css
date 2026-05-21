@@ -21,6 +21,7 @@
 
     body {
       min-height: 100vh;
+      min-width: 1024px;
       margin: 0;
       background: var(--soft-bg);
       color: var(--text-main);
@@ -713,68 +714,4 @@
     .small-muted {
       color: var(--text-muted);
       font-size: 0.88rem;
-    }
-
-    @media (max-width: 1200px) {
-      .admin-menu {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 992px) {
-      .admin-menu {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .criteria-layout {
-        grid-template-columns: 1fr;
-      }
-
-      .criteria-list {
-        max-height: none;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .app-shell {
-        padding-top: 20px;
-      }
-
-      .section-card-header,
-      .section-card-body {
-        padding: 18px;
-      }
-
-      .period-banner,
-      .partner-hero {
-        align-items: flex-start;
-        flex-direction: column;
-        padding: 20px;
-      }
-
-      .profile-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .industry-check-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 576px) {
-      .login-card {
-        padding: 28px 20px 24px;
-      }
-
-      .login-ipass {
-        font-size: 48px;
-      }
-
-      .admin-menu {
-        grid-template-columns: 1fr;
-      }
-
-      .nav-user {
-        max-width: 92px;
-      }
     }
