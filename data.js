@@ -1,6 +1,12 @@
-// i-PASS 평가 데이터 정의 파일
-// 평가항목 추가/수정은 이 파일의 EVALUATION_ITEMS 배열에서 진행
-
+/**
+ * @file data.js
+ * @description 정적 데이터 정의 모듈
+ * @responsibility
+ * - 평가항목(EVALUATION_ITEMS) 배열 정의
+ * - 첨부파일(ATTACHMENT_FILES) 배열 정의
+ * - GitHub 배포 경로 상수 정의
+ * @sideEffects 없음 (데이터 정의만, 로직 없음)
+ */
 const GITHUB_ID = 'yeonggyu325-debug';
 const BASE_URL = 'https://yeonggyu325-debug.github.io/ipass/files';
 
@@ -441,3 +447,32 @@ N/A: 이루자와의 업무 중 산안법 도급승인 대상 작업 없음`,
         attachmentId: null
       }
     ];
+
+
+const INDUSTRIES = [
+      { code: 'SEM', name: '다이오드·트랜지스터 및 유사 반도체소자 제조업' },
+      { code: 'ELE', name: '전기장비 제조업' },
+      { code: 'MCH', name: '기타 기계 및 장비 제조업' },
+      { code: 'TRP', name: '기타운송장비 제조업' },
+      { code: 'WOD', name: '목재 및 나무제품 제조업' },
+      { code: 'CON', name: '전문직별 공사업' },
+      { code: 'TRN', name: '운수업' }
+    ];
+
+const NA_ITEMS = EVALUATION_ITEMS.map((item) => ({
+  id: item.id,
+  name: item.subcategory
+}));
+
+const STATUS_META = {
+      not_submitted: { label: '미제출', className: 'status-muted' },
+      submitted: { label: '제출완료', className: 'status-reviewing' },
+      reviewing: { label: '제출완료', className: 'status-reviewing' },
+      published: { label: '결과공개', className: 'status-success' }
+    };
+
+const PERIOD_STATUS_META = {
+      draft: { label: '준비중', className: 'status-muted' },
+      active: { label: '진행중', className: 'status-success' },
+      closed: { label: '마감', className: 'status-danger' }
+    };
