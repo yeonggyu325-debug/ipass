@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>i-Pass 협력사 안전보건 이행수준 평가 시스템</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="loginPage" class="page login-page">
+    <div class="login-card">
+      <p class="login-kor-title">협력사 안전보건 이행수준 평가 시스템</p>
+      <div class="login-ipass">
+        <span class="ipass-logo"><span class="ipass-i">i</span><span>-Pass</span></span>
+      </div>
+      <p class="login-eng-subtitle">iruaj Partner Safety Score</p>
+      <hr>
+
+      <form id="loginForm" novalidate>
+        <div class="mb-3">
+          <input type="text" class="form-control" id="loginId" placeholder="아이디" autocomplete="username" required>
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" id="loginPassword" placeholder="비밀번호" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="fa-solid fa-right-to-bracket me-2"></i>로그인
+        </button>
+        <div id="loginError" class="alert alert-danger py-2 mt-3 mb-0 d-none" role="alert">
+          아이디 또는 비밀번호가 올바르지 않습니다.
+        </div>
+      </form>
+
+      <hr>
+      <div class="login-company">
+        <img id="loginCompanyLogo" class="login-company-logo" src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="H&iruja">
+        <span id="loginLogoFallback" class="login-logo-fallback">H&amp;iruja</span>
+        <small>충청남도 아산시 둔포면 아산밸리북로 110</small>
+        <small>Copyright ⓒ H&amp;iruaj ALL RIGHTS RESERVED.</small>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminMainPage" class="page">
+    <nav class="navbar app-navbar">
+      <div class="container-fluid container-lg">
+        <a class="navbar-brand" href="#" data-route="admin-main">
+          <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+          <span class="nav-subtitle d-none d-md-inline">협력사 안전보건 이행수준 평가 시스템</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="nav-user current-user-name"></span>
+          <button type="button" class="btn btn-light btn-sm logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-lg app-shell">
+      <div class="admin-menu">
+        <button type="button" class="menu-card is-active" data-route="admin-main">
+          <span class="menu-icon"><i class="fa-solid fa-building-user"></i></span>
+          <span class="menu-title">협력사 현황</span>
+          <span class="menu-text">등록된 협력사 목록과 제출 상태를 확인합니다.</span>
+        </button>
+        <button type="button" class="menu-card" data-route="account-manage">
+          <span class="menu-icon"><i class="fa-solid fa-users-gear"></i></span>
+          <span class="menu-title">계정 관리</span>
+          <span class="menu-text">협력사 계정을 생성, 수정, 삭제합니다.</span>
+        </button>
+        <button type="button" class="menu-card" data-route="attachment-manage">
+          <span class="menu-icon"><i class="fa-solid fa-paperclip"></i></span>
+          <span class="menu-title">첨부파일 관리</span>
+          <span class="menu-text">평가항목별 제공 서식 링크를 등록합니다.</span>
+        </button>
+        <button type="button" class="menu-card" data-route="na-manage">
+          <span class="menu-icon"><i class="fa-solid fa-filter-circle-xmark"></i></span>
+          <span class="menu-title">N/A 기준 관리</span>
+          <span class="menu-text">사업장 정보 기반 자동 N/A 조건을 설정합니다.</span>
+        </button>
+        <button type="button" class="menu-card" data-route="period-manage">
+          <span class="menu-icon"><i class="fa-solid fa-calendar-days"></i></span>
+          <span class="menu-title">평가 회차 관리</span>
+          <span class="menu-text">반기별 평가 회차와 제출 기간을 관리합니다.</span>
+        </button>
+        <button type="button" class="menu-card" data-route="scoring-manage">
+          <span class="menu-icon"><i class="fa-solid fa-clipboard-check"></i></span>
+          <span class="menu-title">채점 관리</span>
+          <span class="menu-text">제출 완료 자료를 검토하고 점수를 입력합니다.</span>
+        </button>
+        <button type="button" class="menu-card" data-route="result-manage">
+          <span class="menu-icon"><i class="fa-solid fa-square-poll-vertical"></i></span>
+          <span class="menu-title">결과 공개 관리</span>
+          <span class="menu-text">채점 완료 결과를 협력사에 공개합니다.</span>
+        </button>
+      </div>
+
+      <section class="section-card">
+        <div class="section-card-header d-flex flex-column flex-md-row justify-content-between gap-2">
+          <div>
+            <h2 class="section-title">협력사 현황</h2>
+            <p class="section-desc">등록된 협력사 목록과 현재 제출 상태입니다.</p>
+          </div>
+          <button type="button" class="btn btn-primary align-self-md-center" data-route="account-manage">
+            <i class="fa-solid fa-plus me-2"></i>계정 관리로 이동
+          </button>
+        </div>
+        <div class="section-card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">번호</th>
+                  <th scope="col">회사명</th>
+                  <th scope="col">아이디</th>
+                  <th scope="col">제출 상태</th>
+                  <th scope="col">등록일</th>
+                </tr>
+              </thead>
+              <tbody id="partnerStatusTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="accountManagePage" class="page">
+    <nav class="navbar app-navbar">
+      <div class="container-fluid container-lg">
+        <a class="navbar-brand" href="#" data-route="admin-main">
+          <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+          <span class="nav-subtitle d-none d-md-inline">협력사 안전보건 이행수준 평가 시스템</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="nav-user current-user-name"></span>
+          <button type="button" class="btn btn-light btn-sm logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-lg app-shell">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+        <div>
+          <h1 class="page-title">계정 관리</h1>
+          <p class="section-desc">협력사 로그인 계정을 생성하고 관리합니다.</p>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+          <button type="button" class="btn btn-outline-primary" data-route="admin-main">
+            <i class="fa-solid fa-arrow-left me-2"></i>관리자 메인
+          </button>
+          <button type="button" class="btn btn-primary" id="openCreateAccountBtn">
+            <i class="fa-solid fa-user-plus me-2"></i>신규 계정 생성
+          </button>
+        </div>
+      </div>
+
+      <section class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-title">협력사 계정 목록</h2>
+          <p class="section-desc">관리자 계정(admin)은 기본 운영 계정으로 삭제할 수 없습니다.</p>
+        </div>
+        <div class="section-card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">번호</th>
+                  <th scope="col">회사명</th>
+                  <th scope="col">아이디</th>
+                  <th scope="col">등록일</th>
+                  <th scope="col">수정</th>
+                  <th scope="col">삭제</th>
+                </tr>
+              </thead>
+              <tbody id="accountTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="attachmentManagePage" class="page">
+    <nav class="navbar app-navbar">
+      <div class="container-fluid container-lg">
+        <a class="navbar-brand" href="#" data-route="admin-main">
+          <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+          <span class="nav-subtitle d-none d-md-inline">협력사 안전보건 이행수준 평가 시스템</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="nav-user current-user-name"></span>
+          <button type="button" class="btn btn-light btn-sm logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-lg app-shell">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+        <div>
+          <h1 class="page-title">첨부파일 관리</h1>
+          <p class="section-desc">협력사에게 제공할 서식 파일의 공유 링크를 등록합니다.</p>
+        </div>
+        <button type="button" class="btn btn-outline-primary align-self-md-center" data-route="admin-main">
+          <i class="fa-solid fa-arrow-left me-2"></i>관리자 메인
+        </button>
+      </div>
+
+      <section class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-title">첨부파일 항목 목록</h2>
+          <p class="section-desc">등록된 링크는 추후 협력사 평가 폼의 다운로드 버튼으로 연결됩니다.</p>
+        </div>
+        <div class="section-card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">항목 ID</th>
+                  <th scope="col">항목명</th>
+                  <th scope="col">상태</th>
+                  <th scope="col">파일 표시명</th>
+                  <th scope="col">관리</th>
+                </tr>
+              </thead>
+              <tbody id="attachmentTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="naManagePage" class="page">
+    <nav class="navbar app-navbar">
+      <div class="container-fluid container-lg">
+        <a class="navbar-brand" href="#" data-route="admin-main">
+          <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+          <span class="nav-subtitle d-none d-md-inline">협력사 안전보건 이행수준 평가 시스템</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="nav-user current-user-name"></span>
+          <button type="button" class="btn btn-light btn-sm logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-lg app-shell">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+        <div>
+          <h1 class="page-title">N/A 기준 관리</h1>
+          <p class="section-desc">평가항목별 자동 N/A 처리 기준을 설정합니다.</p>
+        </div>
+        <button type="button" class="btn btn-outline-primary align-self-md-center" data-route="admin-main">
+          <i class="fa-solid fa-arrow-left me-2"></i>관리자 메인
+        </button>
+      </div>
+
+      <section class="criteria-layout">
+        <div class="section-card">
+          <div class="section-card-header">
+            <h2 class="section-title">평가항목 목록</h2>
+            <p class="section-desc">항목을 선택해 우측 기준을 설정합니다.</p>
+          </div>
+          <div class="section-card-body">
+            <div id="naItemList" class="criteria-list"></div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-card-header">
+            <h2 class="section-title" id="selectedNaItemTitle">N/A 기준 설정</h2>
+            <p class="section-desc">조건 1~3 중 하나라도 해당되면 자동 N/A로 판정합니다.</p>
+          </div>
+          <div class="section-card-body">
+            <div class="condition-block">
+              <h3 class="fs-6 fw-bold mb-3">조건 1. 업종만으로 N/A 처리</h3>
+              <div id="industryOnlyCheckboxes" class="industry-check-grid"></div>
+            </div>
+
+            <div class="condition-block">
+              <h3 class="fs-6 fw-bold mb-3">조건 2. 업종 + 인원 조건</h3>
+              <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-6">
+                  <label for="naIndustrySelect" class="form-label">업종</label>
+                  <select id="naIndustrySelect" class="form-select"></select>
+                </div>
+                <div class="col-8 col-md-4">
+                  <label for="naWorkerInput" class="form-label">인원 기준</label>
+                  <div class="input-group">
+                    <input type="number" class="form-control" id="naWorkerInput" min="0" step="1">
+                    <span class="input-group-text">명 이하</span>
+                  </div>
+                </div>
+                <div class="col-4 col-md-2">
+                  <button type="button" class="btn btn-primary w-100" id="addIndustryWorkerRuleBtn">추가</button>
+                </div>
+              </div>
+              <div id="industryWorkerTags" class="rule-tags"></div>
+            </div>
+
+            <div class="condition-block">
+              <h3 class="fs-6 fw-bold mb-3">조건 3. 전체 인원 기준</h3>
+              <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                  <input type="number" class="form-control" id="naAllWorkerInput" min="0" step="1">
+                </div>
+                <div class="col-12 col-md-7">
+                  <span class="fw-bold text-muted">명 이하인 경우 N/A (업종 무관)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end mt-3">
+              <button type="button" class="btn btn-primary" id="saveNaCriteriaBtn">
+                <i class="fa-solid fa-floppy-disk me-2"></i>이 항목 기준 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="periodManagePage" class="page">
+    <nav class="navbar app-navbar">
+      <div class="container-fluid container-lg">
+        <a class="navbar-brand" href="#" data-route="admin-main">
+          <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+          <span class="nav-subtitle d-none d-md-inline">협력사 안전보건 이행수준 평가 시스템</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="nav-user current-user-name"></span>
+          <button type="button" class="btn btn-light btn-sm logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-lg app-shell">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+        <div>
+          <h1 class="page-title">평가 회차 관리</h1>
+          <p class="section-desc">반기별 평가 회차와 제출 기간을 생성하고 관리합니다.</p>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+          <button type="button" class="btn btn-outline-primary" data-route="admin-main">
+            <i class="fa-solid fa-arrow-left me-2"></i>관리자 메인
+          </button>
+          <button type="button" class="btn btn-primary" id="openCreatePeriodBtn">
+            <i class="fa-solid fa-calendar-plus me-2"></i>신규 회차 생성
+          </button>
+        </div>
+      </div>
+
+      <section class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-title">회차 목록</h2>
+          <p class="section-desc">진행중 회차는 동시에 1개만 유지됩니다.</p>
+        </div>
+        <div class="section-card-body">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">번호</th>
+                  <th scope="col">평가명</th>
+                  <th scope="col">제출기간</th>
+                  <th scope="col">상태</th>
+                  <th scope="col">수정</th>
+                  <th scope="col">삭제</th>
+                </tr>
+              </thead>
+              <tbody id="periodTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="partnerMainPage" class="page">
+    <nav class="navbar app-navbar">
+      <div class="container-fluid container-lg">
+        <a class="navbar-brand" href="#" data-route="partner-main">
+          <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+          <span class="nav-subtitle d-none d-md-inline">협력사 안전보건 이행수준 평가 시스템</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="nav-user current-user-name"></span>
+          <button type="button" class="btn btn-light btn-sm logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-lg app-shell">
+      <div id="partnerActivePeriodBanner" class="mb-4"></div>
+
+      <section class="partner-hero mb-4">
+        <div>
+          <h1 id="partnerGreeting">안녕하세요.</h1>
+          <p>정기 안전보건 이행수준 평가 자료 제출 현황을 확인하세요.</p>
+        </div>
+        <span id="partnerStatusBadge" class="status-badge status-muted">미제출</span>
+      </section>
+
+      <section class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-title">현재 제출 상태</h2>
+        </div>
+        <div class="section-card-body">
+          <div id="partnerStatusContent" class="message-box"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="profilePage" class="page">
+    <nav class="navbar app-navbar">
+      <div class="container-fluid container-lg">
+        <a class="navbar-brand" href="#" data-route="partner-main">
+          <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+          <span class="nav-subtitle d-none d-md-inline">협력사 안전보건 이행수준 평가 시스템</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="nav-user current-user-name"></span>
+          <button type="button" class="btn btn-light btn-sm logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-lg app-shell">
+      <div id="profileActivePeriodBanner" class="mb-4"></div>
+
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+        <div>
+          <h1 class="page-title">사업장 현황 입력</h1>
+          <p class="section-desc">평가 자료 제출 전 사업장 기본정보를 입력합니다.</p>
+        </div>
+        <button type="button" class="btn btn-outline-primary" data-route="partner-main">
+          <i class="fa-solid fa-arrow-left me-2"></i>협력사 메인
+        </button>
+      </div>
+
+      <section class="section-card">
+        <div class="section-card-body">
+          <form id="profileForm" novalidate>
+            <div class="profile-grid">
+              <div>
+                <label for="profileCompanyName" class="form-label">회사명</label>
+                <input type="text" class="form-control" id="profileCompanyName" readonly>
+              </div>
+
+              <div>
+                <label for="profileIndustry" class="form-label">업종 <span class="required-mark">*</span></label>
+                <select class="form-select" id="profileIndustry" required></select>
+              </div>
+
+              <div class="full-span">
+                <label class="form-label">사업장 소재지 <span class="required-mark">*</span></label>
+                <div class="address-line mb-2">
+                  <input type="text" class="form-control zip-input" id="profileZipCode" readonly>
+                  <button type="button" class="btn btn-outline-primary" id="searchAddressBtn">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>주소 검색
+                  </button>
+                </div>
+                <input type="text" class="form-control mb-2" id="profileRoadAddress" readonly>
+                <input type="text" class="form-control" id="profileDetailAddress" placeholder="상세 주소 (동, 층, 호수 등)" required>
+              </div>
+
+              <div>
+                <label for="profileBizNumber" class="form-label">사업자 등록번호 <span class="required-mark">*</span></label>
+                <input type="text" class="form-control" id="profileBizNumber" inputmode="numeric" maxlength="12" placeholder="사업자 등록번호" required>
+              </div>
+
+              <div>
+                <label for="profileWorkerCount" class="form-label">상시근로자 수 <span class="required-mark">*</span></label>
+                <div class="input-group">
+                  <input type="number" class="form-control" id="profileWorkerCount" min="0" step="1" placeholder="상시근로자 수" required>
+                  <span class="input-group-text">명</span>
+                </div>
+              </div>
+
+              <div>
+                <label for="profileManagerName" class="form-label">담당자 성명 <span class="required-mark">*</span></label>
+                <input type="text" class="form-control" id="profileManagerName" placeholder="안전보건 담당자 성명" required>
+              </div>
+
+              <div>
+                <label for="profileManagerPhone" class="form-label">담당자 연락처 <span class="required-mark">*</span></label>
+                <input type="text" class="form-control" id="profileManagerPhone" inputmode="numeric" maxlength="13" placeholder="담당자 연락처" required>
+              </div>
+            </div>
+
+            <div class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-4">
+              <button type="button" class="btn btn-outline-primary" data-route="partner-main">취소</button>
+              <button type="submit" class="btn btn-primary" id="profileSubmitBtn">
+                <i class="fa-solid fa-floppy-disk me-2"></i>다음 단계로
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="evaluationFormPage" class="page">
+    <nav class="navbar app-navbar">
+      <div class="container-fluid container-lg">
+        <a class="navbar-brand" href="#" data-route="partner-main">
+          <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+          <span class="nav-subtitle d-none d-md-inline">협력사 안전보건 이행수준 평가 시스템</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="nav-user current-user-name"></span>
+          <button type="button" class="btn btn-light btn-sm logout-btn">
+            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-lg app-shell">
+      <div id="evaluationActivePeriodBanner" class="mb-4"></div>
+
+      <section class="section-card mb-4">
+        <div class="section-card-header d-flex flex-column flex-md-row justify-content-between gap-3">
+          <div>
+            <h1 class="page-title">평가 자료 작성</h1>
+            <p class="section-desc">항목별 확인사항과 평가내용을 작성한 뒤 최종 제출합니다.</p>
+          </div>
+          <button type="button" class="btn btn-outline-primary align-self-md-center" data-route="partner-main">
+            <i class="fa-solid fa-arrow-left me-2"></i>협력사 메인
+          </button>
+        </div>
+        <div class="section-card-body">
+          <div class="progress-summary">
+            <span id="evaluationProgressText">전체 0항목 중 0항목 작성 완료</span>
+            <span id="evaluationProgressPercent">0%</span>
+          </div>
+          <div class="progress" role="progressbar" aria-label="작성 진행률" aria-valuemin="0" aria-valuemax="100">
+            <div id="evaluationProgressBar" class="progress-bar" style="width: 0%">0%</div>
+          </div>
+        </div>
+      </section>
+
+      <ul id="evaluationCategoryTabs" class="nav evaluation-tabs mb-3" role="tablist"></ul>
+      <div id="evaluationTabContent" class="tab-content"></div>
+
+      <div class="evaluation-fixed-actions d-flex flex-column flex-sm-row justify-content-end gap-2">
+        <button type="button" class="btn btn-outline-primary" id="saveDraftBtn">
+          <i class="fa-solid fa-floppy-disk me-2"></i>임시저장
+        </button>
+        <button type="button" class="btn btn-primary" id="openSubmitConfirmBtn">
+          <i class="fa-solid fa-paper-plane me-2"></i>최종 제출
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal fade" id="accountModal" tabindex="-1" aria-labelledby="accountModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="accountModalTitle">신규 계정 생성</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+        </div>
+        <div class="modal-body">
+          <form id="accountForm" novalidate>
+            <input type="hidden" id="accountMode" value="create">
+            <div class="mb-3">
+              <label for="accountCompanyName" class="form-label">회사명 <span class="required-mark">*</span></label>
+              <input type="text" class="form-control" id="accountCompanyName" required>
+            </div>
+            <div class="mb-3">
+              <label for="accountId" class="form-label">아이디 <span class="required-mark">*</span></label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="accountId" minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]{3,30}" required>
+                <button class="btn btn-outline-primary" type="button" id="checkDuplicateBtn">중복 확인</button>
+              </div>
+              <div id="idCheckMessage" class="form-text">영문, 숫자, 마침표, 밑줄, 하이픈 3~30자</div>
+            </div>
+            <div>
+              <label for="accountPassword" class="form-label">비밀번호 <span id="passwordRequiredMark" class="required-mark">*</span></label>
+              <input type="password" class="form-control" id="accountPassword" minlength="4" autocomplete="new-password">
+              <div id="passwordHelp" class="form-text">4자 이상 입력</div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" id="saveAccountBtn">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="attachmentModal" tabindex="-1" aria-labelledby="attachmentModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="attachmentModalTitle">링크 등록/수정</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+        </div>
+        <div class="modal-body">
+          <form id="attachmentForm" novalidate>
+            <input type="hidden" id="attachmentItemId">
+            <div class="mb-3">
+              <label for="attachmentItemName" class="form-label">항목명</label>
+              <input type="text" class="form-control" id="attachmentItemName" readonly>
+            </div>
+            <div class="mb-3">
+              <label for="attachmentDisplayName" class="form-label">파일 표시명 <span class="required-mark">*</span></label>
+              <input type="text" class="form-control" id="attachmentDisplayName" required>
+            </div>
+            <div class="mb-3">
+              <label for="attachmentUrl" class="form-label">다운로드 URL <span class="required-mark">*</span></label>
+              <input type="url" class="form-control" id="attachmentUrl" required>
+            </div>
+            <div>
+              <label for="attachmentDescription" class="form-label">설명</label>
+              <textarea class="form-control" id="attachmentDescription" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" id="saveAttachmentBtn">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="periodModal" tabindex="-1" aria-labelledby="periodModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="periodModalTitle">신규 회차 생성</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+        </div>
+        <div class="modal-body">
+          <form id="periodForm" novalidate>
+            <input type="hidden" id="periodMode" value="create">
+            <input type="hidden" id="periodId">
+            <div class="mb-3">
+              <label for="periodTitle" class="form-label">평가명 <span class="required-mark">*</span></label>
+              <input type="text" class="form-control" id="periodTitle" required>
+              <div class="d-flex gap-2 mt-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="fillFirstHalfBtn">상반기</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="fillSecondHalfBtn">하반기</button>
+              </div>
+            </div>
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label for="periodStartDate" class="form-label">제출 시작일 <span class="required-mark">*</span></label>
+                <input type="date" class="form-control" id="periodStartDate" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="periodEndDate" class="form-label">제출 마감일 <span class="required-mark">*</span></label>
+                <input type="date" class="form-control" id="periodEndDate" required>
+              </div>
+            </div>
+            <div class="mt-3">
+              <label for="periodStatus" class="form-label">상태</label>
+              <select class="form-select" id="periodStatus">
+                <option value="draft">준비중</option>
+                <option value="active">진행중</option>
+                <option value="closed">마감</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" id="savePeriodBtn">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-labelledby="submitConfirmModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="submitConfirmModalTitle">최종 제출 확인</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+        </div>
+        <div class="modal-body">
+          제출 후에는 수정이 불가능합니다. 제출하시겠습니까?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" id="confirmSubmitBtn">제출</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="appToast" class="toast" role="status" aria-live="polite" aria-atomic="true">
+      <div class="toast-header">
+        <i class="fa-solid fa-circle-check me-2"></i>
+        <strong class="me-auto">알림</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="닫기"></button>
+      </div>
+      <div id="toastMessage" class="toast-body">저장되었습니다.</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
