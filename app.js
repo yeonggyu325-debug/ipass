@@ -267,64 +267,78 @@ function routeByUser(user) {
  * navigate(route);
  */
 function navigate(route) {
-      const user = getCurrentUserRecord();
-      if (!user) {
-        logout();
-        return;
-      }
+  const user = getCurrentUserRecord();
+  if (!user) {
+    logout();
+    return;
+  }
 
-      if (route === 'admin-main' && user.role === 'admin') {
-        renderAdminDashboard();
-        showPage('adminMainPage');
-      }
+  if (route === 'admin-main' && user.role === 'admin') {
+    renderAdminDashboard();
+    showPage('adminMainPage');
+  }
 
-      if (route === 'account-manage' && user.role === 'admin') {
-        renderAccountTable();
-        showPage('accountManagePage');
-      }
+  if (route === 'account-manage' && user.role === 'admin') {
+    renderAccountTable();
+    showPage('accountManagePage');
+  }
 
-      if (route === 'attachment-manage' && user.role === 'admin') {
-        renderAttachmentTable();
-        showPage('attachmentManagePage');
-      }
+  if (route === 'attachment-manage' && user.role === 'admin') {
+    renderAttachmentTable();
+    showPage('attachmentManagePage');
+  }
 
-      if (route === 'na-manage' && user.role === 'admin') {
-        renderNaCriteriaPage();
-        showPage('naManagePage');
-      }
+  if (route === 'na-manage' && user.role === 'admin') {
+    renderNaCriteriaPage();
+    showPage('naManagePage');
+  }
 
-      if (route === 'period-manage' && user.role === 'admin') {
-        renderPeriodTable();
-        showPage('periodManagePage');
-      }
+  if (route === 'period-manage' && user.role === 'admin') {
+    renderPeriodTable();
+    showPage('periodManagePage');
+  }
 
-      if (route === 'partner-main' && user.role === 'partner') {
-        renderPartnerMain();
-        showPage('partnerMainPage');
-      }
+  // ↓↓↓ 아래 2개 추가 ↓↓↓
+  if (route === 'scoring-manage' && user.role === 'admin') {
+    renderScoringManagePage();
+    showPage('scoringManagePage');
+  }
 
-      if (route === 'profile' && user.role === 'partner') {
-        if (!canSubmitNow()) {
-          alert(getSubmitBlockMessage());
-          renderPartnerMain();
-          showPage('partnerMainPage');
-          return;
-        }
-        renderProfileForm();
-        showPage('profilePage');
-      }
+  if (route === 'scoring-page' && user.role === 'admin') {
+    renderScoringPage();
+    initScoringButtons();
+    updateScoringProgress();
+    showPage('scoringPage');
+  }
+  // ↑↑↑ 여기까지 추가 ↑↑↑
 
-      if (route === 'evaluation-form' && user.role === 'partner') {
-        if (!canSubmitNow()) {
-          alert(getSubmitBlockMessage());
-          renderPartnerMain();
-          showPage('partnerMainPage');
-          return;
-        }
-        renderEvaluationForm();
-        showPage('evaluationFormPage');
-      }
+  if (route === 'partner-main' && user.role === 'partner') {
+    renderPartnerMain();
+    showPage('partnerMainPage');
+  }
+
+  if (route === 'profile' && user.role === 'partner') {
+    if (!canSubmitNow()) {
+      alert(getSubmitBlockMessage());
+      renderPartnerMain();
+      showPage('partnerMainPage');
+      return;
     }
+    renderProfileForm();
+    showPage('profilePage');
+  }
+
+  if (route === 'evaluation-form' && user.role === 'partner') {
+    if (!canSubmitNow()) {
+      alert(getSubmitBlockMessage());
+      renderPartnerMain();
+      showPage('partnerMainPage');
+      return;
+    }
+    renderEvaluationForm();
+    showPage('evaluationFormPage');
+  }
+}
 
 /**
  * @description 지정한 페이지 ID만 활성화하여 화면을 전환합니다.
