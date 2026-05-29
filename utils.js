@@ -71,660 +71,389 @@ async function uploadFileToDrive(file, subFolder = '') {
 
 /**
  * @file utils.js
- * @description 공통 유틸리티 모듈
- * @responsibility
- * - 날짜 포맷 변환
- * - 입력값 자동 포맷 (하이픈 삽입 등)
- * - Toast 알림 표시
- * - localStorage 읽기/쓰기 래퍼
- * @sideEffects localStorage 공통 키 읽기/쓰기 및 Toast 표시
+ * @description 공통 유틸리티 모듈 (Google Sheets 연동 버전)
  */
 
 const STORAGE_KEYS = {
-      users: 'users',
-      currentUser: 'currentUser',
-      companyProfiles: 'companyProfiles',
-      attachmentLinks: 'attachmentLinks',
-      naCriteria: 'naCriteria',
-      evaluationPeriods: 'evaluationPeriods',
-      activePeriodId: 'activePeriodId',
-      evaluationSubmissions: 'evaluationSubmissions',
-      scoringData: 'scoringData',
-      publicResults: 'publicResults'
-    };
+  users: 'users',
+  currentUser: 'currentUser',
+  companyProfiles: 'companyProfiles',
+  attachmentLinks: 'attachmentLinks',
+  naCriteria: 'naCriteria',
+  evaluationPeriods: 'evaluationPeriods',
+  activePeriodId: 'activePeriodId',
+  evaluationSubmissions: 'evaluationSubmissions',
+  scoringData: 'scoringData',
+  publicResults: 'publicResults'
+};
+
+// ── 시트명 매핑 (STORAGE_KEY → Sheets 시트명) ──
+const SHEET_MAP = {
+  users: 'users',
+  companyProfiles: 'company_profiles',
+  attachmentLinks: 'attachments',
+  naCriteria: 'na_criteria',
+  evaluationPeriods: 'evaluation_periods',
+  evaluationSubmissions: 'evaluation_submissions',
+  scoringData: 'scoring_data',
+  publicResults: 'results'
+};
+
+// ── 인메모리 캐시 ──
+const _cache = {};
 
 let appToast;
 
-/**
- * @description 앱에서 사용하는 localStorage 컨테이너의 기본 구조를 보장합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * initializeStorageContainers();
- */
+// ──────────────────────────────────────────
+//  초기화
+// ──────────────────────────────────────────
+
 function initializeStorageContainers() {
-  ensureObjectStorage(STORAGE_KEYS.companyProfiles);
-  ensureObjectStorage(STORAGE_KEYS.attachmentLinks);
-  ensureObjectStorage(STORAGE_KEYS.naCriteria);
-  ensureObjectStorage(STORAGE_KEYS.evaluationSubmissions);
-  ensureObjectStorage(STORAGE_KEYS.scoringData);
-  ensureObjectStorage(STORAGE_KEYS.publicResults);
-  ensureArrayStorage(STORAGE_KEYS.evaluationPeriods);
+  // Sheets 연동 버전에서는 별도 초기화 불필요
 }
 
-/**
- * @description Bootstrap Toast 인스턴스를 초기화합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * initToast();
- */
 function initToast() {
   appToast = new bootstrap.Toast(document.getElementById('appToast'), { delay: 2400 });
 }
 
-/**
- * @description 앱 전역 CustomEvent를 발행합니다.
- * @param {*} name - name 값입니다.
- * @param {*} detail - detail 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * emitAppEvent(name, detail);
- */
+// ──────────────────────────────────────────
+//  이벤트 헬퍼
+// ──────────────────────────────────────────
+
 function emitAppEvent(name, detail = {}) {
   window.dispatchEvent(new CustomEvent(name, { detail }));
 }
+function requestRoute(route) { emitAppEvent('ipass:route', { route }); }
+function requestPage(pageId) { emitAppEvent('ipass:page', { pageId }); }
+function requestLogout() { emitAppEvent('ipass:logout'); }
+function requestRefresh(target) { emitAppEvent('ipass:refresh', { target }); }
 
-/**
- * @description 라우터에 SPA 경로 이동을 요청합니다.
- * @param {*} route - route 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * requestRoute(route);
- */
-function requestRoute(route) {
-  emitAppEvent('ipass:route', { route });
-}
+// ──────────────────────────────────────────
+//  currentUser (세션 전용 — localStorage 유지)
+// ──────────────────────────────────────────
 
-/**
- * @description 라우터에 특정 페이지 표시를 요청합니다.
- * @param {*} pageId - pageId 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * requestPage(pageId);
- */
-function requestPage(pageId) {
-  emitAppEvent('ipass:page', { pageId });
-}
-
-/**
- * @description 라우터에 로그아웃 처리를 요청합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * requestLogout();
- */
-function requestLogout() {
-  emitAppEvent('ipass:logout');
-}
-
-/**
- * @description 라우터에 특정 화면 갱신을 요청합니다.
- * @param {*} target - target 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * requestRefresh(target);
- */
-function requestRefresh(target) {
-  emitAppEvent('ipass:refresh', { target });
-}
-
-/**
- * @description ensureObjectStorage 함수의 책임을 수행합니다.
- * @param {*} key - key 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * ensureObjectStorage(key);
- */
-function ensureObjectStorage(key) {
-      try {
-        const value = JSON.parse(localStorage.getItem(key));
-        if (!value || typeof value !== 'object' || Array.isArray(value)) {
-          localStorage.setItem(key, JSON.stringify({}));
-        }
-      } catch (error) {
-        localStorage.setItem(key, JSON.stringify({}));
-      }
-    }
-
-/**
- * @description ensureArrayStorage 함수의 책임을 수행합니다.
- * @param {*} key - key 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * ensureArrayStorage(key);
- */
-function ensureArrayStorage(key) {
-      try {
-        const value = JSON.parse(localStorage.getItem(key));
-        if (!Array.isArray(value)) {
-          localStorage.setItem(key, JSON.stringify([]));
-        }
-      } catch (error) {
-        localStorage.setItem(key, JSON.stringify([]));
-      }
-    }
-
-/**
- * @description loadObject 함수의 책임을 수행합니다.
- * @param {*} key - key 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * loadObject(key);
- */
-function loadObject(key) {
-      try {
-        const value = JSON.parse(localStorage.getItem(key));
-        return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-      } catch (error) {
-        return {};
-      }
-    }
-
-/**
- * @description saveObject 함수의 책임을 수행합니다.
- * @param {*} key - key 값입니다.
- * @param {*} value - value 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * saveObject(key, value);
- */
-function saveObject(key, value) {
-      localStorage.setItem(key, JSON.stringify(value));
-    }
-
-/**
- * @description loadPeriods 함수의 책임을 수행합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * loadPeriods();
- */
-function loadPeriods() {
-      try {
-        const periods = JSON.parse(localStorage.getItem(STORAGE_KEYS.evaluationPeriods));
-        return Array.isArray(periods) ? periods : [];
-      } catch (error) {
-        return [];
-      }
-    }
-
-/**
- * @description savePeriods 함수의 책임을 수행합니다.
- * @param {*} periods - periods 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * savePeriods(periods);
- */
-function savePeriods(periods) {
-      localStorage.setItem(STORAGE_KEYS.evaluationPeriods, JSON.stringify(periods));
-      syncActivePeriodId();
-    }
-
-/**
- * @description getCurrentUserSnapshot 함수의 책임을 수행합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * getCurrentUserSnapshot();
- */
 function getCurrentUserSnapshot() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEYS.currentUser));
-      } catch (error) {
-        return null;
-      }
-    }
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.currentUser));
+  } catch { return null; }
+}
 
-/**
- * @description getCurrentUserRecord 함수의 책임을 수행합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * getCurrentUserRecord();
- */
-function getCurrentUserRecord() {
-      const currentUser = getCurrentUserSnapshot();
-      if (!currentUser || !currentUser.id) {
-        return null;
-      }
-      return loadUsers().find((user) => user.id === currentUser.id) || null;
-    }
+async function getCurrentUserRecord() {
+  const snap = getCurrentUserSnapshot();
+  if (!snap || !snap.id) return null;
+  const users = await loadUsers();
+  return users.find(u => u.id === snap.id) || null;
+}
 
-/**
- * @description setCurrentUser 함수의 책임을 수행합니다.
- * @param {*} user - user 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * setCurrentUser(user);
- */
 function setCurrentUser(user) {
-      localStorage.setItem(STORAGE_KEYS.currentUser, JSON.stringify({
-        id: user.id,
-        role: user.role,
-        companyName: user.companyName
-      }));
+  localStorage.setItem(STORAGE_KEYS.currentUser, JSON.stringify({
+    id: user.id,
+    role: user.role,
+    companyName: user.companyName
+  }));
+}
+
+// ──────────────────────────────────────────
+//  users  (배열, key = id)
+// ──────────────────────────────────────────
+
+async function loadUsers() {
+  if (_cache.users) return _cache.users;
+  try {
+    const rows = await dbGetAll(SHEET_MAP.users);
+    _cache.users = Array.isArray(rows) ? rows : [];
+  } catch { _cache.users = []; }
+  return _cache.users;
+}
+
+async function saveUsers(users) {
+  _cache.users = users;
+  for (const user of users) {
+    await dbSave(SHEET_MAP.users, 'id', user);
+  }
+}
+
+// ──────────────────────────────────────────
+//  loadObject / saveObject  (객체형 데이터)
+// ──────────────────────────────────────────
+
+async function loadObject(key) {
+  const sheet = SHEET_MAP[key];
+  if (!sheet) return {};
+  if (_cache[key]) return _cache[key];
+  try {
+    const rows = await dbGetAll(sheet);
+    if (!Array.isArray(rows) || rows.length === 0) {
+      _cache[key] = {};
+      return {};
     }
+    const keyField = Object.keys(rows[0])[0];
+    const obj = {};
+    rows.forEach(row => { if (row[keyField]) obj[row[keyField]] = row; });
+    _cache[key] = obj;
+  } catch { _cache[key] = {}; }
+  return _cache[key];
+}
 
-/**
- * @description loadUsers 함수의 책임을 수행합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * loadUsers();
- */
-function loadUsers() {
-      try {
-        const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.users));
-        return Array.isArray(users) ? users : [];
-      } catch (error) {
-        return [];
-      }
+async function saveObject(key, value) {
+  const sheet = SHEET_MAP[key];
+  _cache[key] = value;
+  if (!sheet) return;
+  for (const row of Object.values(value)) {
+    if (row && typeof row === 'object') {
+      const keyField = Object.keys(row)[0];
+      await dbSave(sheet, keyField, row);
     }
+  }
+}
 
-/**
- * @description saveUsers 함수의 책임을 수행합니다.
- * @param {*} users - users 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * saveUsers(users);
- */
-function saveUsers(users) {
-      localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
-    }
+// ──────────────────────────────────────────
+//  evaluationPeriods  (배열, key = id)
+// ──────────────────────────────────────────
 
-/**
- * @description checkAutoNA 함수의 책임을 수행합니다.
- * @param {*} itemId - itemId 값입니다.
- * @param {*} industryCode - industryCode 값입니다.
- * @param {*} workerCount - workerCount 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * checkAutoNA(itemId, industryCode, workerCount);
- */
-function checkAutoNA(itemId, industryCode, workerCount) {
-      const criteria = loadObject(STORAGE_KEYS.naCriteria)[itemId];
-      if (!criteria) {
-        return false;
-      }
+async function loadPeriods() {
+  if (_cache.periods) return _cache.periods;
+  try {
+    const rows = await dbGetAll(SHEET_MAP.evaluationPeriods);
+    _cache.periods = Array.isArray(rows) ? rows : [];
+  } catch { _cache.periods = []; }
+  return _cache.periods;
+}
 
-      const count = Number(workerCount);
-      if (!Number.isFinite(count)) {
-        return false;
-      }
+async function savePeriods(periods) {
+  _cache.periods = periods;
+  for (const p of periods) {
+    await dbSave(SHEET_MAP.evaluationPeriods, 'id', p);
+  }
+  await syncActivePeriodId();
+}
 
-      const industryOnly = Array.isArray(criteria.industryOnly) ? criteria.industryOnly : [];
-      if (industryOnly.includes(industryCode)) {
-        return true;
-      }
+// ──────────────────────────────────────────
+//  activePeriodId  (단일 값 → settings 시트)
+// ──────────────────────────────────────────
 
-      const industryWithWorker = Array.isArray(criteria.industryWithWorker) ? criteria.industryWithWorker : [];
-      const matchedIndustryWorker = industryWithWorker.some((rule) => (
-        rule.industry === industryCode && count <= Number(rule.maxWorker)
-      ));
-      if (matchedIndustryWorker) {
-        return true;
-      }
+async function syncActivePeriodId() {
+  const periods = await loadPeriods();
+  const active = periods.find(p => p.status === 'active');
+  const id = active ? active.id : '';
+  _cache.activePeriodId = id;
+  try {
+    await dbSave('settings', 'key', { key: 'activePeriodId', value: id });
+  } catch { /* settings 시트 없으면 무시 */ }
+}
 
-      const allIndustryMaxWorker = criteria.allIndustryMaxWorker;
-      if (allIndustryMaxWorker !== null && allIndustryMaxWorker !== undefined && allIndustryMaxWorker !== '') {
-        return count <= Number(allIndustryMaxWorker);
-      }
+async function _getActivePeriodId() {
+  if (_cache.activePeriodId !== undefined) return _cache.activePeriodId;
+  try {
+    const row = await dbGet('settings', 'key', 'activePeriodId');
+    _cache.activePeriodId = row ? row.value : '';
+  } catch { _cache.activePeriodId = ''; }
+  return _cache.activePeriodId;
+}
 
-      return false;
-    }
+// ──────────────────────────────────────────
+//  캐시 무효화 (데이터 변경 후 필요시 호출)
+// ──────────────────────────────────────────
 
-/**
- * @description getActivePeriod 함수의 책임을 수행합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * getActivePeriod();
- */
-function getActivePeriod() {
-      const activePeriodId = localStorage.getItem(STORAGE_KEYS.activePeriodId);
-      return loadPeriods().find((period) => period.id === activePeriodId && period.status === 'active')
-        || loadPeriods().find((period) => period.status === 'active')
-        || null;
-    }
+function clearCache(key) {
+  if (key) delete _cache[key];
+  else Object.keys(_cache).forEach(k => delete _cache[k]);
+}
 
-/**
- * @description canSubmitNow 함수의 책임을 수행합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * canSubmitNow();
- */
-function canSubmitNow() {
-      const period = getActivePeriod();
-      return Boolean(period && !isPastPeriodEnd(period));
-    }
+// ──────────────────────────────────────────
+//  getActivePeriod / canSubmitNow
+// ──────────────────────────────────────────
 
-/**
- * @description getSubmitBlockMessage 함수의 책임을 수행합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * getSubmitBlockMessage();
- */
-function getSubmitBlockMessage() {
-      const period = getActivePeriod();
-      if (!period) {
-        return '현재 진행 중인 평가가 없습니다.';
-      }
-      if (isPastPeriodEnd(period)) {
-        return '제출 기간이 마감되었습니다.';
-      }
-      return '';
-    }
+async function getActivePeriod() {
+  const activePeriodId = await _getActivePeriodId();
+  const periods = await loadPeriods();
+  return periods.find(p => p.id === activePeriodId && p.status === 'active')
+    || periods.find(p => p.status === 'active')
+    || null;
+}
 
-/**
- * @description isPastPeriodEnd 함수의 책임을 수행합니다.
- * @param {*} period - period 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * isPastPeriodEnd(period);
- */
+async function canSubmitNow() {
+  const period = await getActivePeriod();
+  return Boolean(period && !isPastPeriodEnd(period));
+}
+
+async function getSubmitBlockMessage() {
+  const period = await getActivePeriod();
+  if (!period) return '현재 진행 중인 평가가 없습니다.';
+  if (isPastPeriodEnd(period)) return '제출 기간이 마감되었습니다.';
+  return '';
+}
+
+// ──────────────────────────────────────────
+//  naCriteria
+// ──────────────────────────────────────────
+
+async function checkAutoNA(itemId, industryCode, workerCount) {
+  const all = await loadObject(STORAGE_KEYS.naCriteria);
+  const criteria = all[itemId];
+  if (!criteria) return false;
+
+  const count = Number(workerCount);
+  if (!Number.isFinite(count)) return false;
+
+  const industryOnly = Array.isArray(criteria.industryOnly) ? criteria.industryOnly : [];
+  if (industryOnly.includes(industryCode)) return true;
+
+  const industryWithWorker = Array.isArray(criteria.industryWithWorker) ? criteria.industryWithWorker : [];
+  if (industryWithWorker.some(r => r.industry === industryCode && count <= Number(r.maxWorker))) return true;
+
+  const max = criteria.allIndustryMaxWorker;
+  if (max !== null && max !== undefined && max !== '') return count <= Number(max);
+
+  return false;
+}
+
+// ──────────────────────────────────────────
+//  기타 유틸 (변경 없음)
+// ──────────────────────────────────────────
+
 function isPastPeriodEnd(period) {
-      if (!period || !period.endDate) {
-        return false;
-      }
-      return new Date() > new Date(`${period.endDate}T23:59:59`);
-    }
+  if (!period || !period.endDate) return false;
+  return new Date() > new Date(`${period.endDate}T23:59:59`);
+}
 
-/**
- * @description getSubmissionKey 함수의 책임을 수행합니다.
- * @param {*} companyId - companyId 값입니다.
- * @param {*} periodId - periodId 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * getSubmissionKey(companyId, periodId);
- */
 function getSubmissionKey(companyId, periodId) {
-      return `${companyId}_${periodId}`;
-    }
+  return `${companyId}_${periodId}`;
+}
 
-/**
- * @description formatBizNumber 함수의 책임을 수행합니다.
- * @param {*} value - value 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * formatBizNumber(value);
- */
 function formatBizNumber(value) {
-      const digits = value.replace(/\D/g, '').slice(0, 10);
-      if (digits.length <= 3) {
-        return digits;
-      }
-      if (digits.length <= 5) {
-        return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-      }
-      return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
-    }
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+}
 
-/**
- * @description formatPhoneNumber 함수의 책임을 수행합니다.
- * @param {*} value - value 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * formatPhoneNumber(value);
- */
 function formatPhoneNumber(value) {
-      const digits = value.replace(/\D/g, '').slice(0, 11);
-      if (digits.length <= 3) {
-        return digits;
-      }
-      if (digits.length <= 7) {
-        return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-      }
-      return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-    }
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
 
-/**
- * @description autoResizeTextarea 함수의 책임을 수행합니다.
- * @param {*} textarea - textarea 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * autoResizeTextarea(textarea);
- */
 function autoResizeTextarea(textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.max(100, textarea.scrollHeight)}px`;
-    }
+  textarea.style.height = 'auto';
+  textarea.style.height = `${Math.max(100, textarea.scrollHeight)}px`;
+}
 
-/**
- * @description escapeAttribute 함수의 책임을 수행합니다.
- * @param {*} value - value 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * escapeAttribute(value);
- */
 function escapeAttribute(value) {
-      return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
-/**
- * @description getEmptyCriteria 함수의 책임을 수행합니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * getEmptyCriteria();
- */
 function getEmptyCriteria() {
-      return {
-        industryOnly: [],
-        industryWithWorker: [],
-        allIndustryMaxWorker: null
-      };
-    }
+  return { industryOnly: [], industryWithWorker: [], allIndustryMaxWorker: null };
+}
 
-/**
- * @description hasNaCriteria 함수의 책임을 수행합니다.
- * @param {*} criteria - criteria 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * hasNaCriteria(criteria);
- */
 function hasNaCriteria(criteria) {
-      if (!criteria) {
-        return false;
-      }
-      const industryOnly = Array.isArray(criteria.industryOnly) ? criteria.industryOnly : [];
-      const industryWithWorker = Array.isArray(criteria.industryWithWorker) ? criteria.industryWithWorker : [];
-      const allIndustryMaxWorker = criteria.allIndustryMaxWorker;
-      return industryOnly.length > 0 || industryWithWorker.length > 0 || (
-        allIndustryMaxWorker !== null && allIndustryMaxWorker !== undefined && allIndustryMaxWorker !== ''
-      );
-    }
+  if (!criteria) return false;
+  const industryOnly = Array.isArray(criteria.industryOnly) ? criteria.industryOnly : [];
+  const industryWithWorker = Array.isArray(criteria.industryWithWorker) ? criteria.industryWithWorker : [];
+  const max = criteria.allIndustryMaxWorker;
+  return industryOnly.length > 0 || industryWithWorker.length > 0
+    || (max !== null && max !== undefined && max !== '');
+}
 
-/**
- * @description isValidUrl 함수의 책임을 수행합니다.
- * @param {*} url - url 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * isValidUrl(url);
- */
 function isValidUrl(url) {
-      try {
-        const parsed = new URL(url);
-        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-      } catch (error) {
-        return false;
-      }
-    }
+  try {
+    const p = new URL(url);
+    return p.protocol === 'http:' || p.protocol === 'https:';
+  } catch { return false; }
+}
 
-/**
- * @description createCell 함수의 책임을 수행합니다.
- * @param {*} text - text 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * createCell(text);
- */
 function createCell(text) {
-      const cell = document.createElement('td');
-      cell.textContent = text;
-      return cell;
-    }
+  const td = document.createElement('td');
+  td.textContent = text;
+  return td;
+}
 
-/**
- * @description createStatusCell 함수의 책임을 수행합니다.
- * @param {*} statusMeta - statusMeta 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * createStatusCell(statusMeta);
- */
 function createStatusCell(statusMeta) {
-      const cell = document.createElement('td');
-      const badge = document.createElement('span');
-      badge.className = `status-badge ${statusMeta.className}`;
-      badge.textContent = statusMeta.label;
-      cell.appendChild(badge);
-      return cell;
-    }
+  const td = document.createElement('td');
+  const badge = document.createElement('span');
+  badge.className = `status-badge ${statusMeta.className}`;
+  badge.textContent = statusMeta.label;
+  td.appendChild(badge);
+  return td;
+}
 
-/**
- * @description createActionCell 함수의 책임을 수행합니다.
- * @param {*} action - action 값입니다.
- * @param {*} userId - userId 값입니다.
- * @param {*} label - label 값입니다.
- * @param {*} iconClass - iconClass 값입니다.
- * @param {*} buttonClass - buttonClass 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * createActionCell(action, userId, label, iconClass, buttonClass);
- */
 function createActionCell(action, userId, label, iconClass, buttonClass) {
-      const cell = document.createElement('td');
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = `btn btn-sm ${buttonClass}`;
-      button.dataset.action = action;
-      button.dataset.userId = userId;
-      button.innerHTML = `<i class="fa-solid ${iconClass} me-1"></i>${label}`;
-      cell.appendChild(button);
-      return cell;
-    }
+  const td = document.createElement('td');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = `btn btn-sm ${buttonClass}`;
+  btn.dataset.action = action;
+  btn.dataset.userId = userId;
+  btn.innerHTML = `<i class="fa-solid ${iconClass} me-1"></i>${label}`;
+  td.appendChild(btn);
+  return td;
+}
 
-/**
- * @description createAttachmentActionCell 함수의 책임을 수행합니다.
- * @param {*} itemId - itemId 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * createAttachmentActionCell(itemId);
- */
 function createAttachmentActionCell(itemId) {
-      const cell = document.createElement('td');
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'btn btn-sm btn-outline-primary';
-      button.dataset.attachmentId = itemId;
-      button.innerHTML = '<i class="fa-solid fa-link me-1"></i>링크 등록/수정';
-      cell.appendChild(button);
-      return cell;
-    }
+  const td = document.createElement('td');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-sm btn-outline-primary';
+  btn.dataset.attachmentId = itemId;
+  btn.innerHTML = '<i class="fa-solid fa-link me-1"></i>링크 등록/수정';
+  td.appendChild(btn);
+  return td;
+}
 
-/**
- * @description createPeriodActionCell 함수의 책임을 수행합니다.
- * @param {*} action - action 값입니다.
- * @param {*} periodId - periodId 값입니다.
- * @param {*} label - label 값입니다.
- * @param {*} iconClass - iconClass 값입니다.
- * @param {*} buttonClass - buttonClass 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * createPeriodActionCell(action, periodId, label, iconClass, buttonClass);
- */
 function createPeriodActionCell(action, periodId, label, iconClass, buttonClass) {
-      const cell = document.createElement('td');
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = `btn btn-sm ${buttonClass}`;
-      button.dataset.periodAction = action;
-      button.dataset.periodId = periodId;
-      button.innerHTML = `<i class="fa-solid ${iconClass} me-1"></i>${label}`;
-      cell.appendChild(button);
-      return cell;
-    }
+  const td = document.createElement('td');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = `btn btn-sm ${buttonClass}`;
+  btn.dataset.periodAction = action;
+  btn.dataset.periodId = periodId;
+  btn.innerHTML = `<i class="fa-solid ${iconClass} me-1"></i>${label}`;
+  td.appendChild(btn);
+  return td;
+}
 
-/**
- * @description appendEmptyRow 함수의 책임을 수행합니다.
- * @param {*} tbody - tbody 값입니다.
- * @param {*} colspan - colspan 값입니다.
- * @param {*} message - message 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * appendEmptyRow(tbody, colspan, message);
- */
 function appendEmptyRow(tbody, colspan, message) {
-      const row = document.createElement('tr');
-      const cell = document.createElement('td');
-      cell.colSpan = colspan;
-      cell.className = 'empty-row';
-      cell.textContent = message;
-      row.appendChild(cell);
-      tbody.appendChild(row);
-    }
+  const tr = document.createElement('tr');
+  const td = document.createElement('td');
+  td.colSpan = colspan;
+  td.className = 'empty-row';
+  td.textContent = message;
+  tr.appendChild(td);
+  tbody.appendChild(tr);
+}
 
-/**
- * @description showToast 함수의 책임을 수행합니다.
- * @param {*} message - message 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * showToast(message);
- */
 function showToast(message) {
-      document.getElementById('toastMessage').textContent = message;
-      appToast.show();
-    }
+  document.getElementById('toastMessage').textContent = message;
+  appToast.show();
+}
 
-/**
- * @description formatDate 함수의 책임을 수행합니다.
- * @param {*} date - date 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * formatDate(date);
- */
 function formatDate(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
-/**
- * @description formatPeriodRange 함수의 책임을 수행합니다.
- * @param {*} startDate - startDate 값입니다.
- * @param {*} endDate - endDate 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * formatPeriodRange(startDate, endDate);
- */
 function formatPeriodRange(startDate, endDate) {
-      return `${formatDotDate(startDate)} ~ ${formatDotDate(endDate)}`;
-    }
+  return `${formatDotDate(startDate)} ~ ${formatDotDate(endDate)}`;
+}
 
-/**
- * @description formatDotDate 함수의 책임을 수행합니다.
- * @param {*} value - value 값입니다.
- * @returns {*} 실행 결과입니다.
- * @example
- * formatDotDate(value);
- */
 function formatDotDate(value) {
-      if (!value) {
-        return '-';
-      }
-      const [year, month, day] = value.split('-');
-      return `${year} . ${month} . ${day}`;
-    }
+  if (!value) return '-';
+  const [y, m, d] = value.split('-');
+  return `${y} . ${m} . ${d}`;
+}
 
-    // 유효배점 = 전체배점(가점제외) - N/A항목 배점 합계
-    // 환산점수 = (실제취득점수 ÷ 유효배점) × 100
-    // 최종점수 = 환산점수 + 가점 (100점 초과 불가)
-    // 등급 기준:
-    //   90점 이상           → 안전관리 우수협력사
-    //   70점 이상 90점 미만 → 적격협력사
-    //   70점 미만           → 역량강화 대상협력사
+// 유효배점 = 전체배점(가점제외) - N/A항목 배점 합계
+// 환산점수 = (실제취득점수 ÷ 유효배점) × 100
+// 최종점수 = 환산점수 + 가점 (100점 초과 불가)
+// 등급 기준:
+//   90점 이상           → 안전관리 우수협력사
+//   70점 이상 90점 미만 → 적격협력사
+//   70점 미만           → 역량강화 대상협력사
