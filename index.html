@@ -798,90 +798,80 @@
     </div>
   </nav>
 
-  <main style="padding: 0; display: flex; flex-direction: column; height: calc(100vh - 56px);">
+ <main style="padding: 0; display: flex; flex-direction: column; height: calc(100vh - 56px);">
 
-    <!-- 채점 페이지 서브 헤더 -->
-    <div class="scoring-header">
-      <button type="button" class="btn btn-outline-secondary btn-sm" data-route="scoring-manage">
-        <i class="fa-solid fa-arrow-left me-1"></i>목록으로
+  <!-- 채점 페이지 서브 헤더 -->
+  <div class="scoring-header">
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-route="scoring-manage">
+      <i class="fa-solid fa-arrow-left me-1"></i>목록으로
+    </button>
+    <div class="d-flex align-items-center gap-2 flex-grow-1">
+      <span id="scoringCompanyName" class="fw-bold fs-5"></span>
+      <span id="scoringPeriodLabel" class="text-muted"></span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-outline-primary btn-sm" id="scoringSaveDraftBtn">
+        <i class="fa-solid fa-floppy-disk me-1"></i>임시저장
       </button>
-      <div class="d-flex align-items-center gap-2 flex-grow-1">
-        <span id="scoringCompanyName" class="fw-bold fs-5"></span>
-        <span id="scoringPeriodLabel" class="text-muted"></span>
-      </div>
-      <div class="d-flex align-items-center gap-2">
-        <span id="scoringProgressText" class="text-muted small"></span>
-        <div class="progress" style="width: 120px; height: 8px;">
-          <div id="scoringProgressBar" class="progress-bar" style="width: 0%"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 2단 레이아웃 (사이드바 + 채점 패널) -->
-    <div class="scoring-layout">
-
-      <!-- 왼쪽: 항목 사이드바 -->
-      <aside class="scoring-sidebar">
-        <div id="scoringSidebarContent"></div>
-      </aside>
-
-      <!-- 오른쪽: 채점 패널 -->
-      <section class="scoring-panel">
-        <div id="scoringPanelContent">
-          <div class="text-center text-muted py-5">
-            <i class="fa-solid fa-clipboard-list fa-3x mb-3" style="color: #dee2e6;"></i>
-            <p class="mb-0">왼쪽 항목을 선택하면 채점 화면이 표시됩니다.</p>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <!-- 하단 고정 점수 현황 바 -->
-    <div class="scoring-footer">
-      <div class="scoring-score-summary">
-        <span>실취득: <strong id="footerRealScore">-</strong>점</span>
-        <span class="text-muted">|</span>
-        <span>실배점: <strong id="footerRealMax">-</strong>점</span>
-        <span class="text-muted">|</span>
-        <span>환산점수: <strong id="footerConvertedScore">-</strong>점</span>
-        <span class="text-muted">|</span>
-        <span>가점: <strong id="footerBonus">-</strong>점</span>
-        <span class="text-muted">|</span>
-        <span>최종점수: <strong id="footerFinalScore">-</strong>점</span>
-        <span id="footerGradeBadge" class="badge ms-1">-</span>
-      </div>
-      <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-primary btn-sm" id="scoringSaveDraftBtn">
-          <i class="fa-solid fa-floppy-disk me-1"></i>임시저장
-        </button>
-        <button type="button" class="btn btn-primary btn-sm" id="scoringPublishBtn">
-          <i class="fa-solid fa-share me-1"></i>채점완료 및 공개
-        </button>
-      </div>
-    </div>
-
-  </main>
-</div>
-
-  <div class="toast-container position-fixed top-0 end-0 p-3">
-    <div id="appToast" class="toast" role="status" aria-live="polite" aria-atomic="true">
-      <div class="toast-header">
-        <i class="fa-solid fa-circle-check me-2"></i>
-        <strong class="me-auto">알림</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="닫기"></button>
-      </div>
-      <div id="toastMessage" class="toast-body">저장되었습니다.</div>
+      <button type="button" class="btn btn-primary btn-sm" id="scoringPublishBtn">
+        <i class="fa-solid fa-share me-1"></i>채점완료 및 공개
+      </button>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
-  <script src="data.js"></script>
-  <script src="utils.js"></script>
-  <script src="auth.js"></script>
-  <script src="admin.js"></script>
-  <script src="company.js"></script>
-  <script src="scoring.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+  <!-- ✅ 점수 요약 바 (헤더 바로 아래) -->
+  <div class="scoring-score-bar">
+    <div class="score-bar-item">
+      <span class="score-bar-label">실취득</span>
+      <span class="score-bar-value"><span id="footerRealScore">-</span> / <span id="footerRealMax">-</span></span>
+    </div>
+    <div class="score-bar-divider"></div>
+    <div class="score-bar-item">
+      <span class="score-bar-label">환산점수</span>
+      <span class="score-bar-value" id="footerConvertedScore">-</span>
+    </div>
+    <div class="score-bar-divider"></div>
+    <div class="score-bar-item">
+      <span class="score-bar-label">가점</span>
+      <span class="score-bar-value" id="footerBonus">-</span>
+    </div>
+    <div class="score-bar-divider"></div>
+    <div class="score-bar-item">
+      <span class="score-bar-label">최종점수</span>
+      <span class="score-bar-value highlight" id="footerFinalScore">-</span>
+    </div>
+    <div class="score-bar-divider"></div>
+    <div class="score-bar-item">
+      <span class="score-bar-label">등급</span>
+      <span id="footerGradeBadge" class="badge fs-6">-</span>
+    </div>
+    <div class="score-bar-divider"></div>
+    <div class="score-bar-item" style="flex-direction: row; gap: 8px; min-width: auto;">
+      <span class="score-bar-label">진행률</span>
+      <span id="scoringProgressText" class="score-bar-value" style="font-size:13px;">-</span>
+      <div class="progress" style="width: 100px; height: 8px; align-self: center;">
+        <div id="scoringProgressBar" class="progress-bar" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2단 레이아웃 (사이드바 + 채점 패널) -->
+  <div class="scoring-layout">
+
+    <!-- 왼쪽: 항목 사이드바 -->
+    <aside class="scoring-sidebar">
+      <div id="scoringSidebarContent"></div>
+    </aside>
+
+    <!-- 오른쪽: 채점 패널 -->
+    <section class="scoring-panel">
+      <div id="scoringPanelContent">
+        <div class="text-center text-muted py-5">
+          <i class="fa-solid fa-clipboard-list fa-3x mb-3" style="color: #dee2e6;"></i>
+          <p class="mb-0">왼쪽 항목을 선택하면 채점 화면이 표시됩니다.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</main>
