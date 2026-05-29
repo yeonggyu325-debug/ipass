@@ -827,3 +827,50 @@ body {
   border-color: #ffc107;
   background: #FFF9E6;
 }
+
+/* ── 채점 상단 점수 요약 바 ── */
+.scoring-score-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 10px 24px;
+  background: var(--accent);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.score-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 20px;
+  min-width: 80px;
+}
+
+.score-bar-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.score-bar-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.score-bar-value.highlight {
+  font-size: 20px;
+  color: var(--primary);
+}
+
+.score-bar-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--line);
+  flex-shrink: 0;
+}
