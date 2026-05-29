@@ -172,12 +172,16 @@ function renderScoringManagePage() {
     periodSelect.appendChild(opt);
   });
 
+  // ✅ onchange 대신 addEventListener 사용
+  periodSelect.addEventListener('change', function() {
+    renderScoringTable(this.value);
+  });
+
   const activePeriod = periods.find(p => p.status === 'active');
-  if (activePeriod) periodSelect.value = activePeriod.id;
-
-  periodSelect.onchange = () => renderScoringTable(periodSelect.value);
-
-  if (activePeriod) renderScoringTable(activePeriod.id);
+  if (activePeriod) {
+    periodSelect.value = activePeriod.id;
+    renderScoringTable(activePeriod.id); // ✅ 초기 렌더링
+  }
 }
 
 function renderScoringTable(periodId) {
