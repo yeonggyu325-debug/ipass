@@ -710,3 +710,120 @@ body {
 .grade-excellent         { background-color: #1E7A4D !important; color: #fff !important; }
 .grade-qualified         { background-color: var(--primary) !important; color: #fff !important; }
 .grade-needs-improvement { background-color: #B42318 !important; color: #fff !important; }
+
+/* ── 채점 2단 레이아웃 ── */
+.scoring-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.scoring-left-panel,
+.scoring-right-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.scoring-block-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+/* 제출 자료 박스 */
+.submitted-answer-box {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #F8FBFF;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  min-height: 160px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.submitted-answer-box.empty {
+  background: #F4F6FA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 클릭형 점수 버튼 */
+.score-click-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.score-click-btn {
+  min-width: 56px;
+  padding: 10px 14px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text-main);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.score-click-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--accent);
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(26,107,255,0.15);
+}
+
+.score-click-btn.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(26,107,255,0.3);
+}
+
+.score-click-btn.disabled-btn,
+.score-click-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 선택 점수 표시 */
+.score-selected-display {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.score-selected-display.empty { background: #F4F6FA; color: var(--text-muted); }
+.score-selected-display.na    { background: #FFF3CD; color: #856404; }
+
+/* N/A 카드 */
+.na-toggle-card {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #F8FBFF;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.na-toggle-card.na-active {
+  border-color: #ffc107;
+  background: #FFF9E6;
+}
