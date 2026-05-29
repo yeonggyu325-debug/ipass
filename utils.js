@@ -1,3 +1,74 @@
+// ── Google Apps Script API 설정 ──
+const API_URL = 'https://script.google.com/macros/s/AKfycbxvAwQipNVn7GRgjgRrQaTvp4gGwqkPMUFhU4ZVzxbjCSSUcA3WTmspIeBjkjBu-8IfKw/exec';
+
+// ── API 공통 호출 함수 ──
+async function apiGet(action, params = {}) {
+  const url = new URL(API_URL);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString());
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error);
+  return json.data;
+}
+
+async function apiPost(action, params = {}, body = {}) {
+  const url = new URL(API_URL);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error);
+  return json.data;
+}
+
+// ── Sheets DB 함수 (localStorage 대체) ──
+async function dbGetAll(sheetName) {
+  return await apiGet('getSheet', { sheet: sheetName });
+}
+
+async function dbGet(sheetName, key, value) {
+  return await apiGet('getRow', { sheet: sheetName, key, value });
+}
+
+async function dbSave(sheetName, keyField, data) {
+  return await apiPost('upsertRow', { sheet: sheetName, key: keyField }, data);
+}
+
+async function dbDelete(sheetName, keyField, value) {
+  return await apiGet('deleteRow', { sheet: sheetName, key: keyField, value });
+}
+
+// ── 파일 업로드 ──
+async function uploadFileToDrive(file, subFolder = '') {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const base64 = e.target.result.split(',')[1];
+        const url = new URL(API_URL);
+        url.searchParams.set('action', 'uploadFile');
+        url.searchParams.set('fileName', file.name);
+        url.searchParams.set('mimeType', file.type);
+        url.searchParams.set('subFolder', subFolder);
+        const res = await fetch(url.toString(), {
+          method: 'POST',
+          body: base64
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        resolve(json.data);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
  * @file utils.js
  * @description 공통 유틸리티 모듈
