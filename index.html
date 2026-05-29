@@ -713,6 +713,156 @@
     </div>
   </div>
 
+  <!-- ==================== 채점 관리 목록 페이지 ==================== -->
+<div id="scoringManagePage" class="page">
+  <nav class="navbar app-navbar">
+    <div class="container-fluid container-lg">
+      <a class="navbar-brand" href="#" data-route="admin-main">
+        <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+        <span class="nav-subtitle">협력사 안전보건 이행수준 평가 시스템</span>
+      </a>
+      <div class="d-flex align-items-center gap-2">
+        <span class="nav-user current-user-name"></span>
+        <button type="button" class="btn btn-light btn-sm logout-btn">
+          <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-lg app-shell">
+    <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+      <div>
+        <h1 class="page-title">채점 관리</h1>
+        <p class="section-desc">제출 완료된 협력사 자료를 검토하고 점수를 입력합니다.</p>
+      </div>
+      <button type="button" class="btn btn-outline-primary" data-route="admin-main">
+        <i class="fa-solid fa-arrow-left me-2"></i>관리자 메인
+      </button>
+    </div>
+
+    <!-- 평가 회차 선택 -->
+    <div class="section-card mb-3">
+      <div class="section-card-body">
+        <div class="d-flex align-items-center gap-3">
+          <label class="fw-bold mb-0" for="scoringPeriodSelect">평가 회차 선택</label>
+          <select id="scoringPeriodSelect" class="form-select" style="max-width: 300px;"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 협력사별 채점 현황 테이블 -->
+    <section class="section-card">
+      <div class="section-card-header">
+        <h2 class="section-title">협력사별 채점 현황</h2>
+        <p class="section-desc">제출 완료된 협력사만 채점 가능합니다.</p>
+      </div>
+      <div class="section-card-body">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>회사명</th>
+                <th>제출 상태</th>
+                <th>채점 상태</th>
+                <th>환산점수</th>
+                <th>최종점수</th>
+                <th>등급</th>
+                <th>공개 여부</th>
+                <th>채점</th>
+              </tr>
+            </thead>
+            <tbody id="scoringStatusTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ==================== 채점 화면 페이지 ==================== -->
+<div id="scoringPage" class="page">
+  <nav class="navbar app-navbar">
+    <div class="container-fluid container-lg">
+      <a class="navbar-brand" href="#" data-route="admin-main">
+        <span class="ipass-logo nav-ipass"><span class="ipass-i">i</span><span>-Pass</span></span>
+        <span class="nav-subtitle">협력사 안전보건 이행수준 평가 시스템</span>
+      </a>
+      <div class="d-flex align-items-center gap-2">
+        <span class="nav-user current-user-name"></span>
+        <button type="button" class="btn btn-light btn-sm logout-btn">
+          <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>로그아웃
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main style="padding: 0; display: flex; flex-direction: column; height: calc(100vh - 56px);">
+
+    <!-- 채점 페이지 서브 헤더 -->
+    <div class="scoring-header">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-route="scoring-manage">
+        <i class="fa-solid fa-arrow-left me-1"></i>목록으로
+      </button>
+      <div class="d-flex align-items-center gap-2 flex-grow-1">
+        <span id="scoringCompanyName" class="fw-bold fs-5"></span>
+        <span id="scoringPeriodLabel" class="text-muted"></span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span id="scoringProgressText" class="text-muted small"></span>
+        <div class="progress" style="width: 120px; height: 8px;">
+          <div id="scoringProgressBar" class="progress-bar" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2단 레이아웃 (사이드바 + 채점 패널) -->
+    <div class="scoring-layout">
+
+      <!-- 왼쪽: 항목 사이드바 -->
+      <aside class="scoring-sidebar">
+        <div id="scoringSidebarContent"></div>
+      </aside>
+
+      <!-- 오른쪽: 채점 패널 -->
+      <section class="scoring-panel">
+        <div id="scoringPanelContent">
+          <div class="text-center text-muted py-5">
+            <i class="fa-solid fa-clipboard-list fa-3x mb-3" style="color: #dee2e6;"></i>
+            <p class="mb-0">왼쪽 항목을 선택하면 채점 화면이 표시됩니다.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 하단 고정 점수 현황 바 -->
+    <div class="scoring-footer">
+      <div class="scoring-score-summary">
+        <span>실취득: <strong id="footerRealScore">-</strong>점</span>
+        <span class="text-muted">|</span>
+        <span>실배점: <strong id="footerRealMax">-</strong>점</span>
+        <span class="text-muted">|</span>
+        <span>환산점수: <strong id="footerConvertedScore">-</strong>점</span>
+        <span class="text-muted">|</span>
+        <span>가점: <strong id="footerBonus">-</strong>점</span>
+        <span class="text-muted">|</span>
+        <span>최종점수: <strong id="footerFinalScore">-</strong>점</span>
+        <span id="footerGradeBadge" class="badge ms-1">-</span>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary btn-sm" id="scoringSaveDraftBtn">
+          <i class="fa-solid fa-floppy-disk me-1"></i>임시저장
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="scoringPublishBtn">
+          <i class="fa-solid fa-share me-1"></i>채점완료 및 공개
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
   <div class="toast-container position-fixed top-0 end-0 p-3">
     <div id="appToast" class="toast" role="status" aria-live="polite" aria-atomic="true">
       <div class="toast-header">
