@@ -376,6 +376,14 @@ function renderScoringItemPanel(itemId) {
   const prevItem = EVALUATION_ITEMS[currentIndex - 1];
   const nextItem = EVALUATION_ITEMS[currentIndex + 1];
 
+  // 제출자료 가져오기
+  const submissionsObj = loadObject(STORAGE_KEYS.evaluationSubmissions);
+  const submissionKey = getSubmissionKey(_scoringCompanyId, _scoringPeriodId);
+  const submission = submissionsObj[submissionKey];
+  const submittedAnswer = submission && submission.answers
+    ? (submission.answers[itemId] || '')
+    : '';
+
   const categoryColors = {
     '가점': 'warning text-dark',
     '중대산업재해 예방': 'danger',
@@ -386,65 +394,96 @@ function renderScoringItemPanel(itemId) {
   };
   const badgeClass = categoryColors[item.category] || 'secondary';
 
+  // 배점 버튼 생성 (점수표 기반)
   const scoreValues = generateScoreValues(item);
-  const scoreButtons = scoreValues.map(v => `
-    <button type="button"
-      class="btn btn-sm ${record.score === v ? 'btn-primary' : 'btn-outline-secondary'} scoring-score-btn"
-      data-value="${v}" ${record.isNA ? 'disabled' : ''}>
-      ${v}
-    </button>
-  `).join('');
+
+  const scoreButtons = scoreValues.map(v => {
+    const isSelected = record.score === v;
+    return `
+      <button type="button"
+        class="score-click-btn ${isSelected ? 'selected' : ''} ${record.isNA ? 'disabled-btn' : ''}"
+        data-value="${v}"
+        onclick="clickScore('${itemId}', ${v})"
+        ${record.isNA ? 'disabled' : ''}>
+        ${v}점
+      </button>
+    `;
+  }).join('');
 
   panel.innerHTML = `
     <div class="scoring-item-header">
       <span class="badge bg-${badgeClass}">${item.category}</span>
       <h5 class="mb-0 ms-2">${item.subcategory}</h5>
-      <span class="ms-auto text-muted">만점: <strong>${item.maxScore}점</strong></span>
+      <span class="ms-auto">
+        <span class="score-pill">만점 ${item.maxScore}점</span>
+      </span>
       ${item.naAllowed
         ? '<span class="badge bg-info text-dark ms-2">N/A 가능</span>'
-        : '<span class="badge bg-secondary ms-2">N/A 불가</span>'}
+        : '<span class="badge bg-light text-muted ms-2">N/A 불가</span>'}
     </div>
 
-    ${item.naAllowed ? `
-    <div class="card mb-3 border-info">
-      <div class="card-body py-2">
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="naCheckbox"
-            ${record.isNA ? 'checked' : ''}>
-          <label class="form-check-label fw-bold" for="naCheckbox">
-            N/A (해당없음) 처리
-          </label>
-        </div>
-        <div id="naReasonArea" ${record.isNA ? '' : 'style="display:none;"'}>
-          <input type="text" class="form-control form-control-sm" id="naReasonInput"
-            placeholder="${item.naCondition || ''}"
-            value="${record.naReason || ''}">
+    <!-- 2단 레이아웃: 좌=판정기준, 우=채점 -->
+    <div class="scoring-split-layout">
+
+      <!-- 좌측: 판정기준 + 제출자료 -->
+      <div class="scoring-left-panel">
+        <div class="scoring-block-label">📋 판정기준</div>
+        <div class="criteria-box mb-3">${(item.criteria || '').replace(/\n/g, '<br>')}</div>
+
+        <div class="scoring-block-label">📁 협력사 제출 자료</div>
+        <div class="submitted-answer-box ${submittedAnswer ? '' : 'empty'}">
+          ${submittedAnswer
+            ? submittedAnswer.replace(/\n/g, '<br>')
+            : '<span class="text-muted">제출된 내용이 없습니다.</span>'}
         </div>
       </div>
-    </div>
-    ` : ''}
 
-    <div class="card mb-3" id="scoreInputArea" ${record.isNA ? 'style="opacity:0.4;pointer-events:none;"' : ''}>
-      <div class="card-body">
-        <label class="form-label fw-bold">취득 점수</label>
-        <div class="d-flex align-items-center gap-3 mb-3">
-          <input type="number" class="form-control" id="scoreDirectInput"
-            min="0" max="${item.maxScore}" step="1"
-            value="${record.score !== null && record.score !== undefined ? record.score : ''}"
-            style="width: 100px;"
-            placeholder="0">
-          <span class="text-muted">/ ${item.maxScore}점</span>
+      <!-- 우측: 채점 -->
+      <div class="scoring-right-panel">
+
+        ${item.naAllowed ? `
+        <div class="na-toggle-card ${record.isNA ? 'na-active' : ''}">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="naCheckbox"
+              ${record.isNA ? 'checked' : ''}
+              onchange="toggleNA('${itemId}', this.checked)">
+            <label class="form-check-label fw-bold" for="naCheckbox">
+              N/A (해당없음) 처리
+            </label>
+          </div>
+          <div id="naReasonArea" ${record.isNA ? '' : 'style="display:none;"'} class="mt-2">
+            <input type="text" class="form-control form-control-sm" id="naReasonInput"
+              placeholder="${item.naCondition || 'N/A 사유를 입력하세요'}"
+              value="${record.naReason || ''}"
+              oninput="saveNAReason('${itemId}', this.value)">
+          </div>
         </div>
-        <div class="scoring-score-buttons">
+        ` : ''}
+
+        <div class="scoring-block-label mt-3">🎯 점수 선택 <small class="text-muted">(클릭 즉시 저장)</small></div>
+        <div class="score-click-grid" id="scoreClickGrid">
           ${scoreButtons}
         </div>
-      </div>
-    </div>
 
-    <div class="mb-3">
-      <label class="form-label fw-bold">채점 메모 <span class="text-muted fw-normal">(선택)</span></label>
-      <textarea class="form-control" id="scoringComment" rows="3"
-        placeholder="특이사항, 감점 사유 등 기록">${record.comment || ''}</textarea>
+        ${record.score !== null && record.score !== undefined && !record.isNA ? `
+        <div class="score-selected-display">
+          선택된 점수: <strong class="text-primary">${record.score}점</strong> / ${item.maxScore}점
+        </div>
+        ` : record.isNA ? `
+        <div class="score-selected-display na">
+          N/A 처리됨
+        </div>
+        ` : `
+        <div class="score-selected-display empty">
+          점수를 선택하세요
+        </div>
+        `}
+
+        <div class="scoring-block-label mt-3">📝 채점 메모 <small class="text-muted">(선택)</small></div>
+        <textarea class="form-control" id="scoringComment" rows="4"
+          placeholder="특이사항, 감점 사유 등 기록"
+          oninput="autoSaveComment('${itemId}', this.value)">${record.comment || ''}</textarea>
+      </div>
     </div>
 
     <div class="scoring-nav-btns">
@@ -452,10 +491,6 @@ function renderScoringItemPanel(itemId) {
         ${!prevItem ? 'disabled' : ''}
         onclick="renderScoringItemPanel('${prevItem ? prevItem.id : ''}')">
         <i class="fa-solid fa-arrow-left me-1"></i>이전 항목
-      </button>
-      <button type="button" class="btn btn-primary px-4"
-        onclick="saveScoringItem()">
-        <i class="fa-solid fa-floppy-disk me-1"></i>저장
       </button>
       <button type="button" class="btn btn-outline-secondary"
         ${!nextItem ? 'disabled' : ''}
@@ -465,7 +500,11 @@ function renderScoringItemPanel(itemId) {
     </div>
   `;
 
-  bindScoringPanelEvents(item);
+  // 하단 네비 버튼 상태 갱신
+  const navPrevBtn = document.getElementById('navPrevBtn');
+  const navNextBtn = document.getElementById('navNextBtn');
+  if (navPrevBtn) navPrevBtn.disabled = currentIndex <= 0;
+  if (navNextBtn) navNextBtn.disabled = currentIndex >= EVALUATION_ITEMS.length - 1;
 }
 
 function generateScoreValues(item) {
@@ -638,4 +677,98 @@ function initScoringModule() {
     itemCount: EVALUATION_ITEMS.length,
     storageKey: SCORING_STORAGE_KEY
   };
+}
+
+// 점수 클릭 즉시 저장
+function clickScore(itemId, value) {
+  const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
+  const record = (scoringData && scoringData.items[itemId]) || {};
+  if (record.isNA) return;
+
+  saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
+    score: value,
+    isNA: false,
+    naReason: record.naReason || '',
+    comment: record.comment || ''
+  });
+
+  // 버튼 UI 즉시 반영
+  document.querySelectorAll('.score-click-btn').forEach(btn => {
+    btn.classList.toggle('selected', Number(btn.dataset.value) === value);
+  });
+
+  // 선택 표시 갱신
+  const display = document.querySelector('.score-selected-display');
+  const item = EVALUATION_ITEMS.find(i => i.id === itemId);
+  if (display && item) {
+    display.className = 'score-selected-display';
+    display.innerHTML = `선택된 점수: <strong class="text-primary">${value}점</strong> / ${item.maxScore}점`;
+  }
+
+  renderScoringsSidebar();
+  updateScoringFooter();
+  updateScoringProgress();
+  showToast(`${value}점 저장되었습니다.`);
+}
+
+// N/A 토글 즉시 저장
+function toggleNA(itemId, isNA) {
+  const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
+  const record = (scoringData && scoringData.items[itemId]) || {};
+
+  saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
+    score: isNA ? null : record.score,
+    isNA: isNA,
+    naReason: record.naReason || '',
+    comment: record.comment || ''
+  });
+
+  const naReasonArea = document.getElementById('naReasonArea');
+  const scoreGrid = document.getElementById('scoreClickGrid');
+  const naCard = document.querySelector('.na-toggle-card');
+
+  if (naReasonArea) naReasonArea.style.display = isNA ? '' : 'none';
+  if (scoreGrid) {
+    scoreGrid.querySelectorAll('.score-click-btn').forEach(btn => {
+      btn.disabled = isNA;
+      btn.classList.toggle('disabled-btn', isNA);
+    });
+  }
+  if (naCard) naCard.classList.toggle('na-active', isNA);
+
+  renderScoringsSidebar();
+  updateScoringFooter();
+  updateScoringProgress();
+}
+
+// N/A 사유 자동 저장 (디바운스)
+let _naReasonTimer = null;
+function saveNAReason(itemId, value) {
+  clearTimeout(_naReasonTimer);
+  _naReasonTimer = setTimeout(() => {
+    const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
+    const record = (scoringData && scoringData.items[itemId]) || {};
+    saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
+      score: record.score,
+      isNA: true,
+      naReason: value,
+      comment: record.comment || ''
+    });
+  }, 500);
+}
+
+// 메모 자동 저장 (디바운스)
+let _commentTimer = null;
+function autoSaveComment(itemId, value) {
+  clearTimeout(_commentTimer);
+  _commentTimer = setTimeout(() => {
+    const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
+    const record = (scoringData && scoringData.items[itemId]) || {};
+    saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
+      score: record.score !== undefined ? record.score : null,
+      isNA: record.isNA || false,
+      naReason: record.naReason || '',
+      comment: value
+    });
+  }, 600);
 }
