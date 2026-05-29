@@ -97,19 +97,6 @@ function getScoringData(companyId, periodId) {
   return getAllScoringData()[key] || null;
 }
 
-function saveScoringData(scoringData) {
-  const all = getAllScoringData();
-  const idx = all.findIndex(
-    d => d.companyId === scoringData.companyId && d.periodId === scoringData.periodId
-  );
-  if (idx >= 0) {
-    all[idx] = scoringData;
-  } else {
-    all.push(scoringData);
-  }
-  localStorage.setItem(SCORING_STORAGE_KEY, JSON.stringify(all));
-}
-
 function saveItemScore(companyId, periodId, itemId, itemData) {
   const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : { id: 'admin' };
   let data = getScoringData(companyId, periodId);
@@ -168,15 +155,24 @@ function renderScoringManagePage() {
   const tableBody = document.getElementById('scoringStatusTableBody');
   if (!periodSelect || !tableBody) return;
 
-const periods = loadPeriods();
-periodSelect.onchange = function() {
-  renderScoringTable(this.value);
-};
+  const periods = loadPeriods();
+
+  periodSelect.innerHTML = '<option value="">-- 회차를 선택하세요 --</option>';
+  periods.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.title;
+    periodSelect.appendChild(opt);
+  });
+
+  periodSelect.onchange = function () {
+    renderScoringTable(this.value);
+  };
 
   const activePeriod = periods.find(p => p.status === 'active');
   if (activePeriod) {
     periodSelect.value = activePeriod.id;
-    renderScoringTable(activePeriod.id); // ✅ 초기 렌더링
+    renderScoringTable(activePeriod.id);
   }
 }
 
@@ -199,59 +195,10 @@ function renderScoringTable(periodId) {
     return;
   }
 
-function renderScoringManagePage() {
-  const periodSelect = document.getElementById('scoringPeriodSelect');
-  const tableBody = document.getElementById('scoringStatusTableBody');
-  if (!periodSelect || !tableBody) return;
-
-  const periods = loadPeriods();
-
-  // ✅ 이 부분 추가
-  periodSelect.innerHTML = '<option value="">-- 회차를 선택하세요 --</option>';
-  periods.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.title;
-    periodSelect.appendChild(opt);
-  });
-
-  periodSelect.onchange = function() {
-    renderScoringTable(this.value);
-  };
-
-  const activePeriod = periods.find(p => p.status === 'active');
-  if (activePeriod) {
-    periodSelect.value = activePeriod.id;
-    renderScoringTable(activePeriod.id);
-  }
-}
-   
   users.forEach((user, idx) => {
     const submission = submissionsObj[getSubmissionKey(user.id, periodId)];
     const scoringData = getScoringData(user.id, periodId);
     const isSubmitted = submission && submission.status === 'submitted';
-
-    tableBody.innerHTML += `
-      <tr>
-        <td>${idx + 1}</td>
-        <td>${user.companyName}</td>
-        <td>${isSubmitted
-          ? '<span class="badge bg-success">제출완료</span>'
-          : '<span class="badge bg-secondary">미제출</span>'}</td>
-        <td>${scoringBadge}</td>
-        <td>${환산점수}</td>
-        <td>${최종점수}</td>
-        <td>${등급html}</td>
-        <td>${scoringData
-          ? (scoringData.isPublished
-            ? '<span class="badge bg-primary">공개</span>'
-            : '<span class="badge bg-secondary">비공개</span>')
-          : '-'}</td>
-        <td>${actionBtn}</td>
-      </tr>
-    `;
-  });
-}
 
     let scoringBadge = '';
     if (!isSubmitted) {
