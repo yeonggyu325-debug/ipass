@@ -132,13 +132,8 @@ body {
   flex-shrink: 0;
 }
 
-.nav-ipass {
-  font-size: 1.32rem;
-  font-weight: 900;
-  letter-spacing: -0.5px;
-  color: #fff;
-}
-.nav-ipass .ipass-i { color: #6EB0FF; }
+.nav-ipass { display: none; }
+.nav-ipass .ipass-i { display: none; }
 
 .nav-subtitle {
   color: rgba(255,255,255,0.6);
