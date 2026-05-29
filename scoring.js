@@ -199,45 +199,37 @@ function renderScoringTable(periodId) {
     return;
   }
 
+function renderScoringManagePage() {
+  const periodSelect = document.getElementById('scoringPeriodSelect');
+  const tableBody = document.getElementById('scoringStatusTableBody');
+  if (!periodSelect || !tableBody) return;
+
+  const periods = loadPeriods();
+
+  // ✅ 이 부분 추가
+  periodSelect.innerHTML = '<option value="">-- 회차를 선택하세요 --</option>';
+  periods.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.title;
+    periodSelect.appendChild(opt);
+  });
+
+  periodSelect.onchange = function() {
+    renderScoringTable(this.value);
+  };
+
+  const activePeriod = periods.find(p => p.status === 'active');
+  if (activePeriod) {
+    periodSelect.value = activePeriod.id;
+    renderScoringTable(activePeriod.id);
+  }
+}
+   
   users.forEach((user, idx) => {
     const submission = submissionsObj[getSubmissionKey(user.id, periodId)];
     const scoringData = getScoringData(user.id, periodId);
     const isSubmitted = submission && submission.status === 'submitted';
-
-    let scoringBadge = '';
-    if (!isSubmitted) {
-      scoringBadge = '<span class="badge bg-secondary">미제출</span>';
-    } else if (!scoringData) {
-      scoringBadge = '<span class="badge bg-warning text-dark">채점전</span>';
-    } else if (scoringData.isPublished) {
-      scoringBadge = '<span class="badge bg-primary">공개됨</span>';
-    } else {
-      scoringBadge = '<span class="badge bg-success">채점완료</span>';
-    }
-
-    let 환산점수 = '-';
-    let 최종점수 = '-';
-    let 등급html = '-';
-    if (scoringData) {
-      const result = calculateScore(scoringData);
-      환산점수 = result.환산점수.toFixed(2);
-      최종점수 = result.최종점수.toFixed(2);
-      등급html = result.등급
-        ? `<span class="badge ${getGradeClass(result.등급)}" style="font-size:11px;">${result.등급}</span>`
-        : '-';
-    }
-
-    let actionBtn = '';
-    if (isSubmitted) {
-      const label = scoringData ? '수정' : '채점하기';
-      const btnClass = scoringData ? 'btn-outline-primary' : 'btn-primary';
-      actionBtn = `<button class="btn ${btnClass} btn-sm"
-        onclick="startScoring('${user.id}','${user.companyName}','${periodId}')">
-        ${label}
-      </button>`;
-    } else {
-      actionBtn = '<span class="text-muted small">제출 대기</span>';
-    }
 
     tableBody.innerHTML += `
       <tr>
