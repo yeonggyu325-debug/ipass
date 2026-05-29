@@ -3,7 +3,7 @@
    ========================================================== */
 
 /* ----------------------------------------------------------
-   2. 점수 계산 함수
+   1. 점수 계산 함수
    ---------------------------------------------------------- */
 
 function calculateScore(scoringData) {
@@ -73,7 +73,7 @@ function getGradeClass(grade) {
 }
 
 /* ----------------------------------------------------------
-   3. localStorage 헬퍼
+   2. localStorage 헬퍼
    ---------------------------------------------------------- */
 
 var SCORING_STORAGE_KEY = 'allScoringData';
@@ -150,7 +150,7 @@ function unpublishResult(companyId, periodId) {
 }
 
 /* ----------------------------------------------------------
-   4. 채점 관리 목록 페이지 렌더링
+   3. 채점 관리 목록 페이지 렌더링
    ---------------------------------------------------------- */
 
 var _scoringCompanyId = '';
@@ -286,7 +286,7 @@ function startScoring(companyId, companyName, periodId) {
 }
 
 /* ----------------------------------------------------------
-   5. 채점 화면 렌더링
+   4. 채점 화면 렌더링
    ---------------------------------------------------------- */
 
 function renderScoringPage() {
@@ -354,7 +354,7 @@ function renderScoringsSidebar() {
       html += `
         <div class="item-row ${isActive}" onclick="renderScoringItemPanel('${item.id}')">
           <span class="item-status">${statusIcon}</span>
-          <span class="item-name">${item.subCategory}</span>
+          <span class="item-name">${item.subcategory}</span>
           <span class="item-score">${scoreText}</span>
         </div>
       `;
@@ -386,9 +386,9 @@ function renderScoringItemPanel(itemId) {
   const categoryColors = {
     '가점': 'warning text-dark',
     '중대산업재해 예방': 'danger',
-    '안전보건 관리체계': 'primary',
+    '안전보건 관리 체계': 'primary',
     '유해위험 방지조치': 'warning text-dark',
-    '근로자 보건관리': 'success',
+    '근로자의 보건 관리': 'success',
     '도급시 산업재해 예방': 'info text-dark'
   };
   const badgeClass = categoryColors[item.category] || 'secondary';
@@ -405,7 +405,7 @@ function renderScoringItemPanel(itemId) {
   panel.innerHTML = `
     <div class="scoring-item-header">
       <span class="badge bg-${badgeClass}">${item.category}</span>
-      <h5 class="mb-0 ms-2">${item.subCategory}</h5>
+      <h5 class="mb-0 ms-2">${item.subcategory}</h5>
       <span class="ms-auto text-muted">만점: <strong>${item.maxScore}점</strong></span>
       ${item.naAllowed
         ? '<span class="badge bg-info text-dark ms-2">N/A 가능</span>'
@@ -424,7 +424,7 @@ function renderScoringItemPanel(itemId) {
         </div>
         <div id="naReasonArea" ${record.isNA ? '' : 'style="display:none;"'}>
           <input type="text" class="form-control form-control-sm" id="naReasonInput"
-            placeholder="${item.naCondition}"
+            placeholder="${item.naCondition || ''}"
             value="${record.naReason || ''}">
         </div>
       </div>
@@ -598,7 +598,7 @@ function updateScoringProgress() {
 }
 
 /* ----------------------------------------------------------
-   6. 임시저장 / 채점완료 및 공개
+   5. 임시저장 / 채점완료 및 공개
    ---------------------------------------------------------- */
 
 function initScoringButtons() {
@@ -636,7 +636,7 @@ function initScoringButtons() {
 }
 
 /* ----------------------------------------------------------
-   7. 초기화
+   6. 초기화
    ---------------------------------------------------------- */
 
 function initScoringModule() {
