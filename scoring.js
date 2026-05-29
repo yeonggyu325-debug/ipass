@@ -76,20 +76,25 @@ function getGradeClass(grade) {
    2. localStorage 헬퍼
    ---------------------------------------------------------- */
 
-var SCORING_STORAGE_KEY = 'allScoringData';
+var SCORING_STORAGE_KEY = STORAGE_KEYS.scoringData;
 
 function getAllScoringData() {
   try {
-    return JSON.parse(localStorage.getItem(SCORING_STORAGE_KEY)) || [];
-  } catch {
-    return [];
-  }
+    const raw = JSON.parse(localStorage.getItem(SCORING_STORAGE_KEY));
+    return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  } catch { return {}; }
+}
+
+function saveScoringData(data) {
+  const all = getAllScoringData();
+  const key = `${data.companyId}_${data.periodId}`;
+  all[key] = data;
+  localStorage.setItem(SCORING_STORAGE_KEY, JSON.stringify(all));
 }
 
 function getScoringData(companyId, periodId) {
-  return getAllScoringData().find(
-    d => d.companyId === companyId && d.periodId === periodId
-  ) || null;
+  const key = `${companyId}_${periodId}`;
+  return getAllScoringData()[key] || null;
 }
 
 function saveScoringData(scoringData) {
@@ -163,19 +168,10 @@ function renderScoringManagePage() {
   const tableBody = document.getElementById('scoringStatusTableBody');
   if (!periodSelect || !tableBody) return;
 
-  const periods = JSON.parse(localStorage.getItem('periods') || '[]');
-  periodSelect.innerHTML = '<option value="">-- 회차를 선택하세요 --</option>';
-  periods.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.title;
-    periodSelect.appendChild(opt);
-  });
-
-  // ✅ onchange 대신 addEventListener 사용
-  periodSelect.addEventListener('change', function() {
-    renderScoringTable(this.value);
-  });
+const periods = loadPeriods();
+periodSelect.onchange = function() {
+  renderScoringTable(this.value);
+};
 
   const activePeriod = periods.find(p => p.status === 'active');
   if (activePeriod) {
@@ -188,9 +184,8 @@ function renderScoringTable(periodId) {
   const tableBody = document.getElementById('scoringStatusTableBody');
   if (!tableBody) return;
 
-  const users = JSON.parse(localStorage.getItem('users') || '[]')
-    .filter(u => u.role === 'company');
-  const submissions = JSON.parse(localStorage.getItem('submissions') || '[]');
+  const users = loadUsers().filter(u => u.role === 'partner');
+  const submissionsObj = loadObject(STORAGE_KEYS.evaluationSubmissions);
 
   tableBody.innerHTML = '';
 
@@ -205,11 +200,66 @@ function renderScoringTable(periodId) {
   }
 
   users.forEach((user, idx) => {
-    const submission = submissions.find(
-      s => s.companyId === user.id && s.periodId === periodId
-    );
+    const submission = submissionsObj[getSubmissionKey(user.id, periodId)];
     const scoringData = getScoringData(user.id, periodId);
     const isSubmitted = submission && submission.status === 'submitted';
+
+    let scoringBadge = '';
+    if (!isSubmitted) {
+      scoringBadge = '<span class="badge bg-secondary">미제출</span>';
+    } else if (!scoringData) {
+      scoringBadge = '<span class="badge bg-warning text-dark">채점전</span>';
+    } else if (scoringData.isPublished) {
+      scoringBadge = '<span class="badge bg-primary">공개됨</span>';
+    } else {
+      scoringBadge = '<span class="badge bg-success">채점완료</span>';
+    }
+
+    let 환산점수 = '-';
+    let 최종점수 = '-';
+    let 등급html = '-';
+    if (scoringData) {
+      const result = calculateScore(scoringData);
+      환산점수 = result.환산점수.toFixed(2);
+      최종점수 = result.최종점수.toFixed(2);
+      등급html = result.등급
+        ? `<span class="badge ${getGradeClass(result.등급)}" style="font-size:11px;">${result.등급}</span>`
+        : '-';
+    }
+
+    let actionBtn = '';
+    if (isSubmitted) {
+      const label = scoringData ? '수정' : '채점하기';
+      const btnClass = scoringData ? 'btn-outline-primary' : 'btn-primary';
+      actionBtn = `<button class="btn ${btnClass} btn-sm"
+        onclick="startScoring('${user.id}','${user.companyName}','${periodId}')">
+        ${label}
+      </button>`;
+    } else {
+      actionBtn = '<span class="text-muted small">제출 대기</span>';
+    }
+
+    tableBody.innerHTML += `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${user.companyName}</td>
+        <td>${isSubmitted
+          ? '<span class="badge bg-success">제출완료</span>'
+          : '<span class="badge bg-secondary">미제출</span>'}</td>
+        <td>${scoringBadge}</td>
+        <td>${환산점수}</td>
+        <td>${최종점수}</td>
+        <td>${등급html}</td>
+        <td>${scoringData
+          ? (scoringData.isPublished
+            ? '<span class="badge bg-primary">공개</span>'
+            : '<span class="badge bg-secondary">비공개</span>')
+          : '-'}</td>
+        <td>${actionBtn}</td>
+      </tr>
+    `;
+  });
+}
 
     let scoringBadge = '';
     if (!isSubmitted) {
@@ -298,7 +348,7 @@ function renderScoringPage() {
   const periodEl = document.getElementById('scoringPeriodLabel');
   if (nameEl) nameEl.textContent = _scoringCompanyName;
   if (periodEl) {
-    const periods = JSON.parse(localStorage.getItem('periods') || '[]');
+    const periods = loadPeriods();
     const period = periods.find(p => p.id === _scoringPeriodId);
     periodEl.textContent = period ? period.title : '';
   }
