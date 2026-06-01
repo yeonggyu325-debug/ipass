@@ -1,5 +1,36 @@
+/**
+ * @file utils.js
+ * @description 공통 유틸리티 모듈 (Google Sheets 연동 + 캐시 최적화 버전)
+ */
+
 // ── Google Apps Script API 설정 ──
 const API_URL = 'https://script.google.com/macros/s/AKfycbxvAwQipNVn7GRgjgRrQaTvp4gGwqkPMUFhU4ZVzxbjCSSUcA3WTmspIeBjkjBu-8IfKw/exec';
+
+// ── 인메모리 캐시 (TTL: 5분) ──
+const _cache = {};
+const CACHE_TTL = 5 * 60 * 1000;
+
+function getCached(key) {
+  const entry = _cache[key];
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL) {
+    delete _cache[key];
+    return null;
+  }
+  return entry.data;
+}
+
+function setCached(key, data) {
+  _cache[key] = { data, ts: Date.now() };
+}
+
+function clearCache(key) {
+  if (key) {
+    delete _cache[key];
+  } else {
+    Object.keys(_cache).forEach((k) => delete _cache[k]);
+  }
+}
 
 // ── API 공통 호출 함수 ──
 async function apiGet(action, params = {}) {
@@ -25,7 +56,12 @@ async function apiPost(action, params = {}, body = {}) {
   return json.data;
 }
 
-// ── Sheets DB 함수 (localStorage 대체) ──
+// ── GAS 워밍업 (콜드스타트 방지) ──
+function warmupApi() {
+  apiGet('ping').catch(() => {});
+}
+
+// ── Sheets DB 함수 ──
 async function dbGetAll(sheetName) {
   return await apiGet('getSheet', { sheet: sheetName });
 }
@@ -69,11 +105,7 @@ async function uploadFileToDrive(file, subFolder = '') {
   });
 }
 
-/**
- * @file utils.js
- * @description 공통 유틸리티 모듈 (Google Sheets 연동 버전)
- */
-
+// ── STORAGE_KEYS ──
 const STORAGE_KEYS = {
   users: 'users',
   currentUser: 'currentUser',
@@ -87,62 +119,117 @@ const STORAGE_KEYS = {
   publicResults: 'publicResults'
 };
 
-// ── 시트명 매핑 (STORAGE_KEY → Sheets 시트명) ──
+// ── 시트명 매핑 ──
 const SHEET_MAP = {
-  users: 'users',
-  companyProfiles: 'company_profiles',
-  attachmentLinks: 'attachments',
-  naCriteria: 'na_criteria',
-  evaluationPeriods: 'evaluation_periods',
-  evaluationSubmissions: 'evaluation_submissions',
-  scoringData: 'scoring_data',
-  publicResults: 'results'
+  [STORAGE_KEYS.users]:                'users',
+  [STORAGE_KEYS.companyProfiles]:      'company_profiles',
+  [STORAGE_KEYS.attachmentLinks]:      'attachments',
+  [STORAGE_KEYS.naCriteria]:           'na_criteria',
+  [STORAGE_KEYS.evaluationPeriods]:    'evaluation_periods',
+  [STORAGE_KEYS.evaluationSubmissions]:'evaluation_submissions',
+  [STORAGE_KEYS.scoringData]:          'scoring_data',
+  [STORAGE_KEYS.publicResults]:        'public_results'
 };
-
-// ── 인메모리 캐시 ──
-const _cache = {};
 
 let appToast;
 
-// ──────────────────────────────────────────
-//  초기화
-// ──────────────────────────────────────────
-
-function initializeStorageContainers() {
-  // Sheets 연동 버전에서는 별도 초기화 불필요
-}
-
+// ── Toast ──
 function initToast() {
   appToast = new bootstrap.Toast(document.getElementById('appToast'), { delay: 2400 });
 }
 
-// ──────────────────────────────────────────
-//  이벤트 헬퍼
-// ──────────────────────────────────────────
+function showToast(message) {
+  document.getElementById('toastMessage').textContent = message;
+  appToast.show();
+}
 
+// ── CustomEvent 헬퍼 ──
 function emitAppEvent(name, detail = {}) {
   window.dispatchEvent(new CustomEvent(name, { detail }));
 }
+
 function requestRoute(route) { emitAppEvent('ipass:route', { route }); }
 function requestPage(pageId) { emitAppEvent('ipass:page', { pageId }); }
-function requestLogout() { emitAppEvent('ipass:logout'); }
+function requestLogout()     { emitAppEvent('ipass:logout'); }
 function requestRefresh(target) { emitAppEvent('ipass:refresh', { target }); }
 
-// ──────────────────────────────────────────
-//  currentUser (세션 전용 — localStorage 유지)
-// ──────────────────────────────────────────
+// ── Object 형태 데이터 (naCriteria, attachmentLinks 등) ──
+// Sheets에 { key, value } 형태 1행으로 JSON 직렬화하여 저장
+async function loadObject(storageKey) {
+  const cached = getCached(storageKey);
+  if (cached) return cached;
 
+  try {
+    const sheetName = SHEET_MAP[storageKey];
+    if (!sheetName) return {};
+    const rows = await dbGetAll(sheetName);
+    // rows: [{ key: 'xxx', value: '{"..."}' }, ...]
+    const result = {};
+    if (Array.isArray(rows)) {
+      rows.forEach((row) => {
+        if (row.key) {
+          try { result[row.key] = JSON.parse(row.value); }
+          catch { result[row.key] = row.value; }
+        }
+      });
+    }
+    setCached(storageKey, result);
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+async function saveObject(storageKey, obj) {
+  const sheetName = SHEET_MAP[storageKey];
+  if (!sheetName) return;
+
+  // 각 키를 개별 행으로 upsert
+  const entries = Object.entries(obj);
+  await Promise.all(
+    entries.map(([key, value]) =>
+      dbSave(sheetName, 'key', { key, value: JSON.stringify(value) })
+    )
+  );
+  setCached(storageKey, obj);
+}
+
+// ── Users ──
+async function loadUsers() {
+  const cached = getCached(STORAGE_KEYS.users);
+  if (cached) return cached;
+
+  try {
+    const rows = await dbGetAll(SHEET_MAP[STORAGE_KEYS.users]);
+    const users = Array.isArray(rows) ? rows : [];
+    setCached(STORAGE_KEYS.users, users);
+    return users;
+  } catch {
+    return [];
+  }
+}
+
+async function saveUsers(users) {
+  await Promise.all(
+    users.map((user) => dbSave(SHEET_MAP[STORAGE_KEYS.users], 'id', user))
+  );
+  setCached(STORAGE_KEYS.users, users);
+}
+
+// ── currentUser (세션 — localStorage 유지) ──
 function getCurrentUserSnapshot() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.currentUser));
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 async function getCurrentUserRecord() {
-  const snap = getCurrentUserSnapshot();
-  if (!snap || !snap.id) return null;
+  const currentUser = getCurrentUserSnapshot();
+  if (!currentUser || !currentUser.id) return null;
   const users = await loadUsers();
-  return users.find(u => u.id === snap.id) || null;
+  return users.find((user) => user.id === currentUser.id) || null;
 }
 
 function setCurrentUser(user) {
@@ -153,122 +240,47 @@ function setCurrentUser(user) {
   }));
 }
 
-// ──────────────────────────────────────────
-//  users  (배열, key = id)
-// ──────────────────────────────────────────
-
-async function loadUsers() {
-  if (_cache.users) return _cache.users;
-  try {
-    const rows = await dbGetAll(SHEET_MAP.users);
-    _cache.users = Array.isArray(rows) ? rows : [];
-  } catch { _cache.users = []; }
-  return _cache.users;
-}
-
-async function saveUsers(users) {
-  _cache.users = users;
-  for (const user of users) {
-    await dbSave(SHEET_MAP.users, 'id', user);
-  }
-}
-
-// ──────────────────────────────────────────
-//  loadObject / saveObject  (객체형 데이터)
-// ──────────────────────────────────────────
-
-async function loadObject(key) {
-  const sheet = SHEET_MAP[key];
-  if (!sheet) return {};
-  if (_cache[key]) return _cache[key];
-  try {
-    const rows = await dbGetAll(sheet);
-    if (!Array.isArray(rows) || rows.length === 0) {
-      _cache[key] = {};
-      return {};
-    }
-    const keyField = Object.keys(rows[0])[0];
-    const obj = {};
-    rows.forEach(row => { if (row[keyField]) obj[row[keyField]] = row; });
-    _cache[key] = obj;
-  } catch { _cache[key] = {}; }
-  return _cache[key];
-}
-
-async function saveObject(key, value) {
-  const sheet = SHEET_MAP[key];
-  _cache[key] = value;
-  if (!sheet) return;
-  for (const row of Object.values(value)) {
-    if (row && typeof row === 'object') {
-      const keyField = Object.keys(row)[0];
-      await dbSave(sheet, keyField, row);
-    }
-  }
-}
-
-// ──────────────────────────────────────────
-//  evaluationPeriods  (배열, key = id)
-// ──────────────────────────────────────────
-
+// ── Periods ──
 async function loadPeriods() {
-  if (_cache.periods) return _cache.periods;
+  const cached = getCached(STORAGE_KEYS.evaluationPeriods);
+  if (cached) return cached;
+
   try {
-    const rows = await dbGetAll(SHEET_MAP.evaluationPeriods);
-    _cache.periods = Array.isArray(rows) ? rows : [];
-  } catch { _cache.periods = []; }
-  return _cache.periods;
+    const rows = await dbGetAll(SHEET_MAP[STORAGE_KEYS.evaluationPeriods]);
+    const periods = Array.isArray(rows) ? rows : [];
+    setCached(STORAGE_KEYS.evaluationPeriods, periods);
+    return periods;
+  } catch {
+    return [];
+  }
 }
 
 async function savePeriods(periods) {
-  _cache.periods = periods;
-  for (const p of periods) {
-    await dbSave(SHEET_MAP.evaluationPeriods, 'id', p);
-  }
+  await Promise.all(
+    periods.map((period) =>
+      dbSave(SHEET_MAP[STORAGE_KEYS.evaluationPeriods], 'id', period)
+    )
+  );
+  setCached(STORAGE_KEYS.evaluationPeriods, periods);
   await syncActivePeriodId();
 }
 
-// ──────────────────────────────────────────
-//  activePeriodId  (단일 값 → settings 시트)
-// ──────────────────────────────────────────
-
 async function syncActivePeriodId() {
   const periods = await loadPeriods();
-  const active = periods.find(p => p.status === 'active');
-  const id = active ? active.id : '';
-  _cache.activePeriodId = id;
-  try {
-    await dbSave('settings', 'key', { key: 'activePeriodId', value: id });
-  } catch { /* settings 시트 없으면 무시 */ }
+  const active = periods.find((p) => p.status === 'active');
+  if (active) {
+    localStorage.setItem(STORAGE_KEYS.activePeriodId, active.id);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.activePeriodId);
+  }
 }
 
-async function _getActivePeriodId() {
-  if (_cache.activePeriodId !== undefined) return _cache.activePeriodId;
-  try {
-    const row = await dbGet('settings', 'key', 'activePeriodId');
-    _cache.activePeriodId = row ? row.value : '';
-  } catch { _cache.activePeriodId = ''; }
-  return _cache.activePeriodId;
-}
-
-// ──────────────────────────────────────────
-//  캐시 무효화 (데이터 변경 후 필요시 호출)
-// ──────────────────────────────────────────
-
-function clearCache(key) {
-  if (key) delete _cache[key];
-  else Object.keys(_cache).forEach(k => delete _cache[k]);
-}
-
-// ──────────────────────────────────────────
-//  getActivePeriod / canSubmitNow
-// ──────────────────────────────────────────
-
+// ── 활성 회차 ──
 async function getActivePeriod() {
-  const activePeriodId = await _getActivePeriodId();
+  const activePeriodId = localStorage.getItem(STORAGE_KEYS.activePeriodId);
   const periods = await loadPeriods();
-  return periods.find(p => p.id === activePeriodId && p.status === 'active')
-    || periods.find(p => p.status === 'active')
+  return periods.find((p) => p.id === activePeriodId && p.status === 'active')
+    || periods.find((p) => p.status === 'active')
     || null;
 }
 
@@ -284,13 +296,26 @@ async function getSubmitBlockMessage() {
   return '';
 }
 
-// ──────────────────────────────────────────
-//  naCriteria
-// ──────────────────────────────────────────
+function isPastPeriodEnd(period) {
+  if (!period || !period.endDate) return false;
+  return new Date() > new Date(`${period.endDate}T23:59:59`);
+}
 
-async function checkAutoNA(itemId, industryCode, workerCount) {
-  const all = await loadObject(STORAGE_KEYS.naCriteria);
-  const criteria = all[itemId];
+// ── 앱 초기화 시 병렬 프리패치 ──
+async function prefetchCommonData() {
+  await Promise.all([
+    loadUsers(),
+    loadPeriods(),
+    loadObject(STORAGE_KEYS.attachmentLinks),
+    loadObject(STORAGE_KEYS.naCriteria)
+  ]);
+}
+
+// ── N/A 자동 판정 ──
+function checkAutoNA(itemId, industryCode, workerCount) {
+  // 동기 함수이므로 캐시에서만 읽음 — loadObject 후 사용 필요
+  const allCriteria = getCached(STORAGE_KEYS.naCriteria) || {};
+  const criteria = allCriteria[itemId];
   if (!criteria) return false;
 
   const count = Number(workerCount);
@@ -300,27 +325,20 @@ async function checkAutoNA(itemId, industryCode, workerCount) {
   if (industryOnly.includes(industryCode)) return true;
 
   const industryWithWorker = Array.isArray(criteria.industryWithWorker) ? criteria.industryWithWorker : [];
-  if (industryWithWorker.some(r => r.industry === industryCode && count <= Number(r.maxWorker))) return true;
+  if (industryWithWorker.some((rule) => rule.industry === industryCode && count <= Number(rule.maxWorker))) return true;
 
-  const max = criteria.allIndustryMaxWorker;
-  if (max !== null && max !== undefined && max !== '') return count <= Number(max);
-
+  const allIndustryMaxWorker = criteria.allIndustryMaxWorker;
+  if (allIndustryMaxWorker !== null && allIndustryMaxWorker !== undefined && allIndustryMaxWorker !== '') {
+    return count <= Number(allIndustryMaxWorker);
+  }
   return false;
-}
-
-// ──────────────────────────────────────────
-//  기타 유틸 (변경 없음)
-// ──────────────────────────────────────────
-
-function isPastPeriodEnd(period) {
-  if (!period || !period.endDate) return false;
-  return new Date() > new Date(`${period.endDate}T23:59:59`);
 }
 
 function getSubmissionKey(companyId, periodId) {
   return `${companyId}_${periodId}`;
 }
 
+// ── 입력 포맷 ──
 function formatBizNumber(value) {
   const digits = value.replace(/\D/g, '').slice(0, 10);
   if (digits.length <= 3) return digits;
@@ -335,6 +353,7 @@ function formatPhoneNumber(value) {
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
 }
 
+// ── DOM 유틸 ──
 function autoResizeTextarea(textarea) {
   textarea.style.height = 'auto';
   textarea.style.height = `${Math.max(100, textarea.scrollHeight)}px`;
@@ -348,96 +367,72 @@ function escapeAttribute(value) {
     .replace(/>/g, '&gt;');
 }
 
-function getEmptyCriteria() {
-  return { industryOnly: [], industryWithWorker: [], allIndustryMaxWorker: null };
-}
-
-function hasNaCriteria(criteria) {
-  if (!criteria) return false;
-  const industryOnly = Array.isArray(criteria.industryOnly) ? criteria.industryOnly : [];
-  const industryWithWorker = Array.isArray(criteria.industryWithWorker) ? criteria.industryWithWorker : [];
-  const max = criteria.allIndustryMaxWorker;
-  return industryOnly.length > 0 || industryWithWorker.length > 0
-    || (max !== null && max !== undefined && max !== '');
-}
-
-function isValidUrl(url) {
-  try {
-    const p = new URL(url);
-    return p.protocol === 'http:' || p.protocol === 'https:';
-  } catch { return false; }
-}
-
 function createCell(text) {
-  const td = document.createElement('td');
-  td.textContent = text;
-  return td;
+  const cell = document.createElement('td');
+  cell.textContent = text;
+  return cell;
 }
 
 function createStatusCell(statusMeta) {
-  const td = document.createElement('td');
+  const cell = document.createElement('td');
   const badge = document.createElement('span');
   badge.className = `status-badge ${statusMeta.className}`;
   badge.textContent = statusMeta.label;
-  td.appendChild(badge);
-  return td;
+  cell.appendChild(badge);
+  return cell;
 }
 
 function createActionCell(action, userId, label, iconClass, buttonClass) {
-  const td = document.createElement('td');
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = `btn btn-sm ${buttonClass}`;
-  btn.dataset.action = action;
-  btn.dataset.userId = userId;
-  btn.innerHTML = `<i class="fa-solid ${iconClass} me-1"></i>${label}`;
-  td.appendChild(btn);
-  return td;
+  const cell = document.createElement('td');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `btn btn-sm ${buttonClass}`;
+  button.dataset.action = action;
+  button.dataset.userId = userId;
+  button.innerHTML = `<i class="fa-solid ${iconClass} me-1"></i>${label}`;
+  cell.appendChild(button);
+  return cell;
 }
 
 function createAttachmentActionCell(itemId) {
-  const td = document.createElement('td');
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn btn-sm btn-outline-primary';
-  btn.dataset.attachmentId = itemId;
-  btn.innerHTML = '<i class="fa-solid fa-link me-1"></i>링크 등록/수정';
-  td.appendChild(btn);
-  return td;
+  const cell = document.createElement('td');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn btn-sm btn-outline-primary';
+  button.dataset.attachmentId = itemId;
+  button.innerHTML = '<i class="fa-solid fa-link me-1"></i>링크 등록/수정';
+  cell.appendChild(button);
+  return cell;
 }
 
 function createPeriodActionCell(action, periodId, label, iconClass, buttonClass) {
-  const td = document.createElement('td');
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = `btn btn-sm ${buttonClass}`;
-  btn.dataset.periodAction = action;
-  btn.dataset.periodId = periodId;
-  btn.innerHTML = `<i class="fa-solid ${iconClass} me-1"></i>${label}`;
-  td.appendChild(btn);
-  return td;
+  const cell = document.createElement('td');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `btn btn-sm ${buttonClass}`;
+  button.dataset.periodAction = action;
+  button.dataset.periodId = periodId;
+  button.innerHTML = `<i class="fa-solid ${iconClass} me-1"></i>${label}`;
+  cell.appendChild(button);
+  return cell;
 }
 
 function appendEmptyRow(tbody, colspan, message) {
-  const tr = document.createElement('tr');
-  const td = document.createElement('td');
-  td.colSpan = colspan;
-  td.className = 'empty-row';
-  td.textContent = message;
-  tr.appendChild(td);
-  tbody.appendChild(tr);
+  const row = document.createElement('tr');
+  const cell = document.createElement('td');
+  cell.colSpan = colspan;
+  cell.className = 'empty-row';
+  cell.textContent = message;
+  row.appendChild(cell);
+  tbody.appendChild(row);
 }
 
-function showToast(message) {
-  document.getElementById('toastMessage').textContent = message;
-  appToast.show();
-}
-
+// ── 날짜 포맷 ──
 function formatDate(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatPeriodRange(startDate, endDate) {
@@ -446,8 +441,31 @@ function formatPeriodRange(startDate, endDate) {
 
 function formatDotDate(value) {
   if (!value) return '-';
-  const [y, m, d] = value.split('-');
-  return `${y} . ${m} . ${d}`;
+  const [year, month, day] = value.split('-');
+  return `${year} . ${month} . ${day}`;
+}
+
+// ── N/A 기준 헬퍼 ──
+function getEmptyCriteria() {
+  return { industryOnly: [], industryWithWorker: [], allIndustryMaxWorker: null };
+}
+
+function hasNaCriteria(criteria) {
+  if (!criteria) return false;
+  const industryOnly = Array.isArray(criteria.industryOnly) ? criteria.industryOnly : [];
+  const industryWithWorker = Array.isArray(criteria.industryWithWorker) ? criteria.industryWithWorker : [];
+  const allIndustryMaxWorker = criteria.allIndustryMaxWorker;
+  return industryOnly.length > 0 || industryWithWorker.length > 0
+    || (allIndustryMaxWorker !== null && allIndustryMaxWorker !== undefined && allIndustryMaxWorker !== '');
+}
+
+function isValidUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 // 유효배점 = 전체배점(가점제외) - N/A항목 배점 합계
