@@ -1,28 +1,33 @@
 /**
  * @file app.js
- * @description 애플리케이션 진입점 및 라우팅 모듈 (Google Sheets 연동 + 캐시 최적화 버전)
+ * @description 애플리케이션 진입점 및 라우팅 모듈
+ * - 초기 로딩 최적화: 로그인 화면 즉시 표시 후 백그라운드 초기화
  */
 
-/**
- * 애플리케이션을 초기화하고 로그인 상태에 따라 첫 화면을 결정합니다.
- */
 async function initializeApp() {
-  // GAS 콜드스타트 예방 — await 없이 백그라운드 실행
+  // 1. 로그인 화면 즉시 표시 (사용자가 빈 화면을 보지 않음)
+  showPage('loginPage');
+
+  // 2. GAS 워밍업 — 백그라운드 실행 (await 없음)
   warmupApi();
 
-  await initStorage();
+  // 3. Bootstrap 컴포넌트 · 정적 UI 즉시 초기화 (네트워크 불필요)
   initBootstrapComponents();
   populateStaticSelects();
   bindAppEvents();
   bindEvents();
   initScoringModule();
 
-  const currentUser = await getCurrentUserRecord();
-  if (currentUser) {
-    await routeByUser(currentUser);
-  } else {
-    showPage('loginPage');
-  }
+  // 4. 스토리지 초기화 + 공통 데이터 프리패치 (백그라운드)
+  initStorage().then(async () => {
+    const currentUser = await getCurrentUserRecord();
+    if (currentUser) {
+      await routeByUser(currentUser);
+    }
+    // 로그인하지 않은 경우 이미 loginPage가 표시 중이므로 추가 처리 불필요
+  }).catch((err) => {
+    console.error('initStorage 실패:', err);
+  });
 }
 
 /**
@@ -30,7 +35,6 @@ async function initializeApp() {
  */
 async function initStorage() {
   await initAuthStorage();
-  // 공통 데이터 병렬 프리패치 — 이후 화면 렌더링 속도 향상
   await prefetchCommonData();
   await syncActivePeriodId();
 }
@@ -55,17 +59,9 @@ function bindAppEvents() {
   window.addEventListener('ipass:refresh', handleAppRefreshRequest);
 }
 
-function handleAppRouteRequest(event) {
-  navigate(event.detail.route);
-}
-
-function handleAppPageRequest(event) {
-  showPage(event.detail.pageId);
-}
-
-function handleAppLogoutRequest() {
-  logout();
-}
+function handleAppRouteRequest(event) { navigate(event.detail.route); }
+function handleAppPageRequest(event)  { showPage(event.detail.pageId); }
+function handleAppLogoutRequest()     { logout(); }
 
 async function handleAppRefreshRequest(event) {
   if (event.detail.target === 'admin-dashboard') {
@@ -158,37 +154,47 @@ function populateStaticSelects() {
   });
 }
 
-/**
- * 로그인 로고 이미지 로드 실패 시 텍스트 대체 로고를 표시합니다.
- */
 function handleLoginLogoError(event) {
   event.target.style.display = 'none';
   document.getElementById('loginLogoFallback').style.display = 'inline-block';
 }
 
 /**
- * 로그인 폼 제출을 처리하고 사용자 역할에 맞는 화면으로 이동합니다.
+ * 로그인 폼 제출 처리
+ * - 로딩 중일 수 있으므로 prefetch 완료 보장 후 인증
  */
 async function handleLogin(event) {
   event.preventDefault();
-  const loginId = document.getElementById('loginId').value.trim();
-  const loginPassword = document.getElementById('loginPassword').value;
-  const user = await authenticateUser(loginId, loginPassword);
-  const error = document.getElementById('loginError');
 
-  if (!user) {
-    error.classList.remove('d-none');
-    return;
+  const submitBtn = event.target.querySelector('[type="submit"]');
+  const originalText = submitBtn ? submitBtn.textContent : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '로그인 중...';
   }
 
-  error.classList.add('d-none');
-  setCurrentUser(user);
-  await routeByUser(user);
+  try {
+    const loginId = document.getElementById('loginId').value.trim();
+    const loginPassword = document.getElementById('loginPassword').value;
+    const user = await authenticateUser(loginId, loginPassword);
+    const error = document.getElementById('loginError');
+
+    if (!user) {
+      error.classList.remove('d-none');
+      return;
+    }
+
+    error.classList.add('d-none');
+    setCurrentUser(user);
+    await routeByUser(user);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  }
 }
 
-/**
- * 사용자 역할에 따라 초기 화면으로 이동합니다.
- */
 async function routeByUser(user) {
   if (user.role === 'admin') {
     await renderAdminDashboard();
@@ -199,58 +205,44 @@ async function routeByUser(user) {
   showPage('partnerMainPage');
 }
 
-/**
- * SPA 라우트 문자열에 맞는 화면 렌더링과 페이지 전환을 수행합니다.
- */
 async function navigate(route) {
   const user = await getCurrentUserRecord();
-  if (!user) {
-    logout();
-    return;
-  }
+  if (!user) { logout(); return; }
 
   if (route === 'admin-main' && user.role === 'admin') {
     await renderAdminDashboard();
     showPage('adminMainPage');
   }
-
   if (route === 'account-manage' && user.role === 'admin') {
     await renderAccountTable();
     showPage('accountManagePage');
   }
-
   if (route === 'attachment-manage' && user.role === 'admin') {
     await renderAttachmentTable();
     showPage('attachmentManagePage');
   }
-
   if (route === 'na-manage' && user.role === 'admin') {
     await renderNaCriteriaPage();
     showPage('naManagePage');
   }
-
   if (route === 'period-manage' && user.role === 'admin') {
     await renderPeriodTable();
     showPage('periodManagePage');
   }
-
   if (route === 'scoring-manage' && user.role === 'admin') {
     await renderScoringManagePage();
     showPage('scoringManagePage');
   }
-
   if (route === 'scoring-page' && user.role === 'admin') {
     await renderScoringPage();
     initScoringButtons();
     updateScoringProgress();
     showPage('scoringPage');
   }
-
   if (route === 'partner-main' && user.role === 'partner') {
     await renderPartnerMain();
     showPage('partnerMainPage');
   }
-
   if (route === 'profile' && user.role === 'partner') {
     if (!await canSubmitNow()) {
       alert(await getSubmitBlockMessage());
@@ -261,7 +253,6 @@ async function navigate(route) {
     await renderProfileForm();
     showPage('profilePage');
   }
-
   if (route === 'evaluation-form' && user.role === 'partner') {
     if (!await canSubmitNow()) {
       alert(await getSubmitBlockMessage());
@@ -274,11 +265,7 @@ async function navigate(route) {
   }
 }
 
-/**
- * 지정한 페이지 ID만 활성화하여 화면을 전환합니다.
- */
 function showPage(pageId) {
-  // 네비게이션 사용자명 비동기 업데이트 (렌더링 블로킹 없이)
   updateNavUserNames();
   document.querySelectorAll('.page').forEach((page) => {
     page.classList.toggle('active', page.id === pageId);
@@ -286,10 +273,6 @@ function showPage(pageId) {
   window.scrollTo(0, 0);
 }
 
-/**
- * 네비게이션 바의 로그인 사용자명을 갱신합니다.
- * 캐시에서 즉시 읽으므로 화면 전환을 블로킹하지 않습니다.
- */
 async function updateNavUserNames() {
   const user = await getCurrentUserRecord();
   document.querySelectorAll('.current-user-name').forEach((element) => {
@@ -297,15 +280,12 @@ async function updateNavUserNames() {
   });
 }
 
-/**
- * 로그아웃 후 로그인 화면으로 이동합니다.
- */
 function logout() {
   clearCurrentUser();
-  clearCache(); // 전체 캐시 초기화
+  clearCache();
   document.getElementById('loginForm').reset();
   document.getElementById('loginError').classList.add('d-none');
   showPage('loginPage');
 }
 
-document.addEventListener('DOMContentLoaded', initializeApp)
+document.addEventListener('DOMContentLoaded', initializeApp);
