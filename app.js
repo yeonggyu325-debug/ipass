@@ -1,12 +1,15 @@
 /**
  * @file app.js
- * @description 애플리케이션 진입점 및 라우팅 모듈 (Google Sheets 연동 버전)
+ * @description 애플리케이션 진입점 및 라우팅 모듈 (Google Sheets 연동 + 캐시 최적화 버전)
  */
 
 /**
  * 애플리케이션을 초기화하고 로그인 상태에 따라 첫 화면을 결정합니다.
  */
 async function initializeApp() {
+  // GAS 콜드스타트 예방 — await 없이 백그라운드 실행
+  warmupApi();
+
   await initStorage();
   initBootstrapComponents();
   populateStaticSelects();
@@ -26,8 +29,9 @@ async function initializeApp() {
  * 각 모듈의 초기 저장소 세팅을 조율합니다.
  */
 async function initStorage() {
-  initializeStorageContainers();
   await initAuthStorage();
+  // 공통 데이터 병렬 프리패치 — 이후 화면 렌더링 속도 향상
+  await prefetchCommonData();
   await syncActivePeriodId();
 }
 
@@ -274,6 +278,7 @@ async function navigate(route) {
  * 지정한 페이지 ID만 활성화하여 화면을 전환합니다.
  */
 function showPage(pageId) {
+  // 네비게이션 사용자명 비동기 업데이트 (렌더링 블로킹 없이)
   updateNavUserNames();
   document.querySelectorAll('.page').forEach((page) => {
     page.classList.toggle('active', page.id === pageId);
@@ -283,6 +288,7 @@ function showPage(pageId) {
 
 /**
  * 네비게이션 바의 로그인 사용자명을 갱신합니다.
+ * 캐시에서 즉시 읽으므로 화면 전환을 블로킹하지 않습니다.
  */
 async function updateNavUserNames() {
   const user = await getCurrentUserRecord();
@@ -302,4 +308,4 @@ function logout() {
   showPage('loginPage');
 }
 
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', initializeApp)
