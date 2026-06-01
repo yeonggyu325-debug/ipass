@@ -297,4 +297,133 @@ async function openEditPeriodModal(periodId) {
   document.getElementById('periodStartDate').value = period.startDate;
   document.getElementById('periodEndDate').value = period.endDate;
   document.getElementById('periodStatus').value = period.status;
-  document.getElementById
+  document.getElementById('periodModalTitle').textContent = '회차 수정';
+  periodModal.show();
+}
+
+function fillPeriodTitle(half) {
+  const year = new Date().getFullYear();
+  document.getElementById('periodTitle').value = half === 'first'
+    ? `${year}년 상반기 이행수준평가`
+    : `${year}년 하반기 이행수준평가`;
+}
+
+async function savePeriod() {
+  const mode = document.getElementById('periodMode').value;
+  const existingId = document.getElementById('periodId').value;
+  const title = document.getElementById('periodTitle').value.trim();
+  const startDate = document.getElementById('periodStartDate').value;
+  const endDate = document.getElementById('periodEndDate').value;
+  const status = document.getElementById('periodStatus').value;
+
+  if (!title) {
+    alert('평가명을 입력해 주세요.');
+    document.getElementById('periodTitle').focus();
+    return;
+  }
+
+  if (!startDate || !endDate) {
+    alert('제출 시작일과 마감일을 입력해 주세요.');
+    return;
+  }
+
+  if (startDate > endDate) {
+    alert('제출 마감일은 시작일 이후여야 합니다.');
+    document.getElementById('periodEndDate').focus();
+    return;
+  }
+
+  let periods = await loadPeriods();
+  const id = mode === 'edit' ? existingId : createPeriodId(title, periods);
+  const previousActiveCount = periods.filter((p) => p.status === 'active' && p.id !== id).length;
+
+  if (status === 'active') {
+    periods = periods.map((p) =>
+      p.id !== id && p.status === 'active' ? { ...p, status: 'closed' } : p
+    );
+  }
+
+  const nextPeriod = {
+    id,
+    title,
+    startDate,
+    endDate,
+    status,
+    createdAt: mode === 'edit'
+      ? (periods.find((p) => p.id === id)?.createdAt || new Date().toISOString())
+      : new Date().toISOString()
+  };
+
+  if (mode === 'edit') {
+    periods = periods.map((p) => p.id === id ? nextPeriod : p);
+  } else {
+    periods.push(nextPeriod);
+  }
+
+  await savePeriods(periods);
+  clearCache('periods');
+  periodModal.hide();
+  await renderPeriodTable();
+  showToast(status === 'active' && previousActiveCount > 0
+    ? '기존 진행중 회차가 마감 처리되었습니다.'
+    : '저장되었습니다.');
+}
+
+function createPeriodId(title, periods) {
+  const yearMatch = title.match(/(\d{4})년/);
+  const year = yearMatch ? yearMatch[1] : String(new Date().getFullYear());
+  let baseId = `PERIOD_${Date.now()}`;
+  if (title.includes('상반기')) baseId = `${year}_1`;
+  if (title.includes('하반기')) baseId = `${year}_2`;
+  if (!periods.some((p) => p.id === baseId)) return baseId;
+  return `${baseId}_${String(Date.now()).slice(-4)}`;
+}
+
+async function renderPeriodTable() {
+  const tbody = document.getElementById('periodTableBody');
+  const periods = await loadPeriods();
+  tbody.innerHTML = '';
+
+  if (periods.length === 0) {
+    appendEmptyRow(tbody, 6, '등록된 평가 회차가 없습니다.');
+    return;
+  }
+
+  periods.forEach((period, index) => {
+    const statusMeta = PERIOD_STATUS_META[period.status] || PERIOD_STATUS_META.draft;
+    const row = document.createElement('tr');
+    row.append(
+      createCell(index + 1),
+      createCell(period.title),
+      createCell(formatPeriodRange(period.startDate, period.endDate)),
+      createStatusCell(statusMeta),
+      createPeriodActionCell('edit-period', period.id, '수정', 'fa-pen-to-square', 'btn-outline-primary'),
+      createPeriodActionCell('delete-period', period.id, '삭제', 'fa-trash-can', 'btn-outline-danger')
+    );
+    tbody.appendChild(row);
+  });
+}
+
+function handlePeriodTableClick(event) {
+  const button = event.target.closest('button[data-period-action]');
+  if (!button) return;
+
+  const { periodAction, periodId } = button.dataset;
+  if (periodAction === 'edit-period') openEditPeriodModal(periodId);
+  if (periodAction === 'delete-period') deletePeriod(periodId);
+}
+
+async function deletePeriod(periodId) {
+  if (!confirm('정말 삭제하시겠습니까?')) return;
+
+  const periods = (await loadPeriods()).filter((p) => p.id !== periodId);
+  await savePeriods(periods);
+  clearCache('periods');
+  await renderPeriodTable();
+  showToast('삭제되었습니다.');
+}
+
+// ──────────────────────────────────────────
+//  syncActivePeriodId → utils.js로 이전됨
+//  (admin.js에서 직접 호출하지 않음)
+// ──────────────────────────────────────────
