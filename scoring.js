@@ -1,19 +1,14 @@
 /* ==========================================================
-   scoring.js  —  채점 및 결과 관리 모듈
+   scoring.js  —  채점 및 결과 관리 모듈 (Google Sheets 연동 버전)
    ========================================================== */
 
 /* ----------------------------------------------------------
-   1. 점수 계산 함수
+   1. 점수 계산 함수 (순수 함수 — 변경 없음)
    ---------------------------------------------------------- */
 
 function calculateScore(scoringData) {
   if (!scoringData || !scoringData.items) {
-    return {
-      실취득점수: 0, 실배점: 100,
-      환산점수: 0, 가점: 0,
-      최종점수: 0, 등급: '',
-      naItems: []
-    };
+    return { 실취득점수: 0, 실배점: 100, 환산점수: 0, 가점: 0, 최종점수: 0, 등급: '', naItems: [] };
   }
 
   let 실취득 = 0;
@@ -42,21 +37,14 @@ function calculateScore(scoringData) {
   });
 
   가점합계 = Math.min(가점합계, 5);
-
-  const 환산점수 = 실배점 > 0
-    ? Math.round((실취득 / 실배점) * 100 * 100) / 100
-    : 0;
-
+  const 환산점수 = 실배점 > 0 ? Math.round((실취득 / 실배점) * 100 * 100) / 100 : 0;
   const 최종점수 = Math.round((환산점수 + 가점합계) * 100) / 100;
 
   return {
-    실취득점수: 실취득,
-    실배점: 실배점,
-    환산점수: 환산점수,
-    가점: 가점합계,
-    최종점수: 최종점수,
-    등급: getGrade(최종점수),
-    naItems: naItems
+    실취득점수: 실취득, 실배점,
+    환산점수, 가점: 가점합계,
+    최종점수, 등급: getGrade(최종점수),
+    naItems
   };
 }
 
@@ -73,40 +61,36 @@ function getGradeClass(grade) {
 }
 
 /* ----------------------------------------------------------
-   2. localStorage 헬퍼
+   2. Sheets DB 헬퍼 (localStorage 완전 대체)
    ---------------------------------------------------------- */
 
-var SCORING_STORAGE_KEY = STORAGE_KEYS.scoringData;
-
-function getAllScoringData() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(SCORING_STORAGE_KEY));
-    return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
-  } catch { return {}; }
+async function getAllScoringData() {
+  return await loadObject(STORAGE_KEYS.scoringData);
 }
 
-function saveScoringData(data) {
-  const all = getAllScoringData();
+async function saveScoringData(data) {
+  const all = await getAllScoringData();
   const key = `${data.companyId}_${data.periodId}`;
   all[key] = data;
-  localStorage.setItem(SCORING_STORAGE_KEY, JSON.stringify(all));
+  await saveObject(STORAGE_KEYS.scoringData, all);
+  clearCache(STORAGE_KEYS.scoringData);
 }
 
-function getScoringData(companyId, periodId) {
-  const key = `${companyId}_${periodId}`;
-  return getAllScoringData()[key] || null;
+async function getScoringData(companyId, periodId) {
+  const all = await getAllScoringData();
+  return all[`${companyId}_${periodId}`] || null;
 }
 
-function saveItemScore(companyId, periodId, itemId, itemData) {
-  const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : { id: 'admin' };
-  let data = getScoringData(companyId, periodId);
+async function saveItemScore(companyId, periodId, itemId, itemData) {
+  const currentUser = getCurrentUserSnapshot();
+  let data = await getScoringData(companyId, periodId);
 
   if (!data) {
     data = {
       companyId,
       periodId,
       companyName: '',
-      scoredBy: currentUser.id,
+      scoredBy: currentUser ? currentUser.id : 'admin',
       scoredAt: new Date().toISOString(),
       isPublished: false,
       items: {}
@@ -121,23 +105,23 @@ function saveItemScore(companyId, periodId, itemId, itemData) {
   };
   data.scoredAt = new Date().toISOString();
 
-  saveScoringData(data);
+  await saveScoringData(data);
 }
 
-function publishResult(companyId, periodId) {
-  const data = getScoringData(companyId, periodId);
+async function publishResult(companyId, periodId) {
+  const data = await getScoringData(companyId, periodId);
   if (!data) return false;
   data.isPublished = true;
   data.publishedAt = new Date().toISOString();
-  saveScoringData(data);
+  await saveScoringData(data);
   return true;
 }
 
-function unpublishResult(companyId, periodId) {
-  const data = getScoringData(companyId, periodId);
+async function unpublishResult(companyId, periodId) {
+  const data = await getScoringData(companyId, periodId);
   if (!data) return false;
   data.isPublished = false;
-  saveScoringData(data);
+  await saveScoringData(data);
   return true;
 }
 
@@ -150,12 +134,12 @@ var _scoringCompanyName = '';
 var _scoringPeriodId = '';
 var _scoringSelectedItemId = '';
 
-function renderScoringManagePage() {
+async function renderScoringManagePage() {
   const periodSelect = document.getElementById('scoringPeriodSelect');
   const tableBody = document.getElementById('scoringStatusTableBody');
   if (!periodSelect || !tableBody) return;
 
-  const periods = loadPeriods();
+  const periods = await loadPeriods();
 
   periodSelect.innerHTML = '<option value="">-- 회차를 선택하세요 --</option>';
   periods.forEach(p => {
@@ -172,16 +156,17 @@ function renderScoringManagePage() {
   const activePeriod = periods.find(p => p.status === 'active');
   if (activePeriod) {
     periodSelect.value = activePeriod.id;
-    renderScoringTable(activePeriod.id);
+    await renderScoringTable(activePeriod.id);
   }
 }
 
-function renderScoringTable(periodId) {
+async function renderScoringTable(periodId) {
   const tableBody = document.getElementById('scoringStatusTableBody');
   if (!tableBody) return;
 
-  const users = loadUsers().filter(u => u.role === 'partner');
-  const submissionsObj = loadObject(STORAGE_KEYS.evaluationSubmissions);
+  const allUsers = await loadUsers();
+  const users = allUsers.filter(u => u.role === 'partner');
+  const submissionsObj = await loadObject(STORAGE_KEYS.evaluationSubmissions);
 
   tableBody.innerHTML = '';
 
@@ -195,9 +180,9 @@ function renderScoringTable(periodId) {
     return;
   }
 
-  users.forEach((user, idx) => {
+  for (const [idx, user] of users.entries()) {
     const submission = submissionsObj[getSubmissionKey(user.id, periodId)];
-    const scoringData = getScoringData(user.id, periodId);
+    const scoringData = await getScoringData(user.id, periodId);
     const isSubmitted = submission && submission.status === 'submitted';
 
     let scoringBadge = '';
@@ -254,21 +239,22 @@ function renderScoringTable(periodId) {
         <td>${actionBtn}</td>
       </tr>
     `;
-  });
+  }
 }
 
-function startScoring(companyId, companyName, periodId) {
+async function startScoring(companyId, companyName, periodId) {
   _scoringCompanyId = companyId;
   _scoringCompanyName = companyName;
   _scoringPeriodId = periodId;
   _scoringSelectedItemId = '';
 
-  if (!getScoringData(companyId, periodId)) {
-    saveScoringData({
+  if (!await getScoringData(companyId, periodId)) {
+    const currentUser = getCurrentUserSnapshot();
+    await saveScoringData({
       companyId,
       companyName,
       periodId,
-      scoredBy: typeof getCurrentUser === 'function' ? getCurrentUser().id : 'admin',
+      scoredBy: currentUser ? currentUser.id : 'admin',
       scoredAt: new Date().toISOString(),
       isPublished: false,
       items: {}
@@ -282,29 +268,29 @@ function startScoring(companyId, companyName, periodId) {
    4. 채점 화면 렌더링
    ---------------------------------------------------------- */
 
-function renderScoringPage() {
+async function renderScoringPage() {
   const nameEl = document.getElementById('scoringCompanyName');
   const periodEl = document.getElementById('scoringPeriodLabel');
   if (nameEl) nameEl.textContent = _scoringCompanyName;
   if (periodEl) {
-    const periods = loadPeriods();
+    const periods = await loadPeriods();
     const period = periods.find(p => p.id === _scoringPeriodId);
     periodEl.textContent = period ? period.title : '';
   }
 
-  renderScoringsSidebar();
-  updateScoringFooter();
+  await renderScoringsSidebar();
+  await updateScoringFooter();
 
   if (!_scoringSelectedItemId && EVALUATION_ITEMS.length > 0) {
-    renderScoringItemPanel(EVALUATION_ITEMS[0].id);
+    await renderScoringItemPanel(EVALUATION_ITEMS[0].id);
   }
 }
 
-function renderScoringsSidebar() {
+async function renderScoringsSidebar() {
   const sidebar = document.getElementById('scoringSidebarContent');
   if (!sidebar) return;
 
-  const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
+  const scoringData = await getScoringData(_scoringCompanyId, _scoringPeriodId);
   const items = scoringData ? scoringData.items : {};
 
   const groups = {};
@@ -343,432 +329,8 @@ function renderScoringsSidebar() {
       }
 
       const isActive = _scoringSelectedItemId === item.id ? 'active' : '';
-
       html += `
         <div class="item-row ${isActive}" onclick="renderScoringItemPanel('${item.id}')">
           <span class="item-status">${statusIcon}</span>
           <span class="item-name">${item.subcategory}</span>
-          <span class="item-score">${scoreText}</span>
-        </div>
-      `;
-    });
-  });
-
-  sidebar.innerHTML = html;
-}
-
-function renderScoringItemPanel(itemId) {
-  _scoringSelectedItemId = itemId;
-  renderScoringsSidebar();
-
-  const panel = document.getElementById('scoringPanelContent');
-  if (!panel) return;
-
-  const item = EVALUATION_ITEMS.find(i => i.id === itemId);
-  if (!item) return;
-
-  const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
-  const record = (scoringData && scoringData.items[itemId]) || {
-    score: null, isNA: false, naReason: '', comment: ''
-  };
-
-  const currentIndex = EVALUATION_ITEMS.findIndex(i => i.id === itemId);
-  const prevItem = EVALUATION_ITEMS[currentIndex - 1];
-  const nextItem = EVALUATION_ITEMS[currentIndex + 1];
-
-  // 제출자료 가져오기
-  const submissionsObj = loadObject(STORAGE_KEYS.evaluationSubmissions);
-  const submissionKey = getSubmissionKey(_scoringCompanyId, _scoringPeriodId);
-  const submission = submissionsObj[submissionKey];
-  const submittedAnswer = submission && submission.answers
-    ? (submission.answers[itemId] || '')
-    : '';
-
-  const categoryColors = {
-    '가점': 'warning text-dark',
-    '중대산업재해 예방': 'danger',
-    '안전보건 관리 체계': 'primary',
-    '유해위험 방지조치': 'warning text-dark',
-    '근로자의 보건 관리': 'success',
-    '도급시 산업재해 예방': 'info text-dark'
-  };
-  const badgeClass = categoryColors[item.category] || 'secondary';
-
-  // 배점 버튼 생성 (점수표 기반)
-  const scoreValues = generateScoreValues(item);
-
-  const scoreButtons = scoreValues.map(v => {
-    const isSelected = record.score === v;
-    return `
-      <button type="button"
-        class="score-click-btn ${isSelected ? 'selected' : ''} ${record.isNA ? 'disabled-btn' : ''}"
-        data-value="${v}"
-        onclick="clickScore('${itemId}', ${v})"
-        ${record.isNA ? 'disabled' : ''}>
-        ${v}점
-      </button>
-    `;
-  }).join('');
-
-  panel.innerHTML = `
-    <div class="scoring-item-header">
-      <span class="badge bg-${badgeClass}">${item.category}</span>
-      <h5 class="mb-0 ms-2">${item.subcategory}</h5>
-      <span class="ms-auto">
-        <span class="score-pill">만점 ${item.maxScore}점</span>
-      </span>
-      ${item.naAllowed
-        ? '<span class="badge bg-info text-dark ms-2">N/A 가능</span>'
-        : '<span class="badge bg-light text-muted ms-2">N/A 불가</span>'}
-    </div>
-
-    <!-- 2단 레이아웃: 좌=판정기준, 우=채점 -->
-    <div class="scoring-split-layout">
-
-      <!-- 좌측: 판정기준 + 제출자료 -->
-      <div class="scoring-left-panel">
-        <div class="scoring-block-label">📋 판정기준</div>
-        <div class="criteria-box mb-3">${(item.criteria || '').replace(/\n/g, '<br>')}</div>
-
-        <div class="scoring-block-label">📁 협력사 제출 자료</div>
-        <div class="submitted-answer-box ${submittedAnswer ? '' : 'empty'}">
-          ${submittedAnswer
-            ? submittedAnswer.replace(/\n/g, '<br>')
-            : '<span class="text-muted">제출된 내용이 없습니다.</span>'}
-        </div>
-      </div>
-
-      <!-- 우측: 채점 -->
-      <div class="scoring-right-panel">
-
-        ${item.naAllowed ? `
-        <div class="na-toggle-card ${record.isNA ? 'na-active' : ''}">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="naCheckbox"
-              ${record.isNA ? 'checked' : ''}
-              onchange="toggleNA('${itemId}', this.checked)">
-            <label class="form-check-label fw-bold" for="naCheckbox">
-              N/A (해당없음) 처리
-            </label>
-          </div>
-          <div id="naReasonArea" ${record.isNA ? '' : 'style="display:none;"'} class="mt-2">
-            <input type="text" class="form-control form-control-sm" id="naReasonInput"
-              placeholder="${item.naCondition || 'N/A 사유를 입력하세요'}"
-              value="${record.naReason || ''}"
-              oninput="saveNAReason('${itemId}', this.value)">
-          </div>
-        </div>
-        ` : ''}
-
-        <div class="scoring-block-label mt-3">🎯 점수 선택 <small class="text-muted">(클릭 즉시 저장)</small></div>
-        <div class="score-click-grid" id="scoreClickGrid">
-          ${scoreButtons}
-        </div>
-
-        ${record.score !== null && record.score !== undefined && !record.isNA ? `
-        <div class="score-selected-display">
-          선택된 점수: <strong class="text-primary">${record.score}점</strong> / ${item.maxScore}점
-        </div>
-        ` : record.isNA ? `
-        <div class="score-selected-display na">
-          N/A 처리됨
-        </div>
-        ` : `
-        <div class="score-selected-display empty">
-          점수를 선택하세요
-        </div>
-        `}
-
-        <div class="scoring-block-label mt-3">📝 채점 메모 <small class="text-muted">(선택)</small></div>
-        <textarea class="form-control" id="scoringComment" rows="4"
-          placeholder="특이사항, 감점 사유 등 기록"
-          oninput="autoSaveComment('${itemId}', this.value)">${record.comment || ''}</textarea>
-      </div>
-    </div>
-
-    <div class="scoring-nav-btns">
-      <button type="button" class="btn btn-outline-secondary"
-        ${!prevItem ? 'disabled' : ''}
-        onclick="renderScoringItemPanel('${prevItem ? prevItem.id : ''}')">
-        <i class="fa-solid fa-arrow-left me-1"></i>이전 항목
-      </button>
-      <button type="button" class="btn btn-outline-secondary"
-        ${!nextItem ? 'disabled' : ''}
-        onclick="renderScoringItemPanel('${nextItem ? nextItem.id : ''}')">
-        다음 항목<i class="fa-solid fa-arrow-right ms-1"></i>
-      </button>
-    </div>
-  `;
-
-  // 하단 네비 버튼 상태 갱신
-  const navPrevBtn = document.getElementById('navPrevBtn');
-  const navNextBtn = document.getElementById('navNextBtn');
-  if (navPrevBtn) navPrevBtn.disabled = currentIndex <= 0;
-  if (navNextBtn) navNextBtn.disabled = currentIndex >= EVALUATION_ITEMS.length - 1;
-}
-
-function generateScoreValues(item) {
-  if (item.isBonus) return [0, item.maxScore];
-  const values = [];
-  for (let i = 0; i <= item.maxScore; i++) values.push(i);
-  return values;
-}
-
-function bindScoringPanelEvents(item) {
-  const naCheckbox = document.getElementById('naCheckbox');
-  const naReasonArea = document.getElementById('naReasonArea');
-  const scoreInputArea = document.getElementById('scoreInputArea');
-
-  if (naCheckbox) {
-    naCheckbox.addEventListener('change', function () {
-      if (naReasonArea) naReasonArea.style.display = this.checked ? '' : 'none';
-      if (scoreInputArea) {
-        scoreInputArea.style.opacity = this.checked ? '0.4' : '1';
-        scoreInputArea.style.pointerEvents = this.checked ? 'none' : '';
-      }
-    });
-  }
-
-  document.querySelectorAll('.scoring-score-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
-      const val = Number(this.dataset.value);
-      const directInput = document.getElementById('scoreDirectInput');
-      if (directInput) directInput.value = val;
-      document.querySelectorAll('.scoring-score-btn').forEach(b => {
-        b.classList.remove('btn-primary');
-        b.classList.add('btn-outline-secondary');
-      });
-      this.classList.remove('btn-outline-secondary');
-      this.classList.add('btn-primary');
-    });
-  });
-
-  const directInput = document.getElementById('scoreDirectInput');
-  if (directInput) {
-    directInput.addEventListener('input', function () {
-      let val = Number(this.value);
-      if (val > item.maxScore) { val = item.maxScore; this.value = val; }
-      if (val < 0) { val = 0; this.value = 0; }
-      document.querySelectorAll('.scoring-score-btn').forEach(b => {
-        const bVal = Number(b.dataset.value);
-        b.classList.toggle('btn-primary', bVal === val);
-        b.classList.toggle('btn-outline-secondary', bVal !== val);
-      });
-    });
-  }
-}
-
-function saveScoringItem() {
-  const itemId = _scoringSelectedItemId;
-  if (!itemId) return;
-
-  const naCheckbox = document.getElementById('naCheckbox');
-  const naReasonInput = document.getElementById('naReasonInput');
-  const scoreDirectInput = document.getElementById('scoreDirectInput');
-  const scoringComment = document.getElementById('scoringComment');
-
-  const isNA = naCheckbox ? naCheckbox.checked : false;
-  const naReason = naReasonInput ? naReasonInput.value.trim() : '';
-  const score = scoreDirectInput && scoreDirectInput.value !== ''
-    ? Number(scoreDirectInput.value)
-    : null;
-  const comment = scoringComment ? scoringComment.value.trim() : '';
-
-  saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
-    score: isNA ? null : score,
-    isNA,
-    naReason,
-    comment
-  });
-
-  renderScoringsSidebar();
-  updateScoringFooter();
-  updateScoringProgress();
-  showToast('저장되었습니다.');
-}
-
-function updateScoringFooter() {
-  const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
-  if (!scoringData) return;
-
-  const result = calculateScore(scoringData);
-  const setEl = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
-  };
-
-  setEl('footerRealScore', result.실취득점수);
-  setEl('footerRealMax', result.실배점);
-  setEl('footerConvertedScore', result.환산점수.toFixed(2));
-  setEl('footerBonus', result.가점);
-  setEl('footerFinalScore', result.최종점수.toFixed(2));
-
-  const gradeBadge = document.getElementById('footerGradeBadge');
-  if (gradeBadge && result.등급) {
-    gradeBadge.textContent = result.등급;
-    gradeBadge.className = `badge ms-2 ${getGradeClass(result.등급)}`;
-  }
-}
-
-function updateScoringProgress() {
-  const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
-  const items = scoringData ? scoringData.items : {};
-  const total = EVALUATION_ITEMS.length;
-  const done = EVALUATION_ITEMS.filter(item => {
-    const r = items[item.id];
-    return r && (r.isNA || (r.score !== null && r.score !== undefined));
-  }).length;
-
-  const pct = Math.round((done / total) * 100);
-  const progressText = document.getElementById('scoringProgressText');
-  const progressBar = document.getElementById('scoringProgressBar');
-  if (progressText) progressText.textContent = `${done}/${total} (${pct}%)`;
-  if (progressBar) {
-    progressBar.style.width = `${pct}%`;
-    progressBar.setAttribute('aria-valuenow', pct);
-  }
-}
-
-/* ----------------------------------------------------------
-   5. 임시저장 / 채점완료 및 공개
-   ---------------------------------------------------------- */
-
-function initScoringButtons() {
-  const saveDraftBtn = document.getElementById('scoringSaveDraftBtn');
-  const publishBtn = document.getElementById('scoringPublishBtn');
-
-  if (saveDraftBtn) {
-    saveDraftBtn.onclick = function () {
-      showToast('임시저장 되었습니다.');
-    };
-  }
-
-  if (publishBtn) {
-    publishBtn.onclick = function () {
-      const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
-      const items = scoringData ? scoringData.items : {};
-      const unscored = EVALUATION_ITEMS.filter(item => {
-        const r = items[item.id];
-        return !r || (!r.isNA && (r.score === null || r.score === undefined));
-      });
-
-      let confirmMsg = '채점을 완료하고 협력사에 결과를 공개하시겠습니까?';
-      if (unscored.length > 0) {
-        confirmMsg = `미채점 항목이 ${unscored.length}개 있습니다.\n그래도 공개하시겠습니까?`;
-      }
-
-      if (confirm(confirmMsg)) {
-        publishResult(_scoringCompanyId, _scoringPeriodId);
-        showToast('채점 결과가 공개되었습니다.');
-        renderScoringsSidebar();
-        updateScoringFooter();
-      }
-    };
-  }
-}
-
-/* ----------------------------------------------------------
-   6. 초기화
-   ---------------------------------------------------------- */
-
-function initScoringModule() {
-  return {
-    ready: true,
-    itemCount: EVALUATION_ITEMS.length,
-    storageKey: SCORING_STORAGE_KEY
-  };
-}
-
-// 점수 클릭 즉시 저장
-function clickScore(itemId, value) {
-  const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
-  const record = (scoringData && scoringData.items[itemId]) || {};
-  if (record.isNA) return;
-
-  saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
-    score: value,
-    isNA: false,
-    naReason: record.naReason || '',
-    comment: record.comment || ''
-  });
-
-  // 버튼 UI 즉시 반영
-  document.querySelectorAll('.score-click-btn').forEach(btn => {
-    btn.classList.toggle('selected', Number(btn.dataset.value) === value);
-  });
-
-  // 선택 표시 갱신
-  const display = document.querySelector('.score-selected-display');
-  const item = EVALUATION_ITEMS.find(i => i.id === itemId);
-  if (display && item) {
-    display.className = 'score-selected-display';
-    display.innerHTML = `선택된 점수: <strong class="text-primary">${value}점</strong> / ${item.maxScore}점`;
-  }
-
-  renderScoringsSidebar();
-  updateScoringFooter();
-  updateScoringProgress();
-  showToast(`${value}점 저장되었습니다.`);
-}
-
-// N/A 토글 즉시 저장
-function toggleNA(itemId, isNA) {
-  const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
-  const record = (scoringData && scoringData.items[itemId]) || {};
-
-  saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
-    score: isNA ? null : record.score,
-    isNA: isNA,
-    naReason: record.naReason || '',
-    comment: record.comment || ''
-  });
-
-  const naReasonArea = document.getElementById('naReasonArea');
-  const scoreGrid = document.getElementById('scoreClickGrid');
-  const naCard = document.querySelector('.na-toggle-card');
-
-  if (naReasonArea) naReasonArea.style.display = isNA ? '' : 'none';
-  if (scoreGrid) {
-    scoreGrid.querySelectorAll('.score-click-btn').forEach(btn => {
-      btn.disabled = isNA;
-      btn.classList.toggle('disabled-btn', isNA);
-    });
-  }
-  if (naCard) naCard.classList.toggle('na-active', isNA);
-
-  renderScoringsSidebar();
-  updateScoringFooter();
-  updateScoringProgress();
-}
-
-// N/A 사유 자동 저장 (디바운스)
-let _naReasonTimer = null;
-function saveNAReason(itemId, value) {
-  clearTimeout(_naReasonTimer);
-  _naReasonTimer = setTimeout(() => {
-    const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
-    const record = (scoringData && scoringData.items[itemId]) || {};
-    saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
-      score: record.score,
-      isNA: true,
-      naReason: value,
-      comment: record.comment || ''
-    });
-  }, 500);
-}
-
-// 메모 자동 저장 (디바운스)
-let _commentTimer = null;
-function autoSaveComment(itemId, value) {
-  clearTimeout(_commentTimer);
-  _commentTimer = setTimeout(() => {
-    const scoringData = getScoringData(_scoringCompanyId, _scoringPeriodId);
-    const record = (scoringData && scoringData.items[itemId]) || {};
-    saveItemScore(_scoringCompanyId, _scoringPeriodId, itemId, {
-      score: record.score !== undefined ? record.score : null,
-      isNA: record.isNA || false,
-      naReason: record.naReason || '',
-      comment: value
-    });
-  }, 600);
-}
+          <span class="item-score">${scoreText
