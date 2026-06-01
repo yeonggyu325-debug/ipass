@@ -297,3 +297,275 @@ async function renderEvaluationForm() {
     for (const item of EVALUATION_ITEMS.filter((i) => i.category === category)) {
       const card = await createEvaluationItemCard(
         item,
+        submission.items[item.id] || getEmptyEvaluationItemState(item),
+        profile
+      );
+      pane.appendChild(card);
+    }
+    content.appendChild(pane);
+  }
+
+  document.querySelectorAll('.evaluation-record, .na-reason-input').forEach(autoResizeTextarea);
+  updateEvaluationProgress();
+}
+
+async function createEvaluationItemCard(item, state, profile) {
+  const links = await loadObject(STORAGE_KEYS.attachmentLinks);
+  const attachment = item.attachmentId ? links[item.attachmentId] : null;
+  const isAutoNA = await checkAutoNA(item.id, profile.industryCode, profile.workerCount);
+  const isManualNA = !isAutoNA && Boolean(state.isManualNA);
+
+  const card = document.createElement('article');
+  card.className = `evaluation-item-card ${isAutoNA ? 'is-auto-na' : ''} ${isManualNA ? 'is-manual-na' : ''}`;
+  card.dataset.itemId = item.id;
+  card.dataset.autoNa = String(isAutoNA);
+  card.dataset.maxScore = String(item.maxScore);
+  card.dataset.isBonus = String(item.isBonus);
+
+  const collapseId = `criteria_${item.id}`;
+  card.innerHTML = `
+    <div class="evaluation-item-head">
+      <div>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <h2 class="evaluation-item-title">${item.subcategory}</h2>
+          ${item.isBonus ? '<span class="status-badge status-primary">가점</span>' : ''}
+          <span class="status-badge ${isAutoNA ? 'status-primary' : isManualNA ? 'status-reviewing' : 'status-muted'} na-state-badge">${isAutoNA ? '자동 N/A' : isManualNA ? '수동 N/A' : '작성대상'}</span>
+        </div>
+        <div class="small-muted">${item.category}</div>
+      </div>
+      <div class="d-flex flex-column align-items-end gap-2">
+        <span class="score-pill">${item.maxScore}점</span>
+        <button type="button" class="btn btn-sm btn-outline-primary manual-na-btn" data-manual-na="${item.id}" ${isAutoNA ? 'disabled' : ''}>N/A 처리</button>
+      </div>
+    </div>
+    <div class="evaluation-item-body">
+      <button class="btn btn-sm btn-outline-primary mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="true" aria-controls="${collapseId}">
+        판정기준 접기/펼치기
+      </button>
+      <div class="collapse show mb-3" id="${collapseId}">
+        <div class="criteria-box">${item.criteria}</div>
+      </div>
+      <div class="row g-3">
+        <div class="col-12 col-lg-6">
+          <div class="fw-bold mb-2">세부 체크항목</div>
+          <div class="check-item-list"></div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <div class="fw-bold mb-2">배점 안내</div>
+          <div class="evaluation-guide mb-3">${item.scoreGuide}</div>
+          <label class="form-label" for="record_${item.id}">평가내용 기록</label>
+          <textarea class="form-control evaluation-record" id="record_${item.id}" data-record-content="${item.id}" placeholder="${escapeAttribute(item.recordGuide)}" ${isAutoNA || isManualNA ? 'disabled' : ''}></textarea>
+          <div class="na-reason-wrap mt-3">
+            <label class="form-label" for="naReason_${item.id}">N/A 사유 <span class="required-mark">*</span></label>
+            <textarea class="form-control na-reason-input" id="naReason_${item.id}" data-na-reason="${item.id}" placeholder="N/A 사유를 입력해 주세요." ${isAutoNA || !isManualNA ? 'disabled' : 'required'}></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="attachment-area mt-3"></div>
+    </div>
+  `;
+
+  const list = card.querySelector('.check-item-list');
+  item.checkItems.forEach((checkItem, index) => {
+    const id = `check_${item.id}_${index}`;
+    const wrap = document.createElement('div');
+    wrap.className = 'form-check mb-2';
+    wrap.innerHTML = `
+      <input class="form-check-input evaluation-check" type="checkbox" id="${id}" data-check-item="${item.id}" data-check-index="${index}" ${state.checkResults[index] ? 'checked' : ''} ${isAutoNA || isManualNA ? 'disabled' : ''}>
+      <label class="form-check-label" for="${id}">${checkItem}</label>
+    `;
+    list.appendChild(wrap);
+  });
+
+  card.querySelector('[data-record-content]').value = state.recordContent || '';
+  card.querySelector('[data-na-reason]').value = state.naReason || '';
+
+  if (attachment && attachment.url) {
+    const area = card.querySelector('.attachment-area');
+    const link = document.createElement('a');
+    link.className = 'btn btn-sm btn-outline-primary';
+    link.href = attachment.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = `📎 ${attachment.displayName} 다운로드`;
+    area.appendChild(link);
+  }
+
+  return card;
+}
+
+// ──────────────────────────────────────────
+//  평가 입력 이벤트
+// ──────────────────────────────────────────
+
+function handleEvaluationInput(event) {
+  if (event.target.matches('.evaluation-record, .na-reason-input')) {
+    autoResizeTextarea(event.target);
+  }
+  updateEvaluationProgress();
+}
+
+function handleEvaluationClick(event) {
+  const button = event.target.closest('[data-manual-na]');
+  if (!button) return;
+
+  const card = button.closest('.evaluation-item-card');
+  if (!card || card.dataset.autoNa === 'true') return;
+
+  const enabled = !card.classList.contains('is-manual-na');
+  applyManualNAState(card, enabled);
+  updateEvaluationProgress();
+}
+
+function applyManualNAState(card, enabled) {
+  card.classList.toggle('is-manual-na', enabled);
+  const badge = card.querySelector('.na-state-badge');
+  badge.className = `status-badge ${enabled ? 'status-reviewing' : 'status-muted'} na-state-badge`;
+  badge.textContent = enabled ? '수동 N/A' : '작성대상';
+
+  card.querySelectorAll('.evaluation-check, .evaluation-record').forEach((input) => {
+    input.disabled = enabled;
+  });
+
+  const reason = card.querySelector('.na-reason-input');
+  reason.disabled = !enabled;
+  reason.required = enabled;
+  if (enabled) reason.focus();
+}
+
+function updateEvaluationProgress() {
+  const cards = Array.from(document.querySelectorAll('#evaluationTabContent .evaluation-item-card'));
+  const total = cards.length;
+  const completed = cards.filter(isEvaluationCardCompleted).length;
+  const percent = total ? Math.round((completed / total) * 100) : 0;
+
+  document.getElementById('evaluationProgressText').textContent = `전체 ${total}항목 중 ${completed}항목 작성 완료`;
+  document.getElementById('evaluationProgressPercent').textContent = `${percent}%`;
+  const bar = document.getElementById('evaluationProgressBar');
+  bar.style.width = `${percent}%`;
+  bar.textContent = `${percent}%`;
+  bar.parentElement.setAttribute('aria-valuenow', String(percent));
+}
+
+function isEvaluationCardCompleted(card) {
+  if (card.dataset.autoNa === 'true') return true;
+  if (card.classList.contains('is-manual-na')) {
+    return Boolean(card.querySelector('.na-reason-input').value.trim());
+  }
+  const hasChecked = Array.from(card.querySelectorAll('.evaluation-check')).some((input) => input.checked);
+  const hasRecord = Boolean(card.querySelector('.evaluation-record').value.trim());
+  return hasChecked || hasRecord;
+}
+
+// ──────────────────────────────────────────
+//  제출 / 임시저장
+// ──────────────────────────────────────────
+
+async function collectEvaluationSubmission(status) {
+  const user = await getCurrentUserRecord();
+  const period = await getActivePeriod();
+  const existing = await getEvaluationSubmission(user.id, period.id);
+  const items = {};
+
+  document.querySelectorAll('#evaluationTabContent .evaluation-item-card').forEach((card) => {
+    const itemId = card.dataset.itemId;
+    items[itemId] = {
+      checkResults: Array.from(card.querySelectorAll('.evaluation-check')).map((input) => input.checked),
+      recordContent: card.querySelector('.evaluation-record').value.trim(),
+      isManualNA: card.classList.contains('is-manual-na'),
+      naReason: card.querySelector('.na-reason-input').value.trim()
+    };
+  });
+
+  return {
+    companyId: user.id,
+    periodId: period.id,
+    status,
+    submittedAt: status === 'submitted' ? new Date().toISOString() : (existing.submittedAt || ''),
+    savedAt: new Date().toISOString(),
+    items
+  };
+}
+
+async function saveEvaluationDraft() {
+  const submission = await collectEvaluationSubmission('draft');
+  const submissions = await loadObject(STORAGE_KEYS.evaluationSubmissions);
+  submissions[getSubmissionKey(submission.companyId, submission.periodId)] = submission;
+  await saveObject(STORAGE_KEYS.evaluationSubmissions, submissions);
+  clearCache(STORAGE_KEYS.evaluationSubmissions);
+  showToast('임시저장 완료');
+}
+
+function openSubmitConfirmModal() {
+  if (!validateManualNAReasons()) return;
+  submitConfirmModal.show();
+}
+
+function validateManualNAReasons() {
+  const missingCard = Array.from(
+    document.querySelectorAll('#evaluationTabContent .evaluation-item-card.is-manual-na')
+  ).find((card) => !card.querySelector('.na-reason-input').value.trim());
+
+  if (missingCard) {
+    const title = missingCard.querySelector('.evaluation-item-title').textContent;
+    alert(`${title} 항목의 N/A 사유를 입력해 주세요.`);
+    missingCard.querySelector('.na-reason-input').focus();
+    return false;
+  }
+  return true;
+}
+
+async function submitEvaluation() {
+  if (!validateManualNAReasons()) return;
+
+  const submission = await collectEvaluationSubmission('submitted');
+  const submissions = await loadObject(STORAGE_KEYS.evaluationSubmissions);
+  submissions[getSubmissionKey(submission.companyId, submission.periodId)] = submission;
+  await saveObject(STORAGE_KEYS.evaluationSubmissions, submissions);
+
+  const allUsers = await loadUsers();
+  const updatedUsers = allUsers.map((user) =>
+    user.id === submission.companyId ? { ...user, submissionStatus: 'submitted' } : user
+  );
+  await saveUsers(updatedUsers);
+  clearCache('users');
+  clearCache(STORAGE_KEYS.evaluationSubmissions);
+
+  const updatedUser = updatedUsers.find((user) => user.id === submission.companyId);
+  setCurrentUser(updatedUser);
+  submitConfirmModal.hide();
+  await renderPartnerMain();
+  requestPage('partnerMainPage');
+  showToast('제출되었습니다.');
+}
+
+// ──────────────────────────────────────────
+//  헬퍼
+// ──────────────────────────────────────────
+
+async function getCurrentCompanyProfile() {
+  const user = await getCurrentUserRecord();
+  if (!user) return null;
+  const profiles = await loadObject(STORAGE_KEYS.companyProfiles);
+  return profiles[user.id] || null;
+}
+
+async function getEvaluationSubmission(companyId, periodId) {
+  const submissions = await loadObject(STORAGE_KEYS.evaluationSubmissions);
+  return submissions[getSubmissionKey(companyId, periodId)] || {
+    companyId,
+    periodId,
+    status: 'draft',
+    submittedAt: '',
+    items: {}
+  };
+}
+
+function getEmptyEvaluationItemState(item) {
+  return {
+    checkResults: item.checkItems.map(() => false),
+    recordContent: '',
+    isManualNA: false,
+    naReason: ''
+  };
+}
