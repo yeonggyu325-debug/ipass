@@ -1,77 +1,47 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>협력사 이행수준평가</title>
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    협력사 이행수준평가
+  </title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
 
     body {
-      margin: 0;
-      font-family: Arial, "Noto Sans KR", sans-serif;
+      font-family:
+        Arial,
+        "Noto Sans KR",
+        sans-serif;
+
       background: #f4f6f8;
+
+      margin: 0;
+
+      padding: 40px;
+
       color: #1f2937;
     }
 
-    .topbar {
-      height: 64px;
+    .card {
+      max-width: 800px;
+
+      margin: auto;
+
       background: white;
-      border-bottom: 1px solid #dfe3e8;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-    }
 
-    .brand {
-      font-size: 18px;
-      font-weight: 800;
-    }
+      border:
+        1px solid #ddd;
 
-    .bell {
-      background: white;
-      border: 1px solid #dfe3e8;
-      border-radius: 8px;
-      padding: 10px 14px;
-    }
+      border-radius: 12px;
 
-    .layout {
-      display: grid;
-      grid-template-columns: 230px 1fr;
-      min-height: calc(100vh - 64px);
-    }
-
-    .sidebar {
-      background: white;
-      border-right: 1px solid #dfe3e8;
-      padding: 20px 14px;
-    }
-
-    .sidebar-title {
-      font-size: 12px;
-      color: #6b7280;
-      margin: 8px 10px 12px;
-    }
-
-    .nav {
-      padding: 11px 12px;
-      margin-bottom: 4px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    .nav:hover,
-    .nav.active {
-      background: #eef4fb;
-      color: #1f5aa6;
-      font-weight: 700;
-    }
-
-    .content {
       padding: 24px;
     }
 
@@ -79,1128 +49,124 @@
       margin-top: 0;
     }
 
-    .sub {
-      font-size: 14px;
-      color: #6b7280;
-      margin-bottom: 20px;
-    }
-
-    .kpis {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .kpi {
-      background: white;
-      border: 1px solid #dfe3e8;
-      border-radius: 10px;
-      padding: 16px;
-    }
-
-    .kpi-label {
-      color: #6b7280;
-      font-size: 13px;
-    }
-
-    .kpi-value {
-      font-size: 28px;
-      font-weight: 800;
-      margin-top: 8px;
-    }
-
-    .card {
-      background: white;
-      border: 1px solid #dfe3e8;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .card-title {
-      padding: 15px 16px;
-      border-bottom: 1px solid #dfe3e8;
-      font-weight: 700;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th,
-    td {
-      padding: 12px;
-      border-bottom: 1px solid #edf0f2;
-      text-align: left;
-      font-size: 14px;
-    }
-
-    th {
-      background: #fafbfc;
-      font-size: 12px;
-      color: #4b5563;
-    }
-
-    tbody tr {
-      cursor: pointer;
-    }
-
-    tbody tr:hover {
-      background: #f7fbff;
-    }
-
-    .tag {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .green {
-      background: #ecfdf3;
+    .success {
       color: #15803d;
-    }
-
-    .orange {
-      background: #fff7ed;
-      color: #b45309;
-    }
-
-    .blue {
-      background: #eaf2ff;
-      color: #1d4ed8;
-    }
-
-    .gray {
-      background: #f3f4f6;
-      color: #4b5563;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .back {
-      border: 1px solid #dfe3e8;
-      background: white;
-      padding: 9px 12px;
-      border-radius: 7px;
-      cursor: pointer;
-      margin-bottom: 12px;
-    }
-
-    .company-info {
-      background: white;
-      border: 1px solid #dfe3e8;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-
-    .field label {
-      display: block;
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 5px;
-    }
-
-    .field input {
-      width: 100%;
-      height: 40px;
-      border: 1px solid #dfe3e8;
-      border-radius: 7px;
-      padding: 0 10px;
-      background: #f9fafb;
-    }
-
-    .item {
-      background: white;
-      border: 1px solid #dfe3e8;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
-
-    .item-head {
-      padding: 15px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-    }
-
-    .item-body {
-      display: none;
-      border-top: 1px solid #dfe3e8;
-      padding: 16px;
-    }
-
-    .item.open .item-body {
-      display: block;
-    }
-
-    .guide {
-      background: #f7fafc;
-      border-left: 4px solid #1f5aa6;
-      padding: 12px;
-      margin-bottom: 12px;
     }
 
     .error {
       color: #b91c1c;
-      padding: 20px;
     }
 
-    @media(max-width: 900px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
+    pre {
+      background: #f7f7f7;
 
-      .sidebar {
-        display: none;
-      }
+      padding: 16px;
 
-      .kpis {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      border-radius: 8px;
 
-      .info-grid {
-        grid-template-columns: 1fr;
-      }
+      overflow: auto;
     }
+
   </style>
+
 </head>
 
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    I-PASS 협력사 이행수준평가
-  </div>
+<div class="card">
 
-  <button class="bell">
-    🔔
-    <span id="noticeCount">0</span>
-  </button>
-</header>
+  <h1>
+    협력사 이행수준평가
+  </h1>
 
-<div class="layout">
+  <p id="status">
+    API 연결 확인 중...
+  </p>
 
-  <aside class="sidebar">
-
-    <div class="sidebar-title">
-      관리자
-    </div>
-
-    <div
-      class="nav active"
-      onclick="showDashboard()"
-    >
-      대시보드
-    </div>
-
-    <div
-      class="nav"
-      onclick="showTargets()"
-    >
-      평가대상 관리
-    </div>
-
-    <div class="nav">
-      평가회차 관리
-    </div>
-
-    <div class="nav">
-      평가표 관리
-    </div>
-
-    <div class="nav">
-      협력사 관리
-    </div>
-
-    <div class="nav">
-      계정관리
-    </div>
-
-  </aside>
-
-  <main class="content">
-
-    <!-- 대시보드 -->
-
-    <section id="dashboard">
-
-      <h1 id="dashboardTitle">
-        평가 대시보드
-      </h1>
-
-      <div
-        class="sub"
-        id="cycleText"
-      >
-        평가회차 불러오는 중...
-      </div>
-
-      <div class="kpis">
-
-        <div class="kpi">
-          <div class="kpi-label">
-            평가대상 업체
-          </div>
-          <div
-            class="kpi-value"
-            id="targetCount"
-          >
-            -
-          </div>
-        </div>
-
-        <div class="kpi">
-          <div class="kpi-label">
-            제출완료
-          </div>
-          <div
-            class="kpi-value"
-            id="submittedCount"
-          >
-            -
-          </div>
-        </div>
-
-        <div class="kpi">
-          <div class="kpi-label">
-            평가중
-          </div>
-          <div
-            class="kpi-value"
-            id="evaluatingCount"
-          >
-            -
-          </div>
-        </div>
-
-        <div class="kpi">
-          <div class="kpi-label">
-            평가완료
-          </div>
-          <div
-            class="kpi-value"
-            id="completedCount"
-          >
-            -
-          </div>
-        </div>
-
-        <div class="kpi">
-          <div class="kpi-label">
-            미확인 알림
-          </div>
-          <div
-            class="kpi-value"
-            id="unreadCount"
-          >
-            -
-          </div>
-        </div>
-
-      </div>
-
-      <div class="card">
-
-        <div class="card-title">
-          협력사 진행현황
-        </div>
-
-        <div id="companyTable">
-          불러오는 중...
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- 평가대상 -->
-
-    <section
-      id="targets"
-      class="hidden"
-    >
-
-      <h1>
-        평가대상 관리
-      </h1>
-
-      <div class="sub">
-        평가회차별 협력사 선정 현황
-      </div>
-
-      <div class="card">
-
-        <div id="targetTable">
-          불러오는 중...
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- 평가상세 -->
-
-    <section
-      id="evaluation"
-      class="hidden"
-    >
-
-      <button
-        class="back"
-        onclick="showDashboard()"
-      >
-        ← 대시보드
-      </button>
-
-      <h1 id="evaluationTitle">
-        평가 상세
-      </h1>
-
-      <div class="company-info">
-
-        <div class="info-grid">
-
-          <div class="field">
-            <label>회사명</label>
-            <input
-              id="companyName"
-              readonly
-            >
-          </div>
-
-          <div class="field">
-            <label>업종</label>
-            <input
-              id="industryName"
-              readonly
-            >
-          </div>
-
-          <div class="field">
-            <label>사업자등록번호</label>
-            <input
-              id="businessNumber"
-              readonly
-            >
-          </div>
-
-          <div class="field">
-            <label>대표자명</label>
-            <input
-              id="representativeName"
-              readonly
-            >
-          </div>
-
-          <div class="field">
-            <label>상시근로자 수</label>
-            <input
-              id="workerCount"
-              readonly
-            >
-          </div>
-
-          <div class="field">
-            <label>진행상태</label>
-            <input
-              id="targetStatus"
-              readonly
-            >
-          </div>
-
-        </div>
-
-      </div>
-
-      <div id="evaluationItems">
-      </div>
-
-    </section>
-
-  </main>
+  <pre id="result"></pre>
 
 </div>
 
 
 <script>
 
-async function api(path) {
+async function start() {
 
-  const response =
-    await fetch(API + path);
-
-  if (!response.ok) {
-    throw new Error(
-      "API 오류 " + response.status
+  const status =
+    document.getElementById(
+      "status"
     );
-  }
 
-  return response.json();
+  const result =
+    document.getElementById(
+      "result"
+    );
 
-}
-
-
-function statusTag(status) {
-
-  const map = {
-
-    pending:
-      ["대기", "gray"],
-
-    drafting:
-      ["작성중", "gray"],
-
-    submitted:
-      ["제출완료", "green"],
-
-    evaluating:
-      ["평가중", "orange"],
-
-    finalized:
-      ["평가완료", "blue"]
-
-  };
-
-  const value =
-    map[status] ||
-    [status || "-", "gray"];
-
-  return `
-    <span class="tag ${value[1]}">
-      ${value[0]}
-    </span>
-  `;
-}
-
-
-async function loadDashboard() {
 
   try {
 
-    const cycleData =
-      await api(
-        "/api/cycles"
+    const response =
+      await fetch(
+        "/api/companies"
       );
 
-    const cycle =
-      cycleData.cycles?.[0];
 
-    if (cycle) {
+    const text =
+      await response.text();
 
-      document.getElementById(
-        "dashboardTitle"
-      ).textContent =
-        cycle.cycle_name +
-        " 대시보드";
 
-      document.getElementById(
-        "cycleText"
-      ).textContent =
-        cycle.start_at +
-        " ~ " +
-        cycle.end_at;
+    if (!response.ok) {
+
+      throw new Error(
+        "HTTP " +
+        response.status +
+        "\n" +
+        text
+      );
 
     }
 
 
-    const dashboardData =
-      await api(
-        "/api/dashboard"
-      );
-
-    const d =
-      dashboardData.dashboard || {};
-
-
-    document.getElementById(
-      "targetCount"
-    ).textContent =
-      d.target_company_count ?? 0;
-
-
-    document.getElementById(
-      "submittedCount"
-    ).textContent =
-      d.submitted_count ?? 0;
-
-
-    document.getElementById(
-      "evaluatingCount"
-    ).textContent =
-      d.evaluating_count ?? 0;
-
-
-    document.getElementById(
-      "completedCount"
-    ).textContent =
-      d.completed_count ?? 0;
-
-
-    document.getElementById(
-      "unreadCount"
-    ).textContent =
-      d.unread_notification_count ?? 0;
-
-
-    document.getElementById(
-      "noticeCount"
-    ).textContent =
-      d.unread_notification_count ?? 0;
-
-
-    await loadCompanies(
-      cycle?.id
-    );
-
-  }
-
-  catch (error) {
-
-    document.getElementById(
-      "companyTable"
-    ).innerHTML =
-      `<div class="error">
-        ${error.message}
-      </div>`;
-
-  }
-
-}
-
-
-async function loadCompanies(
-  cycleId
-) {
-
-  let path =
-    "/api/targets";
-
-  if (cycleId) {
-
-    path +=
-      "?cycle_id=" +
-      encodeURIComponent(
-        cycleId
-      );
-
-  }
-
-  const data =
-    await api(path);
-
-  const targets =
-    data.targets || [];
-
-
-  let rows = "";
-
-
-  targets
-    .filter(
-      t => t.is_selected === 1
-    )
-    .forEach(t => {
-
-      rows += `
-
-        <tr
-          onclick="
-            openEvaluation(
-              '${t.id}'
-            )
-          "
-        >
-
-          <td>
-            ${t.company_name}
-          </td>
-
-          <td>
-            ${t.industry_name || "-"}
-          </td>
-
-          <td>
-            ${t.worker_count ?? "-"}
-          </td>
-
-          <td>
-            ${statusTag(
-              t.status
-            )}
-          </td>
-
-        </tr>
-
-      `;
-
-    });
-
-
-  document.getElementById(
-    "companyTable"
-  ).innerHTML = `
-
-    <table>
-
-      <thead>
-
-        <tr>
-
-          <th>
-            협력사
-          </th>
-
-          <th>
-            업종
-          </th>
-
-          <th>
-            상시근로자
-          </th>
-
-          <th>
-            상태
-          </th>
-
-        </tr>
-
-      </thead>
-
-      <tbody>
-
-        ${rows}
-
-      </tbody>
-
-    </table>
-
-  `;
-
-}
-
-
-async function showTargets() {
-
-  hidePages();
-
-  document.getElementById(
-    "targets"
-  ).classList.remove(
-    "hidden"
-  );
-
-
-  try {
-
     const data =
-      await api(
-        "/api/targets"
+      JSON.parse(text);
+
+
+    status.className =
+      "success";
+
+
+    status.textContent =
+      "API + D1 연결 성공";
+
+
+    result.textContent =
+      JSON.stringify(
+        data,
+        null,
+        2
       );
-
-
-    let rows = "";
-
-
-    for (
-      const t of
-      data.targets || []
-    ) {
-
-      rows += `
-
-        <tr>
-
-          <td>
-            ${t.company_name}
-          </td>
-
-          <td>
-            ${t.industry_name || "-"}
-          </td>
-
-          <td>
-
-            ${
-              t.is_selected
-                ? "평가대상"
-                : "제외"
-            }
-
-          </td>
-
-          <td>
-            ${t.exclusion_reason || "-"}
-          </td>
-
-          <td>
-            ${statusTag(t.status)}
-          </td>
-
-        </tr>
-
-      `;
-
-    }
-
-
-    document.getElementById(
-      "targetTable"
-    ).innerHTML = `
-
-      <table>
-
-        <thead>
-
-          <tr>
-
-            <th>
-              협력사
-            </th>
-
-            <th>
-              업종
-            </th>
-
-            <th>
-              선정여부
-            </th>
-
-            <th>
-              제외사유
-            </th>
-
-            <th>
-              상태
-            </th>
-
-          </tr>
-
-        </thead>
-
-        <tbody>
-          ${rows}
-        </tbody>
-
-      </table>
-
-    `;
 
   }
 
   catch (error) {
 
-    document.getElementById(
-      "targetTable"
-    ).innerHTML =
-      `<div class="error">
-        ${error.message}
-      </div>`;
+    status.className =
+      "error";
+
+
+    status.textContent =
+      "연결 실패";
+
+
+    result.textContent =
+      error.message;
 
   }
 
 }
 
 
-async function openEvaluation(
-  targetId
-) {
-
-  hidePages();
-
-  document.getElementById(
-    "evaluation"
-  ).classList.remove(
-    "hidden"
-  );
-
-
-  try {
-
-    const data =
-      await api(
-        "/api/evaluations/" +
-        encodeURIComponent(
-          targetId
-        )
-      );
-
-
-    const target =
-      data.evaluation.target;
-
-
-    const items =
-      data.evaluation.items || [];
-
-
-    document.getElementById(
-      "evaluationTitle"
-    ).textContent =
-      target.company_name +
-      " 평가";
-
-
-    document.getElementById(
-      "companyName"
-    ).value =
-      target.company_name || "";
-
-
-    document.getElementById(
-      "industryName"
-    ).value =
-      target.industry_name || "";
-
-
-    document.getElementById(
-      "businessNumber"
-    ).value =
-      target.business_number || "";
-
-
-    document.getElementById(
-      "representativeName"
-    ).value =
-      target.representative_name || "";
-
-
-    document.getElementById(
-      "workerCount"
-    ).value =
-      target.worker_count ?? "";
-
-
-    document.getElementById(
-      "targetStatus"
-    ).value =
-      target.status || "";
-
-
-    let html = "";
-
-
-    items.forEach(
-      (item, index) => {
-
-        html += `
-
-          <div
-            class="
-              item
-              ${
-                index === 0
-                  ? "open"
-                  : ""
-              }
-            "
-          >
-
-            <div
-              class="item-head"
-              onclick="
-                this
-                  .parentElement
-                  .classList
-                  .toggle('open')
-              "
-            >
-
-              <div>
-
-                <strong>
-                  ${
-                    item.item_code || ""
-                  }
-                  ${item.item_name}
-                </strong>
-
-                &nbsp;
-
-                <span class="tag blue">
-
-                  배점
-                  ${item.max_score}
-                  점
-
-                </span>
-
-                ${
-                  item.applicable === 0
-
-                    ? `
-                      <span class="tag gray">
-                        N/A
-                      </span>
-                    `
-
-                    : ""
-                }
-
-              </div>
-
-              <div>
-                ▼
-              </div>
-
-            </div>
-
-
-            <div class="item-body">
-
-              <div class="guide">
-
-                <strong>
-                  제출 가이드
-                </strong>
-
-                <br><br>
-
-                ${
-                  item.guide_text ||
-                  "등록된 제출 가이드가 없습니다."
-                }
-
-              </div>
-
-
-              <p>
-
-                <strong>
-                  협력사 설명
-                </strong>
-
-                <br>
-
-                ${
-                  item.description ||
-                  "등록된 설명 없음"
-                }
-
-              </p>
-
-
-              <p>
-
-                <strong>
-                  관리자 점수
-                </strong>
-
-                <br>
-
-                ${
-                  item.earned_score ?? 0
-                }
-
-                /
-
-                ${
-                  item.max_score_snapshot ??
-                  item.max_score
-                }
-
-              </p>
-
-
-              <p>
-
-                <strong>
-                  보완사항
-                </strong>
-
-                <br>
-
-                ${
-                  item.evaluation_comment ||
-                  "없음"
-                }
-
-              </p>
-
-            </div>
-
-          </div>
-
-        `;
-
-      }
-    );
-
-
-    document.getElementById(
-      "evaluationItems"
-    ).innerHTML =
-      html ||
-      "등록된 평가항목이 없습니다.";
-
-  }
-
-  catch (error) {
-
-    document.getElementById(
-      "evaluationItems"
-    ).innerHTML =
-      `<div class="error">
-        ${error.message}
-      </div>`;
-
-  }
-
-}
-
-
-function hidePages() {
-
-  document.getElementById(
-    "dashboard"
-  ).classList.add(
-    "hidden"
-  );
-
-  document.getElementById(
-    "targets"
-  ).classList.add(
-    "hidden"
-  );
-
-  document.getElementById(
-    "evaluation"
-  ).classList.add(
-    "hidden"
-  );
-
-}
-
-
-function showDashboard() {
-
-  hidePages();
-
-  document.getElementById(
-    "dashboard"
-  ).classList.remove(
-    "hidden"
-  );
-
-}
-
-
-loadDashboard();
+start();
 
 </script>
 
