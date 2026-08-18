@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ipass",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-18",
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "partner_evaluation_db",
+      "database_name": "partner-evaluation-db",
+      "database_id": "ff99104d-d3b5-4af5-b48e-0a2fbc53564c"
+    }
+  ]
+}
