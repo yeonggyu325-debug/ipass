@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>협력사 EHS 포털 | Hniruja</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -1360,6 +1361,13 @@ main{
 @media(max-width:900px){.committee-admin-layout{grid-template-columns:1fr}.committee-list{max-height:260px;overflow:auto}.committee-score-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.committee-toolbar{align-items:flex-start}.committee-score-strip{grid-template-columns:1fr 1fr}.committee-meeting-fields{grid-template-columns:1fr}.committee-partner-row{grid-template-columns:82px minmax(0,1fr);padding:10px 12px}.committee-partner-row .person,.committee-partner-row .committee-state{grid-column:2}}
 
+
+/* ===== V16.4 Committee monthly-target UI + faster perceived loading ===== */
+.committee-partner-row{grid-template-columns:72px minmax(0,1fr) 150px 72px!important}.committee-partner-row .committee-state{justify-self:end}.committee-partner-row .person{display:block!important}
+.committee-create-grid{display:grid;grid-template-columns:160px minmax(220px,1fr);gap:12px;max-width:520px}.committee-create-grid label,.committee-meeting-fields.simple label{display:block;margin-bottom:6px;color:#7b8791;font-size:11px;font-weight:700}.committee-create-grid select,.committee-create-grid input{width:100%;height:42px;border:1px solid var(--line);border-radius:7px;background:#fff;padding:0 11px;color:var(--text)}
+.committee-meeting-fields.simple{grid-template-columns:180px minmax(0,1fr)}.committee-target-grid{display:grid;grid-template-columns:1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}.committee-target-row{display:grid;grid-template-columns:minmax(150px,1.25fr) 104px minmax(100px,.7fr) minmax(110px,.8fr);align-items:center;gap:10px;min-height:54px;padding:8px 12px;border-bottom:1px solid var(--line)}.committee-target-check{display:flex;align-items:center;gap:9px;min-width:0;color:#44515c;font-size:12px;font-weight:650;cursor:pointer}.committee-target-check input{width:16px;height:16px;accent-color:var(--primary);flex:0 0 auto}.committee-target-check span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.committee-target-row select,.committee-target-row .committee-person-input{height:34px;border:1px solid #e3e7ea;border-radius:6px;background:#fbfcfd;padding:0 8px;color:#58656f;font-size:11px}.committee-target-row select:disabled,.committee-target-row .committee-person-input:disabled{opacity:.45;background:#f6f7f8}.committee-target-row .committee-person-input::placeholder{color:#adb5bb}.committee-batch{display:flex;justify-content:flex-end;gap:6px;margin:-3px 0 9px}.committee-action-spacer{flex:1}.committee-actions{align-items:center}.committee-list .loading,.committee-editor .loading{min-height:88px}
+@media(max-width:760px){.committee-partner-row{grid-template-columns:52px minmax(0,1fr) 56px!important}.committee-partner-row .person{grid-column:2}.committee-partner-row .committee-state{grid-column:auto!important}.committee-target-grid{grid-template-columns:1fr}.committee-target-row{grid-template-columns:minmax(0,1fr) 92px;border-right:0}.committee-target-row .committee-person-input{grid-column:1/-1}.committee-create-grid,.committee-meeting-fields.simple{grid-template-columns:1fr}.committee-batch{justify-content:flex-start;flex-wrap:wrap}}
+
 </style>
 </head>
 <body>
@@ -1367,7 +1375,7 @@ main{
 <section id="publicPortal" class="login-shell">
   <div class="login-stage">
     <div class="login-brand">
-      <img class="login-brand-logo" src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja">
+      <img class="login-brand-logo" src="/hniruja-logo.png" alt="Hniruja">
       <div class="partner-portal-lockup">
         <span class="partner-portal-title">협력사 EHS 포털</span>
         <span class="partner-capsule">Partner</span>
@@ -1498,7 +1506,7 @@ main{
   <header class="app-header">
     <div class="app-header-inner">
       <a class="app-brand" href="javascript:void(0)" onclick="navigatePage('portalHome')">
-        <img src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja">
+        <img src="/hniruja-logo.png" alt="Hniruja">
         <div class="app-brand-copy">
           <span class="app-brand-name">협력사 EHS 포털</span>
           <span class="app-brand-chip">EHS</span>
@@ -1693,7 +1701,7 @@ main{
       <section class="page" id="page-committee">
         <div class="breadcrumb"><button onclick="navigatePage('portalHome')">홈</button><span>›</span>EHS 업무<span>›</span>안전보건협의체</div>
         <div class="page-header">
-          <div><h1>안전보건협의체 참석 현황</h1><div class="meta">협력사는 불참 1회당 3점이 감점되며, 협의체 점수는 10점 만점입니다.</div></div>
+          <div><h1>안전보건협의체 참석 현황</h1><div class="meta">월별 1회 운영 · 월마다 대상 협력사와 부서를 선택합니다. 협력사는 불참 1회당 3점이 감점됩니다.</div></div>
         </div>
         <div class="committee-toolbar">
           <div class="committee-toolbar-left"><select id="committeeYear" class="committee-year"></select></div>
@@ -1816,12 +1824,23 @@ async function firebasePost(endpoint,body,locale=false){
 function firebaseMessage(c){const m={EMAIL_NOT_FOUND:"등록되지 않은 이메일입니다.",INVALID_PASSWORD:"비밀번호가 올바르지 않습니다.",INVALID_LOGIN_CREDENTIALS:"이메일 또는 비밀번호가 올바르지 않습니다.",USER_DISABLED:"사용 중지된 계정입니다.",INVALID_EMAIL:"이메일 형식이 올바르지 않습니다.",TOO_MANY_ATTEMPTS_TRY_LATER:"로그인 시도가 너무 많습니다."};return m[c]||c}
 async function refreshToken(){const body=new URLSearchParams({grant_type:"refresh_token",refresh_token:session.refreshToken});const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body});const d=await r.json();if(!r.ok)throw new Error("로그인 세션이 만료되었습니다.");session.idToken=d.id_token;session.refreshToken=d.refresh_token||session.refreshToken;session.expiresAt=Date.now()+Number(d.expires_in||3600)*1000;sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));return session.idToken}
 async function token(){if(!session)throw new Error("로그인이 필요합니다.");if(Date.now()>session.expiresAt-60000)return refreshToken();return session.idToken}
-async function api(path,options={}){const t=await token();let r;try{r=await fetch(API_BASE+path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${t}`,...(options.body?{"content-type":"application/json"}:{}),...(options.headers||{})}})}catch{throw new Error("i-PaSS API에 연결하지 못했습니다.")}const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{throw new Error("서버 응답을 해석할 수 없습니다.")}if(!r.ok){const message=(r.status===404&&data.error==="API route not found")?"Worker 백엔드가 이전 버전입니다. V16.2.1 전체 프로젝트(src/index.js 포함)를 다시 배포해 주세요.":(data.error||`HTTP ${r.status}`);throw Object.assign(new Error(message),{status:r.status,data})}return data}
+async function api(path,options={}){const t=await token();let r;try{r=await fetch(API_BASE+path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${t}`,...(options.body?{"content-type":"application/json"}:{}),...(options.headers||{})}})}catch{throw new Error("i-PaSS API에 연결하지 못했습니다.")}const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{throw new Error("서버 응답을 해석할 수 없습니다.")}if(!r.ok){const message=(r.status===404&&data.error==="API route not found")?"Worker 백엔드가 이전 버전입니다. V16.4 전체 프로젝트(src/index.js 포함)를 다시 배포해 주세요.":(data.error||`HTTP ${r.status}`);throw Object.assign(new Error(message),{status:r.status,data})}return data}
 async function publicApi(path){const r=await fetch(API_BASE+path,{headers:{Accept:"application/json"}});const t=await r.text();if(!r.ok)throw new Error(t||`HTTP ${r.status}`);return t?JSON.parse(t):{}}
+const GET_CACHE=new Map(),GET_INFLIGHT=new Map();
+function cachedGet(key,loader,ttl=15000){
+  const now=Date.now(),hit=GET_CACHE.get(key);
+  if(hit&&hit.expiresAt>now)return Promise.resolve(hit.value);
+  if(GET_INFLIGHT.has(key))return GET_INFLIGHT.get(key);
+  const p=Promise.resolve().then(loader).then(value=>{GET_CACHE.set(key,{value,expiresAt:Date.now()+ttl});return value}).finally(()=>GET_INFLIGHT.delete(key));
+  GET_INFLIGHT.set(key,p);return p;
+}
+function apiCached(path,ttl=15000){return cachedGet(`auth:${path}`,()=>api(path),ttl)}
+function publicApiCached(path,ttl=30000){return cachedGet(`public:${path}`,()=>publicApi(path),ttl)}
+function invalidateGetCache(prefix=""){for(const key of GET_CACHE.keys()){if(!prefix||key.includes(prefix))GET_CACHE.delete(key)}}
 
 function todayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function formatNoticeDate(v){if(!v)return"";const d=new Date(v);if(Number.isNaN(d.getTime()))return String(v).slice(0,10);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`}
-async function showLatestNotice(placement){try{const data=await publicApi(`/api/public/notices?placement=${encodeURIComponent(placement)}`);const notice=(data.notices||[])[0];if(!notice)return;const key=`ipass.notice.hide.${placement}.${notice.id}`;if(localStorage.getItem(key)===todayKey())return;activeNoticeKey=key;$("hideNoticeToday").checked=false;$("noticePopupTitle").textContent=(notice.is_important?"[중요] ":"")+notice.title;$("noticePopupDate").textContent=formatNoticeDate(notice.created_at);$("noticePopupContent").innerHTML=`<div style="white-space:pre-wrap">${esc(notice.content||"")}</div>`;$("noticeModal").classList.remove("hidden")}catch{}}
+async function showLatestNotice(placement){try{const data=await publicApiCached(`/api/public/notices?placement=${encodeURIComponent(placement)}`,30000);const notice=(data.notices||[])[0];if(!notice)return;const key=`ipass.notice.hide.${placement}.${notice.id}`;if(localStorage.getItem(key)===todayKey())return;activeNoticeKey=key;$("hideNoticeToday").checked=false;$("noticePopupTitle").textContent=(notice.is_important?"[중요] ":"")+notice.title;$("noticePopupDate").textContent=formatNoticeDate(notice.created_at);$("noticePopupContent").innerHTML=`<div style="white-space:pre-wrap">${esc(notice.content||"")}</div>`;$("noticeModal").classList.remove("hidden")}catch{}}
 function closeNoticePopup(){if(activeNoticeKey&&$("hideNoticeToday").checked)localStorage.setItem(activeNoticeKey,todayKey());$("noticeModal").classList.add("hidden");activeNoticeKey=null}
 $("closeNoticePopup").onclick=closeNoticePopup;$("closeNoticePopupBottom").onclick=closeNoticePopup;$("noticeModal").onclick=e=>{if(e.target===$("noticeModal"))closeNoticePopup()};
 $("openTerms").onclick=()=>$("termsModal").classList.remove("hidden");$("closeTerms").onclick=()=>$("termsModal").classList.add("hidden");$("termsModal").onclick=e=>{if(e.target===$("termsModal"))$("termsModal").classList.add("hidden")};
@@ -1874,7 +1893,7 @@ $("actionModalCancel").onclick=()=>closeActionModal(false);
 $("actionModalConfirm").onclick=()=>closeActionModal(true);
 $("actionModal").onclick=e=>{if(e.target===$("actionModal"))closeActionModal(false)};
 
-function logout(){session=null;currentUser=null;sessionStorage.removeItem(SESSION_KEY);$("app").classList.add("hidden");$("publicPortal").classList.remove("hidden");$("loginPassword").value=""}
+function logout(){session=null;currentUser=null;GET_CACHE.clear();GET_INFLIGHT.clear();sessionStorage.removeItem(SESSION_KEY);$("app").classList.add("hidden");$("publicPortal").classList.remove("hidden");$("loginPassword").value=""}
 $("logoutBtn").onclick=logout;
 async function routeAfterLogin(me){
   if(me.auth_state!=="approved"){
@@ -1897,7 +1916,7 @@ async function routeAfterLogin(me){
   $("portalWelcome").textContent=`${company}의 EHS 업무를 한 화면에서 확인하세요.`;
   $("adminNavGroup").classList.toggle("hidden",currentUser.role!=="admin");
   showPage("portalHome");
-  await loadPortalHome();
+  loadPortalHome();
   showLatestNotice("after_login");
 }
 
@@ -1970,7 +1989,7 @@ function projectionCard(title,score,grade,primary=false){
 async function annualApi(year,companyId=""){
   const q=new URLSearchParams({year:String(year)});
   if(companyId)q.set("company_id",companyId);
-  return api(`/api/annual-ipass?${q.toString()}`);
+  return apiCached(`/api/annual-ipass?${q.toString()}`,15000);
 }
 async function loadAnnualIpassOverview(){
   const box=$("portalIpassOverview");
@@ -2080,7 +2099,7 @@ async function initAnnualAdminManager(targets){
 async function loadHomeNotices(){
   const listBox=$("homeNoticeList"),banner=$("homeImportantBanner");
   try{
-    const data=await publicApi("/api/public/notices?placement=after_login");
+    const data=await publicApiCached("/api/public/notices?placement=after_login",30000);
     const list=data.notices||[];
     const important=list.find(n=>Number(n.is_important)===1)||list[0];
     if(important){
@@ -2094,10 +2113,10 @@ async function loadHomeNotices(){
     listBox.innerHTML='<div class="empty">공지사항을 불러오지 못했습니다.</div>';
   }
 }
-async function loadPortalHome(){
+function loadPortalHome(){
   $("homeDate").textContent=formatHomeDate();
-  loadHomeNotices();
-  await loadAnnualIpassOverview();
+  // Render the home shell immediately, then load independent data in parallel.
+  void Promise.allSettled([loadHomeNotices(),loadAnnualIpassOverview()]);
 }
 function setHeaderUnread(count){
   const b=$("headerUnreadBadge"),n=Number(count||0);
@@ -2105,100 +2124,174 @@ function setHeaderUnread(count){
   b.classList.toggle("show",n>0);
 }
 
+let committeeAdminOptions={companies:[],departments:[]};
+let committeeMeetingsCache=[];
+
 function committeeStatusLabel(status){
-  const map={present:["참석","present"],absent:["불참","absent"],na:["비대상","na"],pending:["미정",""]};
+  const map={present:["참석","present"],absent:["불참","absent"],pending:["확인 전",""]};
   const v=map[status]||map.pending;
   return `<span class="committee-state ${v[1]}">${v[0]}</span>`;
 }
-function committeeOptions(value,internal=false){
-  const options=internal
-    ? [["pending","미정"],["present","참석"],["absent","불참"],["na","비대상"]]
-    : [["pending","미정"],["present","참석"],["absent","불참"],["na","비대상"]];
-  return options.map(([v,t])=>`<option value="${v}" ${value===v?"selected":""}>${t}</option>`).join("");
+function committeeOptions(value){
+  return [["pending","선택"],["present","참석"],["absent","불참"]].map(([v,t])=>`<option value="${v}" ${value===v?"selected":""}>${t}</option>`).join("");
 }
 function initCommitteeYear(){
   const y=$("committeeYear");if(!y)return;
   const now=new Date().getFullYear();
   if(!y.options.length){for(let i=now+1;i>=now-4;i--){const o=document.createElement("option");o.value=String(i);o.textContent=`${i}년`;if(i===now)o.selected=true;y.appendChild(o)}}
-  y.onchange=loadCommittee;
+  y.onchange=()=>loadCommittee(true);
 }
-async function loadCommittee(){
+async function loadCommittee(force=false){
   initCommitteeYear();
   const year=Number($("committeeYear")?.value||new Date().getFullYear());
   const content=$("committeeContent"),summary=$("committeeSummary"),createBtn=$("committeeCreateBtn");
   if(!content)return;
-  content.innerHTML='<div class="loading">협의체 현황을 불러오는 중...</div>';
   createBtn.classList.toggle("hidden",currentUser?.role!=="admin");
-  createBtn.onclick=createCommitteeMeeting;
+  createBtn.textContent="+ 월 협의체 생성";
+  createBtn.onclick=showCommitteeCreateForm;
+  if(!content.dataset.loaded)content.innerHTML='<div class="loading">협의체 현황을 불러오는 중...</div>';
   try{
-    const d=await api(`/api/committee?year=${year}`);
-    if(currentUser?.role==="admin")renderCommitteeAdminList(d.meetings||[],year);
-    else renderCommitteePartner(d.summary||{},d.meetings||[],year);
+    if(force)invalidateGetCache('/api/committee?');
+    const d=await apiCached(`/api/committee?year=${year}`,force?1:8000);
+    content.dataset.loaded="1";
+    if(currentUser?.role==="admin"){
+      committeeAdminOptions=d.options||{companies:[],departments:[]};
+      committeeMeetingsCache=d.meetings||[];
+      renderCommitteeAdminList(committeeMeetingsCache,year,false);
+    }else renderCommitteePartner(d.summary||{},d.meetings||[],year);
   }catch(e){summary.innerHTML="";content.innerHTML=`<div class="error">${esc(e.message)}</div>`}
 }
 function renderCommitteePartner(s,meetings,year){
   $("committeeSummary").innerHTML=`<div class="committee-score-strip">
     <div class="committee-score-card"><div class="label">협의체 참석점수</div><div class="value">${formatScore(s.score??10)} / 10</div><div class="meta">불참 1회당 -3점</div></div>
-    <div class="committee-score-card"><div class="label">확정 협의체</div><div class="value">${Number(s.finalized_meeting_count||0)}회</div><div class="meta">${year}년 기준</div></div>
-    <div class="committee-score-card"><div class="label">참석</div><div class="value">${Number(s.present_count||0)}회</div><div class="meta">협력사 참석</div></div>
+    <div class="committee-score-card"><div class="label">대상 협의체</div><div class="value">${Number(s.finalized_meeting_count||0)}회</div><div class="meta">${year}년 나의 대상 회차</div></div>
+    <div class="committee-score-card"><div class="label">참석</div><div class="value">${Number(s.present_count||0)}회</div><div class="meta">참석 완료</div></div>
     <div class="committee-score-card"><div class="label">불참</div><div class="value">${Number(s.absence_count||0)}회</div><div class="meta">-${Number(s.absence_count||0)*3}점</div></div>
   </div>`;
-  $("committeeContent").innerHTML=meetings.length?`<div class="committee-partner-list">${meetings.map(m=>`<div class="committee-partner-row"><div class="date">${esc(m.meeting_date||"")}</div><div class="title">${esc(m.title||"")}</div><div class="person">${m.attendee_position||m.attendee_name?`${esc(m.attendee_position||"")} ${esc(m.attendee_name||"")}`:"-"}</div>${committeeStatusLabel(m.attendance_status)}</div>`).join("")}</div>`:'<div class="committee-empty">확정된 협의체 참석 이력이 없습니다.</div>';
+  $("committeeContent").innerHTML=meetings.length?`<div class="committee-partner-list">${meetings.map(m=>`<div class="committee-partner-row"><div class="date">${Number(m.meeting_month||String(m.meeting_date||'').slice(5,7))}월</div><div class="title">${esc(m.title||"")}</div><div class="person">${m.attendance_status==="present"?`${esc(m.attendee_position||"")} ${esc(m.attendee_name||"")}`.trim():"-"}</div>${committeeStatusLabel(m.attendance_status)}</div>`).join("")}</div>`:'<div class="committee-empty">올해 확정된 대상 협의체가 없습니다.</div>';
 }
-function renderCommitteeAdminList(meetings,year){
-  $("committeeSummary").innerHTML=`<div class="committee-note">협력사 14개사의 참석 여부·직급·성명을 기록하고, 사내 8개 부서 참석자도 함께 관리합니다. 점수는 협력사에만 적용됩니다.</div>`;
+function renderCommitteeAdminList(meetings,year,autoOpen=true){
+  const used=new Set(meetings.map(m=>Number(m.meeting_month||String(m.meeting_date||"").slice(5,7))));
+  $("committeeSummary").innerHTML=`<div class="committee-note">월별 협의체는 <b>1개만</b> 생성됩니다. 각 월마다 대상 협력사와 사내 부서를 직접 선택하고 <b>참석/불참 · 직급 · 성명</b>을 기록합니다. 협력사 불참만 i-PaSS 점수에 반영됩니다.</div>`;
   const content=$("committeeContent");
-  content.innerHTML=`<div class="committee-admin-layout"><div class="committee-list"><div class="committee-list-head"><strong>${year}년 협의체</strong><span class="sub">${meetings.length}회</span></div><div id="committeeMeetingList">${meetings.length?meetings.map(m=>`<button class="committee-meeting-item" data-id="${esc(m.id)}" type="button"><div class="title">${esc(m.title)}</div><div class="meta">${esc(m.meeting_date)} · <span class="committee-status-badge ${m.status}">${m.status==="finalized"?"확정":"작성중"}</span> · 불참 ${Number(m.partner_absent_count||0)}개사</div></button>`).join(""):'<div class="committee-empty">등록된 협의체가 없습니다.</div>'}</div></div><div class="committee-editor" id="committeeEditor"><div class="committee-empty">좌측에서 협의체를 선택하거나 새 회차를 등록하세요.</div></div></div>`;
+  content.innerHTML=`<div class="committee-admin-layout"><div class="committee-list"><div class="committee-list-head"><strong>${year}년 협의체</strong><span class="sub">${meetings.length}/12개월</span></div><div id="committeeMeetingList">${meetings.length?meetings.map(m=>`<button class="committee-meeting-item" data-id="${esc(m.id)}" type="button"><div class="title">${Number(m.meeting_month||0)}월 협의체</div><div class="meta">${esc(m.meeting_date)} · <span class="committee-status-badge ${m.status}">${m.status==="finalized"?"확정":"작성중"}</span> · 대상 ${Number(m.partner_target_count||0)}개사 · 불참 ${Number(m.partner_absent_count||0)}개사</div></button>`).join(""):'<div class="committee-empty">등록된 협의체가 없습니다.</div>'}</div></div><div class="committee-editor" id="committeeEditor"><div class="committee-empty">월 협의체를 생성하거나 좌측 회차를 선택하세요.</div></div></div>`;
   content.querySelectorAll(".committee-meeting-item").forEach(btn=>btn.onclick=()=>loadCommitteeMeetingEditor(btn.dataset.id));
-  if(meetings[0])loadCommitteeMeetingEditor(meetings[0].id);
+  $("committeeCreateBtn").disabled=used.size>=12;
+  if(autoOpen&&meetings[0])loadCommitteeMeetingEditor(meetings[0].id);
+}
+function showCommitteeCreateForm(){
+  const editor=$("committeeEditor");if(!editor)return;
+  const year=Number($("committeeYear")?.value||new Date().getFullYear());
+  const used=new Set(committeeMeetingsCache.map(m=>Number(m.meeting_month||String(m.meeting_date||"").slice(5,7))));
+  const months=Array.from({length:12},(_,i)=>i+1).filter(m=>!used.has(m));
+  if(!months.length){editor.innerHTML='<div class="committee-empty">12개월 협의체가 모두 등록되어 있습니다.</div>';return}
+  const now=new Date();
+  const preferred=months.includes(now.getMonth()+1)?now.getMonth()+1:months[0];
+  editor.innerHTML=`<div class="committee-editor-head"><strong>${year}년 월 협의체 생성</strong><span class="committee-status-badge draft">신규</span></div><div class="committee-editor-body"><div class="committee-create-grid"><div><label>월</label><select id="committeeCreateMonth">${months.map(m=>`<option value="${m}" ${m===preferred?"selected":""}>${m}월</option>`).join("")}</select></div><div><label>개최일</label><input id="committeeCreateDate" type="date"></div></div><div class="committee-note">월별 1개만 생성됩니다. 생성 후 해당 월의 대상 협력사와 부서를 선택하세요.</div><div class="committee-actions"><button class="btn primary-small" id="committeeCreateConfirm" type="button">생성</button></div></div>`;
+  const setDate=()=>{const m=Number($("committeeCreateMonth").value);const mm=String(m).padStart(2,"0");const d=(year===now.getFullYear()&&m===now.getMonth()+1)?String(now.getDate()).padStart(2,"0"):"01";$("committeeCreateDate").value=`${year}-${mm}-${d}`};
+  $("committeeCreateMonth").onchange=setDate;setDate();
+  $("committeeCreateConfirm").onclick=createCommitteeMeeting;
 }
 async function createCommitteeMeeting(){
   const year=Number($("committeeYear")?.value||new Date().getFullYear());
-  const now=new Date();
-  const date=(year===now.getFullYear())?`${year}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`:`${year}-01-01`;
-  const month=Number(date.slice(5,7));
+  const month=Number($("committeeCreateMonth")?.value);
+  const meeting_date=$("committeeCreateDate")?.value;
+  const btn=$("committeeCreateConfirm");if(btn){btn.disabled=true;btn.textContent="생성 중..."}
   try{
-    const d=await api('/api/admin/committee',{method:'POST',body:JSON.stringify({meeting_date:date,title:`${year}년 ${month}월 정기 안전보건협의체`})});
-    await loadCommittee();
-    if(d.meeting?.id)loadCommitteeMeetingEditor(d.meeting.id);
+    const d=await api('/api/admin/committee',{method:'POST',body:JSON.stringify({year,month,meeting_date})});
+    invalidateGetCache('/api/committee?');
+    committeeMeetingsCache=[{...d.meeting,partner_target_count:0,partner_absent_count:0,partner_present_count:0,partner_pending_count:0,department_target_count:0},...committeeMeetingsCache].sort((a,b)=>Number(b.meeting_month)-Number(a.meeting_month));
+    renderCommitteeAdminList(committeeMeetingsCache,year,false);
+    renderCommitteeEditor(d.meeting);
   }catch(e){await askAction({title:"등록 실패",message:e.message,confirmText:"확인"})}
+  finally{if(btn){btn.disabled=false;btn.textContent="생성"}}
 }
 async function loadCommitteeMeetingEditor(id){
   const editor=$("committeeEditor");if(!editor)return;
-  editor.innerHTML='<div class="loading">협의체 상세를 불러오는 중...</div>';
+  editor.innerHTML='<div class="loading">상세를 불러오는 중...</div>';
   document.querySelectorAll(".committee-meeting-item").forEach(b=>b.classList.toggle("active",b.dataset.id===id));
-  try{const d=await api(`/api/admin/committee/${encodeURIComponent(id)}`);renderCommitteeEditor(d.meeting)}catch(e){editor.innerHTML=`<div class="error">${esc(e.message)}</div>`}
+  try{const d=await apiCached(`/api/admin/committee/${encodeURIComponent(id)}`,8000);renderCommitteeEditor(d.meeting)}catch(e){editor.innerHTML=`<div class="error">${esc(e.message)}</div>`}
+}
+function renderCommitteeTargetRows(options,selected,type){
+  const map=new Map((selected||[]).map(r=>[type==="partner"?r.company_id:r.department_id,r]));
+  return (options||[]).map(o=>{
+    const id=o.id,name=type==="partner"?o.company_name:o.department_name,row=map.get(id),checked=!!row,status=row?.attendance_status||"pending";
+    const position=row?.attendee_position||"",personName=row?.attendee_name||"";
+    return `<div class="committee-target-row" data-target-id="${esc(id)}"><label class="committee-target-check"><input type="checkbox" class="target-check" ${checked?"checked":""}><span>${esc(name)}</span></label><select class="committee-att-status" ${checked?"":"disabled"}>${committeeOptions(status)}</select><input class="committee-person-input committee-position" type="text" placeholder="직급" value="${esc(position)}" ${checked?"":"disabled"}><input class="committee-person-input committee-name" type="text" placeholder="성명" value="${esc(personName)}" ${checked?"":"disabled"}></div>`;
+  }).join("");
+}
+function bindCommitteeTargetRows(containerId){
+  const box=$(containerId);if(!box)return;
+  box.querySelectorAll('.committee-target-row').forEach(row=>{
+    const check=row.querySelector('.target-check'),select=row.querySelector('.committee-att-status');
+    const inputs=[...row.querySelectorAll('.committee-person-input')];
+    const sync=()=>{
+      select.disabled=!check.checked;
+      inputs.forEach(i=>i.disabled=!check.checked);
+      if(!check.checked){select.value='pending';inputs.forEach(i=>i.value='')}
+    };
+    check.onchange=sync;
+    sync();
+  });
 }
 function renderCommitteeEditor(m){
   const editor=$("committeeEditor");
-  editor.innerHTML=`<div class="committee-editor-head"><strong>${esc(m.title)}</strong><span class="committee-status-badge ${m.status}">${m.status==="finalized"?"확정":"작성중"}</span></div><div class="committee-editor-body">
-    <div class="committee-meeting-fields"><div><label>개최일</label><input id="committeeMeetingDate" type="date" value="${esc(m.meeting_date||"")}"></div><div><label>협의체 명칭</label><input id="committeeMeetingTitle" value="${esc(m.title||"")}"></div><div class="wide"><label>비고</label><textarea id="committeeMeetingNote" placeholder="필요한 메모를 입력하세요.">${esc(m.note||"")}</textarea></div></div>
-    <div class="committee-subhead"><h3>협력사 참석자</h3><span>점수 적용 · 불참 1회당 -3점</span></div>
-    <div class="committee-table-wrap"><table class="committee-table"><thead><tr><th style="width:24%">협력사</th><th style="width:16%">참석상태</th><th style="width:22%">직급</th><th>성명</th></tr></thead><tbody id="committeePartnerRows">${(m.partners||[]).map(r=>`<tr data-company-id="${esc(r.company_id)}"><td class="org-name">${esc(r.company_name)}</td><td><select class="committee-att-status">${committeeOptions(r.attendance_status)}</select></td><td><input class="committee-att-position" value="${esc(r.attendee_position||"")}" placeholder="직급"></td><td><input class="committee-att-name" value="${esc(r.attendee_name||"")}" placeholder="성명"></td></tr>`).join("")}</tbody></table></div>
-    <div class="committee-subhead"><h3>사내 부서 참석자</h3><span>참석 이력만 관리 · 점수 미적용</span></div>
-    <div class="committee-table-wrap"><table class="committee-table"><thead><tr><th style="width:24%">부서</th><th style="width:16%">참석상태</th><th style="width:22%">직급</th><th>성명</th></tr></thead><tbody id="committeeDepartmentRows">${(m.departments||[]).map(r=>`<tr data-department-id="${esc(r.department_id)}"><td class="org-name">${esc(r.department_name)}</td><td><select class="committee-att-status">${committeeOptions(r.attendance_status,true)}</select></td><td><input class="committee-att-position" value="${esc(r.attendee_position||"")}" placeholder="직급"></td><td><input class="committee-att-name" value="${esc(r.attendee_name||"")}" placeholder="성명"></td></tr>`).join("")}</tbody></table></div>
-    <div class="committee-note">확정하면 협력사 참석 이력이 공개되고 연간 i-PaSS 협의체 점수에 즉시 반영됩니다. 확정 후에도 관리자는 수정할 수 있습니다.</div>
-    <div class="committee-actions"><button class="btn" id="committeeSaveDraft" type="button">${m.status==="finalized"?"수정 저장":"임시저장"}</button><button class="btn primary-small" id="committeeFinalize" type="button">${m.status==="finalized"?"확정 내용 저장":"회의 확정"}</button></div>
+  const month=Number(m.meeting_month||String(m.meeting_date||"").slice(5,7));
+  editor.innerHTML=`<div class="committee-editor-head"><strong>${month}월 안전보건협의체</strong><span class="committee-status-badge ${m.status}">${m.status==="finalized"?"확정":"작성중"}</span></div><div class="committee-editor-body">
+    <div class="committee-meeting-fields simple"><div><label>개최일</label><input id="committeeMeetingDate" type="date" value="${esc(m.meeting_date||"")}"></div><div class="wide"><label>비고</label><textarea id="committeeMeetingNote" placeholder="필요한 메모만 입력하세요.">${esc(m.note||"")}</textarea></div></div>
+    <div class="committee-subhead"><h3>대상 협력사</h3><span>월마다 직접 선택 · 참석 시 직급/성명 입력 · 불참 1회당 -3점</span></div>
+    <div class="committee-batch"><button class="btn" type="button" onclick="committeeSetAll('committeePartnerRows','present')">선택 대상 모두 참석</button><button class="btn" type="button" onclick="committeeClearTargets('committeePartnerRows')">선택 해제</button></div>
+    <div class="committee-target-grid" id="committeePartnerRows">${renderCommitteeTargetRows(committeeAdminOptions.companies,m.partners,'partner')}</div>
+    <div class="committee-subhead"><h3>대상 사내 부서</h3><span>월마다 직접 선택 · 참석 시 직급/성명 입력 · 점수 미적용</span></div>
+    <div class="committee-batch"><button class="btn" type="button" onclick="committeeSetAll('committeeDepartmentRows','present')">선택 대상 모두 참석</button><button class="btn" type="button" onclick="committeeClearTargets('committeeDepartmentRows')">선택 해제</button></div>
+    <div class="committee-target-grid departments" id="committeeDepartmentRows">${renderCommitteeTargetRows(committeeAdminOptions.departments,m.departments,'department')}</div>
+    <div class="committee-note">선택하지 않은 협력사·부서는 해당 월 협의체 대상이 아닙니다. 참석 대상은 직급과 성명을 입력해야 확정할 수 있으며, 협력사의 불참만 i-PaSS 점수에 반영됩니다.</div>
+    <div class="committee-actions"><button class="btn danger" id="committeeDelete" type="button">회차 삭제</button><span class="committee-action-spacer"></span><button class="btn" id="committeeSaveDraft" type="button">${m.status==="finalized"?"수정 저장":"임시저장"}</button><button class="btn primary-small" id="committeeFinalize" type="button">${m.status==="finalized"?"확정 내용 저장":"회의 확정"}</button></div>
   </div>`;
+  bindCommitteeTargetRows('committeePartnerRows');bindCommitteeTargetRows('committeeDepartmentRows');
   $("committeeSaveDraft").onclick=()=>saveCommitteeMeeting(m.id,false,m.status);
   $("committeeFinalize").onclick=()=>saveCommitteeMeeting(m.id,true,m.status);
+  $("committeeDelete").onclick=()=>deleteCommitteeMeeting(m.id,month);
+}
+function committeeSetAll(containerId,status){
+  const box=$(containerId);if(!box)return;
+  box.querySelectorAll('.committee-target-row').forEach(row=>{const c=row.querySelector('.target-check'),s=row.querySelector('.committee-att-status');if(c.checked){s.disabled=false;s.value=status}});
+}
+function committeeClearTargets(containerId){
+  const box=$(containerId);if(!box)return;
+  box.querySelectorAll('.committee-target-row').forEach(row=>{const c=row.querySelector('.target-check'),s=row.querySelector('.committee-att-status');c.checked=false;s.value='pending';s.disabled=true;row.querySelectorAll('.committee-person-input').forEach(i=>{i.value='';i.disabled=true})});
 }
 function collectCommitteeRows(){
-  const partners=[...document.querySelectorAll("#committeePartnerRows tr")].map(tr=>({company_id:tr.dataset.companyId,attendance_status:tr.querySelector(".committee-att-status").value,attendee_position:tr.querySelector(".committee-att-position").value.trim(),attendee_name:tr.querySelector(".committee-att-name").value.trim()}));
-  const departments=[...document.querySelectorAll("#committeeDepartmentRows tr")].map(tr=>({department_id:tr.dataset.departmentId,attendance_status:tr.querySelector(".committee-att-status").value,attendee_position:tr.querySelector(".committee-att-position").value.trim(),attendee_name:tr.querySelector(".committee-att-name").value.trim()}));
-  return {partners,departments};
+  const collect=(containerId,key)=>[...document.querySelectorAll(`#${containerId} .committee-target-row`)]
+    .filter(row=>row.querySelector('.target-check').checked)
+    .map(row=>({
+      [key]:row.dataset.targetId,
+      attendance_status:row.querySelector('.committee-att-status').value,
+      attendee_position:row.querySelector('.committee-position').value.trim(),
+      attendee_name:row.querySelector('.committee-name').value.trim()
+    }));
+  return {partners:collect('committeePartnerRows','company_id'),departments:collect('committeeDepartmentRows','department_id')};
 }
 async function saveCommitteeMeeting(id,finalize,currentStatus){
   const rows=collectCommitteeRows();
-  const body={meeting_date:$("committeeMeetingDate").value,title:$("committeeMeetingTitle").value.trim(),note:$("committeeMeetingNote").value.trim(),partners:rows.partners,departments:rows.departments,finalize:finalize===true};
+  const body={meeting_date:$("committeeMeetingDate").value,note:$("committeeMeetingNote").value.trim(),partners:rows.partners,departments:rows.departments,finalize:finalize===true};
   if(!finalize&&currentStatus==="draft")body.status="draft";
   try{
     const d=await api(`/api/admin/committee/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(body)});
+    invalidateGetCache('/api/committee');invalidateGetCache('/api/annual-ipass');
+    await loadCommittee(true);
     renderCommitteeEditor(d.meeting);
-    await loadCommittee();
-    loadCommitteeMeetingEditor(id);
-    if(finalize)await loadAnnualIpassOverview();
+    if(finalize)loadAnnualIpassOverview();
   }catch(e){await askAction({title:"저장 실패",message:e.message,confirmText:"확인"})}
+}
+async function deleteCommitteeMeeting(id,month){
+  const result=await askAction({title:"협의체 삭제",message:`${month}월 협의체를 삭제할까요? 참석기록도 함께 삭제됩니다.`,confirmText:"삭제",danger:true});
+  if(!result.confirmed)return;
+  try{
+    await api(`/api/admin/committee/${encodeURIComponent(id)}`,{method:"DELETE"});
+    invalidateGetCache('/api/committee');invalidateGetCache('/api/annual-ipass');
+    await loadCommittee(true);loadAnnualIpassOverview();
+  }catch(e){await askAction({title:"삭제 실패",message:e.message,confirmText:"확인"})}
 }
 
 function showServicePlaceholder(service){
@@ -2235,7 +2328,7 @@ async function loadPortalNotices(){
   const box=$("portalNoticeList");
   box.innerHTML='<div class="loading">불러오는 중...</div>';
   try{
-    const data=await publicApi("/api/public/notices?placement=after_login");
+    const data=await publicApiCached("/api/public/notices?placement=after_login",30000);
     const list=data.notices||[];
     box.innerHTML=list.length
       ? `<div class="table-wrap"><table><thead><tr><th>구분</th><th>제목</th><th>게시일</th></tr></thead><tbody>${list.map(n=>`<tr><td>${n.is_important?'<span class="tag red">중요</span>':'<span class="tag gray">일반</span>'}</td><td><b>${esc(n.title)}</b><div class="sub" style="margin-top:5px">${esc(n.content||"")}</div></td><td>${esc(String(n.created_at||"").slice(0,10))}</td></tr>`).join("")}</tbody></table></div>`
