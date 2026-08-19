@@ -11,7 +11,7 @@ export default {
       }
 
       if (request.method === "GET" && path === "/api/health") {
-        return json({ success: true, service: "ipass", status: "ok" });
+        return json({ success: true, service: "ipass", status: "ok", version: "16.2.1", annual_ipass_routes: true });
       }
 
       if (request.method === "GET" && path === "/api/public/companies") {
@@ -208,6 +208,85 @@ export default {
       const auth = await requireApprovedAccount(request, env);
       if (!auth.ok) return json({ success: false, error: auth.error, auth_state: auth.auth_state }, auth.status);
       const user = auth.account;
+
+
+      if (request.method === "GET" && path === "/api/annual-ipass") {
+        const year = parseAnnualYear(url.searchParams.get("year"));
+        const companyId = user.role === "admin"
+          ? String(url.searchParams.get("company_id") || "").trim()
+          : String(user.company_id || "").trim();
+
+        if (!companyId) return json({ success: false, error: "회사 정보가 필요합니다." }, 400);
+        const summary = await annualIpassSummary(env, companyId, year);
+        return json({ success: true, annual: summary });
+      }
+
+      const annualAdminMatch = path.match(/^\/api\/admin\/annual-ipass\/([^/]+)\/(\d{4})$/);
+      if (user.role === "admin" && annualAdminMatch && request.method === "GET") {
+        const companyId = decodeURIComponent(annualAdminMatch[1]);
+        const year = parseAnnualYear(annualAdminMatch[2]);
+        const summary = await annualIpassSummary(env, companyId, year);
+        return json({ success: true, annual: summary });
+      }
+
+      if (user.role === "admin" && annualAdminMatch && request.method === "PATCH") {
+        const companyId = decodeURIComponent(annualAdminMatch[1]);
+        const year = parseAnnualYear(annualAdminMatch[2]);
+        const body = await request.json();
+
+        await ensureAnnualIpassRow(env, companyId, year);
+        const before = await getAnnualIpassRow(env, companyId, year);
+
+        const changes = [];
+        const sets = [];
+        const binds = [];
+
+        for (const half of ["first", "second"]) {
+          const modeKey = `${half}_half_mode`;
+          const scoreKey = `${half}_half_score`;
+          const mode = body[modeKey];
+          if (mode === "manual") {
+            const score = Number(body[scoreKey]);
+            if (!Number.isFinite(score) || score < 0 || score > 40) {
+              return json({ success: false, error: `${half === "first" ? "상반기" : "하반기"} 점수는 0~40점으로 입력하세요.` }, 400);
+            }
+            sets.push(`${half}_half_score = ?`, `${half}_half_source = 'manual'`, `${half}_half_target_id = NULL`, `${half}_half_updated_by = ?`, `${half}_half_updated_at = CURRENT_TIMESTAMP`);
+            binds.push(round1(score), user.id);
+            changes.push({ field: `${half}_half_score`, old: before?.[`${half}_half_score`], value: round1(score), source: "manual" });
+          } else if (mode === "auto") {
+            sets.push(`${half}_half_score = NULL`, `${half}_half_source = NULL`, `${half}_half_target_id = NULL`, `${half}_half_updated_by = ?`, `${half}_half_updated_at = CURRENT_TIMESTAMP`);
+            binds.push(user.id);
+            changes.push({ field: `${half}_half_score`, old: before?.[`${half}_half_score`], value: null, source: "reset_to_auto" });
+          }
+        }
+
+        for (const field of ["committee_absence_count", "industrial_accident_count", "unreasonable_finding_count"]) {
+          if (body[field] !== undefined) {
+            const n = Number(body[field]);
+            if (!Number.isInteger(n) || n < 0) return json({ success: false, error: "건수는 0 이상의 정수로 입력하세요." }, 400);
+            sets.push(`${field} = ?`);
+            binds.push(n);
+            changes.push({ field, old: before?.[field], value: n, source: "manual" });
+          }
+        }
+
+        if (sets.length) {
+          sets.push(`updated_by = ?`, `updated_at = CURRENT_TIMESTAMP`);
+          binds.push(user.id, companyId, year);
+          await env.partner_evaluation_db.prepare(`
+            UPDATE annual_ipass_scores
+            SET ${sets.join(", ")}
+            WHERE company_id = ? AND year = ?
+          `).bind(...binds).run();
+
+          for (const c of changes) {
+            await logAnnualChange(env, companyId, year, c.field, c.old, c.value, c.source, user.id);
+          }
+        }
+
+        const summary = await annualIpassSummary(env, companyId, year);
+        return json({ success: true, annual: summary });
+      }
 
       if (request.method === "GET" && path === "/api/cycles") {
         const { results } = await env.partner_evaluation_db.prepare(`
@@ -519,7 +598,7 @@ export default {
         return json({ success: true });
       }
 
-      return json({ success: false, error: "API route not found" }, 404);
+      return json({ success: false, error: "API route not found", method: request.method, path, version: "16.2.1" }, 404);
     } catch (error) {
       console.error(error);
       return json({ success: false, error: error?.message || "Internal server error" }, 500);
@@ -592,6 +671,153 @@ async function requireApprovedAccount(request, env) {
   if (legacy.status && legacy.status !== "active") return { ok: false, status: 403, error: "사용이 중지된 계정입니다.", auth_state: "suspended" };
 
   return { ok: true, account: { ...legacy, approval_status: "approved" }, firebase: firebase.user };
+}
+
+
+function parseAnnualYear(value) {
+  const current = new Date().getFullYear();
+  const year = Number(value || current);
+  if (!Number.isInteger(year) || year < 2020 || year > 2100) return current;
+  return year;
+}
+
+function round1(value) {
+  return Math.round(Number(value || 0) * 10) / 10;
+}
+
+async function ensureAnnualIpassRow(env, companyId, year) {
+  const company = await env.partner_evaluation_db.prepare(`SELECT id FROM companies WHERE id = ? LIMIT 1`).bind(companyId).first();
+  if (!company) throw new Error("회사 정보를 찾을 수 없습니다.");
+  await env.partner_evaluation_db.prepare(`
+    INSERT INTO annual_ipass_scores (id, company_id, year)
+    VALUES (?, ?, ?)
+    ON CONFLICT(company_id, year) DO NOTHING
+  `).bind(crypto.randomUUID(), companyId, year).run();
+}
+
+async function getAnnualIpassRow(env, companyId, year) {
+  return env.partner_evaluation_db.prepare(`
+    SELECT * FROM annual_ipass_scores WHERE company_id = ? AND year = ? LIMIT 1
+  `).bind(companyId, year).first();
+}
+
+async function publishedAutoHalfScores(env, companyId, year) {
+  const { results } = await env.partner_evaluation_db.prepare(`
+    SELECT
+      ec.half, et.id AS target_id, er.final_score,
+      COALESCE(er.published_at, et.published_at) AS published_at
+    FROM evaluation_targets et
+    JOIN evaluation_cycles ec ON ec.id = et.cycle_id
+    JOIN evaluation_results er ON er.target_id = et.id
+    WHERE et.company_id = ?
+      AND ec.year = ?
+      AND et.is_selected = 1
+      AND ec.half IN ('first','second')
+      AND COALESCE(er.published_at, et.published_at) IS NOT NULL
+    ORDER BY COALESCE(er.published_at, et.published_at) DESC
+  `).bind(companyId, year).all();
+
+  const out = { first: null, second: null };
+  for (const row of results || []) {
+    if (out[row.half]) continue;
+    const raw = Number(row.final_score);
+    if (!Number.isFinite(raw)) continue;
+    out[row.half] = {
+      score: round1(Math.max(0, Math.min(100, raw)) * 0.4),
+      target_id: row.target_id,
+      final_score_100: round1(raw),
+      published_at: row.published_at
+    };
+  }
+  return out;
+}
+
+async function syncAnnualAutoScores(env, companyId, year) {
+  await ensureAnnualIpassRow(env, companyId, year);
+  const row = await getAnnualIpassRow(env, companyId, year);
+  const auto = await publishedAutoHalfScores(env, companyId, year);
+
+  for (const half of ["first", "second"]) {
+    const found = auto[half];
+    if (!found || row?.[`${half}_half_source`] === "manual") continue;
+    const old = row?.[`${half}_half_score`];
+    if (Number(old) === Number(found.score) && row?.[`${half}_half_target_id`] === found.target_id) continue;
+    await env.partner_evaluation_db.prepare(`
+      UPDATE annual_ipass_scores
+      SET ${half}_half_score = ?,
+          ${half}_half_source = 'auto',
+          ${half}_half_target_id = ?,
+          ${half}_half_updated_by = NULL,
+          ${half}_half_updated_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE company_id = ? AND year = ?
+    `).bind(found.score, found.target_id, companyId, year).run();
+    await logAnnualChange(env, companyId, year, `${half}_half_score`, old, found.score, "auto", null);
+  }
+  return auto;
+}
+
+async function logAnnualChange(env, companyId, year, field, oldValue, newValue, source, changedBy) {
+  if (String(oldValue ?? "") === String(newValue ?? "")) return;
+  await env.partner_evaluation_db.prepare(`
+    INSERT INTO annual_ipass_score_logs
+      (company_id, year, field_name, old_value, new_value, change_source, changed_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(companyId, year, field, oldValue == null ? null : String(oldValue), newValue == null ? null : String(newValue), source, changedBy || null).run();
+}
+
+function annualGrade(score) {
+  if (score == null || !Number.isFinite(Number(score))) return null;
+  const n = Number(score);
+  if (n >= 90) return "안전관리 우수협력사";
+  if (n >= 70) return "적격 수급사";
+  return "역량강화대상 협력사";
+}
+
+async function annualIpassSummary(env, companyId, year) {
+  const auto = await syncAnnualAutoScores(env, companyId, year);
+  const row = await getAnnualIpassRow(env, companyId, year);
+  const company = await env.partner_evaluation_db.prepare(`SELECT company_name FROM companies WHERE id = ? LIMIT 1`).bind(companyId).first();
+
+  const first = row?.first_half_score == null ? null : Number(row.first_half_score);
+  const second = row?.second_half_score == null ? null : Number(row.second_half_score);
+  const committeeAbsence = Number(row?.committee_absence_count || 0);
+  const accidentCount = Number(row?.industrial_accident_count || 0);
+  const unreasonableCount = Number(row?.unreasonable_finding_count || 0);
+  const committeeScore = committeeAbsence === 0 ? 10 : 0;
+  const accidentScore = accidentCount === 0 ? 10 : 0;
+  const unreasonableDeduction = unreasonableCount * 3;
+  const base = (first || 0) + committeeScore + accidentScore - unreasonableDeduction;
+  const finalTotal = second == null ? null : round1(Math.max(0, Math.min(100, base + second)));
+  const maintainProjection = first == null || second != null ? null : round1(Math.max(0, Math.min(100, base + first)));
+  const perfectProjection = first == null || second != null ? null : round1(Math.max(0, Math.min(100, base + 40)));
+
+  return {
+    company_id: companyId,
+    company_name: company?.company_name || null,
+    year,
+    first_half_score: first,
+    first_half_source: row?.first_half_source || null,
+    second_half_score: second,
+    second_half_source: row?.second_half_source || null,
+    auto_first_half_score: auto.first?.score ?? null,
+    auto_second_half_score: auto.second?.score ?? null,
+    committee_absence_count: committeeAbsence,
+    industrial_accident_count: accidentCount,
+    unreasonable_finding_count: unreasonableCount,
+    committee_score: committeeScore,
+    industrial_accident_score: accidentScore,
+    unreasonable_deduction: unreasonableDeduction,
+    final_total: finalTotal,
+    final_grade: annualGrade(finalTotal),
+    current_reflected_score: round1(Math.max(0, base + (second || 0))),
+    current_reflected_max: second == null ? 60 : 100,
+    maintain_projection: maintainProjection,
+    maintain_grade: annualGrade(maintainProjection),
+    perfect_projection: perfectProjection,
+    perfect_grade: annualGrade(perfectProjection),
+    second_half_pending: second == null
+  };
 }
 
 function forbidden() {
