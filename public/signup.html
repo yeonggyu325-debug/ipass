@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Hniruja Partner Portal | 회원가입</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{--navy:#234e70;--ink:#273746;--muted:#7b8996;--line:#d9e3e9;--line-soft:#edf1f4;--bg:#f6f9fb;--danger:#b33f39;--success:#2c7758}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:"Pretendard Variable","Pretendard","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif;color:var(--ink);background:var(--bg);letter-spacing:-.018em}
+body{font-size:110%}
+button,input,select{font:inherit}
+.header{height:72px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.header-inner{width:min(980px,92vw);display:flex;align-items:center;justify-content:space-between}
+.brand{color:var(--navy);font-size:22px;font-weight:760;letter-spacing:-.035em}
+.brand small{margin-left:9px;color:#8a98a5;font-size:10px;font-weight:600;letter-spacing:.04em}
+.back{color:#667d8e;font-size:11px;text-decoration:none}
+.wrap{width:min(860px,92vw);margin:48px auto 70px}
+.page-title{margin-bottom:28px}
+.page-title .eyebrow{color:#8292a0;font-size:10px;font-weight:800;letter-spacing:.11em}
+.page-title h1{margin:8px 0 0;color:#294459;font-size:28px;font-weight:730;letter-spacing:-.035em}
+.page-title p{display:none}
+.section{margin-top:20px;background:#fff;border-top:2px solid var(--navy)}
+.section-title{height:48px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--line);color:#365367;font-size:13px;font-weight:700}
+.section-body{padding:4px 18px 12px}
+.field{display:grid;grid-template-columns:170px minmax(0,1fr);align-items:center;gap:22px;min-height:68px;border-bottom:1px solid var(--line-soft)}
+.field:last-child{border-bottom:0}
+.field label{color:#4b5f6f;font-size:12px;font-weight:650}
+.field input,.field select{width:100%;height:46px;border:1px solid #ccd8e1;background:#fff;padding:0 12px;outline:none}
+.field input:focus,.field select:focus{border-color:#79a1bc;box-shadow:0 0 0 3px rgba(91,140,174,.07)}
+.help{display:none}
+.agree{margin-top:10px;padding:16px;border:1px solid var(--line);background:#fbfcfd;color:#5f7281;font-size:12px}
+.agree-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.agree a{color:#4e728e}
+.actions{display:flex;justify-content:center;gap:8px;margin-top:28px}
+.btn{min-width:122px;height:44px;border:1px solid #ccd8e0;background:#fff;color:#4f6575}
+.btn.primary{border-color:var(--navy);background:var(--navy);color:#fff;font-weight:700}
+.msg{min-height:18px;margin-top:14px;text-align:center;font-size:12px}
+.msg.error{color:var(--danger)}.msg.ok{color:var(--success)}
+.footer{text-align:center;color:#89959f;font-size:10px;padding:20px}
+@media(max-width:650px){body{font-size:105%}.field{grid-template-columns:1fr;gap:7px;padding:13px 0}.header-inner{width:90vw}.brand small{display:none}.agree-row{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<header class="header"><div class="header-inner"><div class="brand">Hniruja Partner Portal <small>협력사 포털</small></div><a class="back" href="/">로그인으로 돌아가기</a></div></header>
+
+<main class="wrap">
+  <div class="page-title"><div class="eyebrow">HNIRUJA PARTNER PORTAL</div><h1>회원가입</h1></div>
+
+  <form id="signupForm">
+    <section class="section">
+      <div class="section-title">01&nbsp;&nbsp;계정정보</div>
+      <div class="section-body">
+        <div class="field"><label>이메일</label><div><input id="email" type="email" autocomplete="username" required style="width:100%"><div class="help">로그인 및 이메일 인증에 사용됩니다.</div></div></div>
+        <div class="field"><label>비밀번호</label><div><input id="password" type="password" minlength="6" autocomplete="new-password" required style="width:100%"><div class="help">6자 이상 입력하세요.</div></div></div>
+        <div class="field"><label>비밀번호 확인</label><input id="password2" type="password" minlength="6" autocomplete="new-password" required></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">02&nbsp;&nbsp;회사정보</div>
+      <div class="section-body">
+        <div class="field"><label>회사명</label><div><select id="company" required style="width:100%"><option value="">회사 선택</option></select><div class="help">등록된 협력사 목록에서 선택하세요.</div></div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">03&nbsp;&nbsp;담당자정보</div>
+      <div class="section-body">
+        <div class="field"><label>이름</label><input id="name" required></div>
+        <div class="field"><label>직급</label><input id="position" required></div>
+        <div class="field"><label>휴대전화번호</label><input id="phone" placeholder="010-0000-0000" required></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">04&nbsp;&nbsp;개인정보 동의</div>
+      <div class="section-body">
+        <div class="agree">
+          <div class="agree-row"><label><input id="privacy" type="checkbox" required> 개인정보 수집·이용 및 개인정보처리방침에 동의합니다.</label><a href="/" target="_blank">처리방침 확인</a></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="actions"><button class="btn" type="button" onclick="location.href='/'">취소</button><button class="btn primary" type="submit">회원가입</button></div>
+    <div id="message" class="msg"></div>
+  </form>
+</main>
+
+<div class="footer">COPYRIGHTⓒ Hniruja, ALL RIGHTS RESERVED.</div>
+
+<script>
+const FIREBASE_API_KEY="AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
+const API_BASE=(location.hostname==="ipass.i-pass-eval.workers.dev")?"":"https://ipass.i-pass-eval.workers.dev";
+let session=null;
+async function firebasePost(endpoint,body,locale=false){const r=await fetch(`https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:"POST",headers:{"content-type":"application/json",...(locale?{"X-Firebase-Locale":"ko"}:{})},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(({EMAIL_EXISTS:"이미 가입된 이메일입니다.",WEAK_PASSWORD:"비밀번호는 6자 이상 입력하세요.",INVALID_EMAIL:"이메일 형식이 올바르지 않습니다."})[d?.error?.message]||d?.error?.message||"회원가입에 실패했습니다.");return d}
+async function api(path,options={}){const r=await fetch(API_BASE+path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${session.idToken}`,...(options.body?{"content-type":"application/json"}:{})}});const t=await r.text();const d=t?JSON.parse(t):{};if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);return d}
+async function loadCompanies(){const r=await fetch(API_BASE+"/api/public/companies");const d=await r.json();document.getElementById("company").innerHTML='<option value="">회사 선택</option>'+((d.companies||[]).map(x=>`<option value="${x.id}">${x.company_name}</option>`).join(""))}
+document.getElementById("signupForm").onsubmit=async e=>{e.preventDefault();const msg=document.getElementById("message");msg.className="msg";msg.textContent="회원가입 처리 중...";try{const p1=document.getElementById("password").value,p2=document.getElementById("password2").value;if(p1!==p2)throw new Error("비밀번호 확인이 일치하지 않습니다.");const d=await firebasePost("accounts:signUp",{email:document.getElementById("email").value.trim(),password:p1,returnSecureToken:true});session={idToken:d.idToken};await api("/api/auth/register",{method:"POST",body:JSON.stringify({company_id:document.getElementById("company").value,name:document.getElementById("name").value.trim(),position:document.getElementById("position").value.trim(),phone:document.getElementById("phone").value.trim(),privacy_agreed:document.getElementById("privacy").checked})});await firebasePost("accounts:sendOobCode",{requestType:"VERIFY_EMAIL",idToken:d.idToken},true);msg.className="msg ok";msg.textContent="회원가입이 완료되었습니다. 이메일 인증 후 관리자 승인을 기다려주세요.";document.getElementById("signupForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=true)}catch(err){msg.className="msg error";msg.textContent=err.message}};
+loadCompanies().catch(()=>{document.getElementById("message").className="msg error";document.getElementById("message").textContent="회사 목록을 불러오지 못했습니다."});
+</script>
+</body>
+</html>
