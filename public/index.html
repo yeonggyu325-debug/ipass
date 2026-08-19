@@ -3,121 +3,373 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>I-PASS 로그인</title>
+<title>i-PaSS | 협력사 이행수준평가</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:#eef3f8;color:#1f2937}
-.hidden{display:none!important}
-.login-page{min-height:100vh;display:grid;place-items:center;padding:24px}
-.login-card{width:min(420px,100%);background:#fff;border:1px solid #dfe3e8;border-radius:16px;padding:30px;box-shadow:0 12px 36px rgba(15,23,42,.08)}
-.logo{width:48px;height:48px;border-radius:12px;background:#1f5aa6;color:#fff;display:grid;place-items:center;font-size:22px;font-weight:900;margin-bottom:18px}
-h1{margin:0 0 7px;font-size:24px}.muted{color:#6b7280;font-size:14px}.field{margin-top:16px}
-.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
-.field input{width:100%;height:44px;border:1px solid #d0d5dd;border-radius:8px;padding:0 12px;font:inherit}
-.btn{width:100%;height:44px;border:0;border-radius:8px;background:#1f5aa6;color:#fff;font-weight:800;margin-top:20px;cursor:pointer;font:inherit}
-.link{border:0;background:none;color:#1f5aa6;margin-top:14px;cursor:pointer;padding:0;font:inherit}
-.msg{font-size:13px;margin-top:14px;min-height:18px}.msg.error{color:#b42318}.msg.ok{color:#15803d}
-.version{margin-top:18px;font-size:11px;color:#98a2b3;text-align:center}
-.app{padding:30px}.box{max-width:800px;margin:auto;background:#fff;border:1px solid #dfe3e8;border-radius:12px;padding:24px}
-.logout{border:1px solid #d0d5dd;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
+:root{--navy:#123e72;--blue:#1976d2;--sky:#6ec6ff;--bg:#f4f7fb;--text:#172033;--muted:#667085;--line:#dfe5ec;--red:#c62828;--green:#14804a}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,"Noto Sans KR",sans-serif;color:var(--text);background:var(--bg)}button,input,select,textarea{font:inherit}.hidden{display:none!important}
+.portal-bg{min-height:100vh;background:radial-gradient(circle at 12% 20%,rgba(255,255,255,.28),transparent 30%),radial-gradient(circle at 85% 15%,rgba(255,255,255,.18),transparent 24%),linear-gradient(135deg,#d8f0ff 0%,#6bbcff 35%,#246fbd 68%,#113d72 100%);display:flex;flex-direction:column}
+.login-header{height:88px;display:flex;align-items:center;padding:0 5vw}.login-header img{height:38px;max-width:180px;object-fit:contain;filter:brightness(0) invert(1)}.service-title{color:white;font-size:22px;font-weight:800;margin-left:18px;border-left:1px solid rgba(255,255,255,.45);padding-left:18px}
+.login-main{flex:1;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(380px,480px);gap:54px;align-items:center;width:min(1240px,92vw);margin:auto;padding:30px 0 60px}
+.hero{color:white;max-width:650px}.hero-kicker{font-size:15px;font-weight:700;letter-spacing:.12em;opacity:.85}.hero h1{font-size:52px;line-height:1.13;margin:14px 0 18px;letter-spacing:-1.8px}.hero p{font-size:18px;line-height:1.7;opacity:.9}.glass-line{width:76px;height:4px;background:rgba(255,255,255,.72);border-radius:10px;margin-top:28px}
+.auth-card{background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:30px;box-shadow:0 24px 70px rgba(4,30,66,.22);backdrop-filter:blur(10px)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:#eef3f8;border-radius:10px;padding:4px;margin-bottom:24px}.tab{border:0;background:transparent;border-radius:8px;padding:10px;cursor:pointer;color:#667085;font-weight:700}.tab.active{background:white;color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.auth-card h2{font-size:25px;margin:0 0 6px}.sub{color:var(--muted);font-size:14px;line-height:1.55}.field{margin-top:15px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.field input,.field select{width:100%;height:44px;border:1px solid #cfd8e3;border-radius:9px;padding:0 12px;background:white}.primary{width:100%;height:46px;border:0;border-radius:9px;background:linear-gradient(90deg,#1d67ad,#14477e);color:white;font-weight:800;cursor:pointer;margin-top:20px}
+.auth-actions{display:flex;justify-content:center;gap:14px;margin-top:16px;font-size:13px}.link{border:0;background:none;padding:0;color:#315d8e;cursor:pointer}.divider{color:#c4cad1}.msg{margin-top:14px;min-height:20px;font-size:13px}.msg.error{color:var(--red)}.msg.ok{color:var(--green)}
+.notice-panel{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}.notice-title{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:800}.notice-list{margin-top:9px;max-height:115px;overflow:auto}.notice-item{padding:8px 0;border-bottom:1px dashed #e1e6ec;font-size:13px}.notice-item b{color:#b42318;margin-right:5px}
+.login-footer{color:rgba(255,255,255,.88);font-size:12px;text-align:center;padding:20px 10px 26px;line-height:1.7}
+.modal{position:fixed;inset:0;background:rgba(10,24,43,.55);display:grid;place-items:center;padding:24px;z-index:100}.modal-card{width:min(760px,96vw);max-height:88vh;background:white;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.28);overflow:hidden}.modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line)}.modal-head h3{margin:0}.modal-close{border:0;background:transparent;font-size:24px;cursor:pointer}.modal-body{padding:22px;overflow:auto;max-height:calc(88vh - 70px);line-height:1.65}.modal-body h4{margin:22px 0 8px}.modal-body table{width:100%;border-collapse:collapse;font-size:12px}.modal-body th,.modal-body td{border:1px solid #dfe5ec;padding:8px;vertical-align:top}
+.status-card{background:white;border-radius:18px;padding:34px;text-align:center;box-shadow:0 24px 70px rgba(4,30,66,.2)}.status-icon{font-size:44px}.status-card h2{margin:14px 0 8px}.secondary{border:1px solid #cfd8e3;background:white;border-radius:9px;padding:10px 14px;cursor:pointer;margin-top:12px}
+.app-header{height:64px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:30}.app-brand{display:flex;align-items:center;gap:12px;font-weight:800}.app-brand img{height:28px}.app-right{display:flex;align-items:center;gap:10px}.pill{font-size:12px;background:#eaf3fc;color:#1c5d99;padding:7px 10px;border-radius:999px;font-weight:800}.app-layout{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 64px)}aside{background:white;border-right:1px solid var(--line);padding:18px 12px}.nav{padding:11px 12px;border-radius:8px;margin:3px 0;cursor:pointer}.nav.active,.nav:hover{background:#edf5fc;color:#1f5fa0;font-weight:800}.nav.disabled{opacity:.45;cursor:default}
+main{padding:24px}.page{display:none}.page.active{display:block}.page h1{margin-top:0}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}.kpi,.card,.info,.item{background:#fff;border:1px solid var(--line);border-radius:10px}.kpi{padding:16px}.kpi .label{font-size:13px;color:var(--muted)}.kpi .value{font-size:28px;font-weight:800;margin-top:8px}.card{overflow:hidden;margin-bottom:14px}.card-title{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #edf0f2;text-align:left;font-size:14px}th{background:#fafbfc;font-size:12px;color:#4b5563}.clickable{cursor:pointer}.clickable:hover{background:#f7fbff}
+.tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}.green{background:#ecfdf3;color:#15803d}.orange{background:#fff7ed;color:#b45309}.blue{background:#eaf2ff;color:#1d4ed8}.gray{background:#f3f4f6;color:#4b5563}.red{background:#fef3f2;color:#b42318}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.btn{border:1px solid #d4dbe4;background:white;border-radius:8px;padding:8px 11px;cursor:pointer}.btn.primary-small{background:#1f5fa0;color:white;border-color:#1f5fa0}.btn.danger{color:#b42318}.info{padding:16px;margin-bottom:14px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.item{margin-bottom:12px;overflow:hidden}.item-head{padding:15px 16px;display:flex;justify-content:space-between;cursor:pointer}.item-body{display:none;border-top:1px solid var(--line);padding:16px}.item.open .item-body{display:block}.guide{background:#f7fafc;border-left:4px solid #1f5aa6;padding:12px;margin-bottom:12px}.detail{display:grid;grid-template-columns:1fr 1fr;gap:12px}.box{border:1px solid var(--line);border-radius:8px;padding:12px}.loading,.empty,.error{padding:24px;color:var(--muted);text-align:center}.error{color:var(--red)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-row .field{margin-top:0}.notice-form textarea{width:100%;min-height:110px;border:1px solid #cfd8e3;border-radius:8px;padding:10px}.checks{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-top:10px}
+@media(max-width:900px){.login-main{grid-template-columns:1fr;width:min(560px,92vw)}.hero{display:none}.app-layout{grid-template-columns:1fr}aside{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.grid,.detail,.form-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<section id="loginPage" class="login-page">
-  <div class="login-card">
-    <div class="logo">I</div>
-    <h1>I-PASS 로그인</h1>
-    <div class="muted">협력사 이행수준평가 시스템</div>
-    <form id="loginForm">
-      <div class="field"><label for="email">이메일</label><input id="email" type="email" autocomplete="username" required></div>
-      <div class="field"><label for="password">비밀번호</label><input id="password" type="password" autocomplete="current-password" required></div>
-      <button class="btn" type="submit">로그인</button>
-    </form>
-    <button class="link" id="resetBtn">비밀번호를 잊으셨나요?</button>
-    <div id="message" class="msg"></div>
-    <div class="version">Firebase Auth 연결 확인용 · v4</div>
+
+<section id="publicPortal" class="portal-bg">
+  <div class="login-header">
+    <img src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja">
+    <div class="service-title">i-PaSS</div>
+  </div>
+
+  <div class="login-main">
+    <div class="hero">
+      <div class="hero-kicker">PARTNER SAFETY PERFORMANCE SYSTEM</div>
+      <h1>함께 만드는 안전,<br>신뢰로 이어지는 파트너십</h1>
+      <p>협력사 이행수준평가를 위한 i-PaSS입니다.<br>평가자료 제출부터 결과 확인까지 한 곳에서 관리합니다.</p>
+      <div class="glass-line"></div>
+    </div>
+
+    <div id="authCard" class="auth-card">
+      <div class="tabs">
+        <button class="tab active" data-login-mode="partner">협력사 로그인</button>
+        <button class="tab" data-login-mode="admin">관리자 로그인</button>
+      </div>
+      <h2>로그인</h2>
+      <div class="sub" id="loginModeText">승인된 협력사 담당자 계정으로 로그인하세요.</div>
+
+      <form id="loginForm">
+        <div class="field"><label>이메일</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+        <div class="field"><label>비밀번호</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+        <button class="primary" type="submit">로그인</button>
+      </form>
+
+      <div class="auth-actions">
+        <button class="link" id="openRegister">회원가입</button><span class="divider">|</span>
+        <button class="link" id="openReset">비밀번호 찾기</button><span class="divider">|</span>
+        <button class="link" id="openPrivacy">개인정보처리방침</button>
+      </div>
+      <div id="loginMessage" class="msg"></div>
+
+      <div class="notice-panel">
+        <div class="notice-title"><span>공지사항</span><span class="sub">최신 공지</span></div>
+        <div class="notice-list" id="loginNotices"><div class="sub">불러오는 중...</div></div>
+      </div>
+    </div>
+
+    <div id="registerCard" class="auth-card hidden">
+      <h2>협력사 회원가입</h2>
+      <div class="sub">회원가입 후 이메일 인증과 관리자 승인이 완료되어야 이용할 수 있습니다.</div>
+      <form id="registerForm">
+        <div class="field"><label>이메일</label><input id="regEmail" type="email" required></div>
+        <div class="form-row">
+          <div class="field"><label>비밀번호</label><input id="regPassword" type="password" minlength="6" required></div>
+          <div class="field"><label>비밀번호 확인</label><input id="regPassword2" type="password" minlength="6" required></div>
+        </div>
+        <div class="field"><label>회사명</label><select id="regCompany" required><option value="">회사 선택</option></select></div>
+        <div class="form-row">
+          <div class="field"><label>이름</label><input id="regName" required></div>
+          <div class="field"><label>직급</label><input id="regPosition" required></div>
+        </div>
+        <div class="field"><label>휴대전화번호</label><input id="regPhone" placeholder="010-0000-0000" required></div>
+        <div class="checks"><label><input id="regPrivacy" type="checkbox" required> 개인정보 수집·이용 및 개인정보처리방침에 동의합니다.</label></div>
+        <button class="primary" type="submit">회원가입</button>
+      </form>
+      <div class="auth-actions"><button class="link backLogin">로그인으로 돌아가기</button><span class="divider">|</span><button class="link" id="openPrivacy2">개인정보처리방침</button></div>
+      <div id="registerMessage" class="msg"></div>
+    </div>
+
+    <div id="resetCard" class="auth-card hidden">
+      <h2>비밀번호 찾기</h2>
+      <div class="sub">가입한 이메일을 입력하면 비밀번호 재설정 메일을 발송합니다.</div>
+      <form id="resetForm">
+        <div class="field"><label>이메일</label><input id="resetEmail" type="email" required></div>
+        <button class="primary" type="submit">재설정 메일 발송</button>
+      </form>
+      <div class="auth-actions"><button class="link backLogin">로그인으로 돌아가기</button></div>
+      <div id="resetMessage" class="msg"></div>
+    </div>
+
+    <div id="statusCard" class="status-card hidden">
+      <div class="status-icon" id="statusIcon">⏳</div>
+      <h2 id="statusTitle">가입 승인 대기중</h2>
+      <div class="sub" id="statusText"></div>
+      <button class="secondary hidden" id="resendVerify">인증메일 다시 보내기</button>
+      <button class="secondary" id="statusLogout">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="login-footer">
+    충청남도 아산시 둔포면 아산밸리북로 110<br>
+    COPYRIGHTⓒ Hniruja, ALL RIGHTS RESERVED.
   </div>
 </section>
 
-<section id="app" class="app hidden">
-  <div class="box">
-    <h1>로그인 성공</h1>
-    <p id="who"></p>
-    <p id="serverResult" class="muted">I-PASS 서버 사용자 확인 중...</p>
-    <button class="logout" id="logoutBtn">로그아웃</button>
+<div id="privacyModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head"><h3>i-PaSS 개인정보처리방침</h3><button class="modal-close" id="closePrivacy">×</button></div>
+    <div class="modal-body">
+      <p><b>Hniruja</b>(이하 “회사”)는 협력사 이행수준평가 시스템 <b>i-PaSS</b>를 운영함에 있어 「개인정보 보호법」 등 관계 법령을 준수하며, 개인정보를 안전하게 처리하기 위해 다음과 같이 개인정보처리방침을 공개합니다.</p>
+      <h4>1. 개인정보의 처리 목적</h4>
+      <p>회원가입 및 회원관리, 이메일 인증과 로그인, 협력사 담당자 관리, 협력사 이행수준평가 자료 제출 및 결과 확인, 증빙자료 관리, 서비스 운영·보안, 공지사항 안내를 위해 개인정보를 처리합니다.</p>
+      <h4>2. 처리하는 개인정보 항목</h4>
+      <table><tr><th>구분</th><th>항목</th></tr><tr><td>회원가입</td><td>이메일, 회사명, 이름, 직급, 휴대전화번호, 개인정보 동의 여부</td></tr><tr><td>인증</td><td>비밀번호, Firebase UID, 이메일 인증 여부</td></tr><tr><td>서비스 이용</td><td>사업자등록번호, 대표자명, 상시근로자 수, 평가자료, 첨부파일, 접속·변경·감사기록 등</td></tr></table>
+      <h4>3. 보유 및 이용기간</h4>
+      <p>회원정보, 평가자료, 증빙자료 및 감사로그의 구체적인 보유기간은 회사 내부 정책 확정 후 적용합니다. 처리 목적 달성 또는 보유기간 경과 후에는 관계 법령에 따라 지체 없이 파기합니다.</p>
+      <h4>4. 회원가입 및 계정관리</h4>
+      <p>협력사 담당자만 직접 회원가입할 수 있으며 관리자 계정은 공개 회원가입으로 생성할 수 없습니다. 회원가입 후 이메일 인증과 관리자 승인이 모두 완료되어야 서비스를 이용할 수 있습니다. 한 회사당 활성 담당자 계정은 최대 3개까지 허용합니다. 퇴사 등의 사유가 있는 계정은 관리자가 사용중지할 수 있습니다.</p>
+      <h4>5. 개인정보 처리업무의 위탁 및 국외처리</h4>
+      <p>사용자 인증에는 Firebase Authentication을, 웹서비스·API·데이터베이스·파일저장에는 Cloudflare 서비스를 이용합니다. 이에 따라 서비스 제공 과정에서 인증정보 및 서비스 데이터가 국외에서 처리될 수 있습니다.</p>
+      <h4>6. 개인정보의 파기</h4>
+      <p>전자적 파일은 복구 또는 재생이 어렵도록 삭제하며, 법령상 보존이 필요한 경우에는 별도로 분리하여 보관합니다.</p>
+      <h4>7. 개인정보의 안전성 확보조치</h4>
+      <p>사용자별 접근권한 분리, 관리자/협력사 권한 통제, 암호화 통신, 인증정보 보호, 접속기록 및 감사로그 관리, 시스템 접근제한 등의 보호조치를 적용합니다.</p>
+      <h4>8. 정보주체의 권리</h4>
+      <p>정보주체는 관계 법령에 따라 개인정보 열람, 정정, 삭제, 처리정지 등을 요구할 수 있습니다. 구체적인 접수방법과 담당부서는 운영 전 최종 확정하여 본 방침에 반영합니다.</p>
+      <h4>9. 개인정보 보호책임자</h4>
+      <p>개인정보 보호책임자, 담당부서, 이메일 및 연락처는 운영 전 회사 내부에서 확정하여 반영합니다.</p>
+      <h4>10. 개인정보처리방침 변경</h4>
+      <p>본 방침의 내용이 변경되는 경우 i-PaSS 공지사항을 통해 안내합니다.</p>
+    </div>
   </div>
+</div>
+
+<section id="app" class="hidden">
+<header class="app-header">
+  <div class="app-brand"><img src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja"><span>i-PaSS</span></div>
+  <div class="app-right"><span id="userLabel" class="sub"></span><span id="rolePill" class="pill"></span><button class="btn" id="logoutBtn">로그아웃</button></div>
+</header>
+<div class="app-layout">
+<aside id="sidebar"></aside>
+<main>
+  <section class="page" id="page-dashboard">
+    <h1>관리자 대시보드</h1><div class="sub" id="cycleText">평가현황</div>
+    <div class="kpis">
+      <div class="kpi"><div class="label">평가대상 업체</div><div class="value" id="targetCount">-</div></div>
+      <div class="kpi"><div class="label">제출완료</div><div class="value" id="submittedCount">-</div></div>
+      <div class="kpi"><div class="label">평가중</div><div class="value" id="evaluatingCount">-</div></div>
+      <div class="kpi"><div class="label">평가완료</div><div class="value" id="completedCount">-</div></div>
+      <div class="kpi"><div class="label">미확인 알림</div><div class="value" id="unreadCount">-</div></div>
+    </div>
+    <div class="card"><div class="card-title">협력사 진행현황</div><div id="companyTable" class="loading">불러오는 중...</div></div>
+  </section>
+
+  <section class="page" id="page-approvals">
+    <h1>회원가입 승인</h1><div class="sub">회사명 / 이름 / 직급 / 연락처 / 이메일 / 가입일 / 승인·반려</div>
+    <div class="card"><div id="approvalTable" class="loading">불러오는 중...</div></div>
+  </section>
+
+  <section class="page" id="page-accounts">
+    <h1>협력사 계정 관리</h1><div class="sub">반려 계정은 추후 승인 가능하며, 퇴사자 등은 사용중지 처리합니다.</div>
+    <div class="card"><div id="accountTable" class="loading">불러오는 중...</div></div>
+  </section>
+
+  <section class="page" id="page-notices">
+    <h1>공지사항 관리</h1>
+    <div class="card notice-form">
+      <div class="card-title">공지 등록</div>
+      <div style="padding:16px">
+        <div class="field"><label>제목</label><input id="noticeTitle"></div>
+        <div class="field"><label>내용</label><textarea id="noticeContent"></textarea></div>
+        <div class="checks">
+          <label><input type="checkbox" id="noticeImportant"> 중요공지</label>
+          <label><input type="checkbox" id="noticeLogin" checked> 로그인 화면 표시</label>
+          <label><input type="checkbox" id="noticeAfter"> 로그인 후 표시</label>
+        </div>
+        <button class="btn primary-small" id="createNotice" style="margin-top:12px">공지 등록</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">공지 목록</div><div id="noticeAdminList" class="loading">불러오는 중...</div></div>
+  </section>
+
+  <section class="page" id="page-partnerHome">
+    <h1>나의 평가</h1><div class="sub">현재 회사에 배정된 평가회차입니다.</div>
+    <div id="afterLoginNoticeBox" class="card hidden"><div class="card-title">공지사항</div><div id="afterLoginNotices"></div></div>
+    <div class="card"><div id="myEvaluationTable" class="loading">불러오는 중...</div></div>
+  </section>
+
+  <section class="page" id="page-evaluation">
+    <button class="btn" id="backBtn">← 돌아가기</button>
+    <h1 id="evaluationTitle" style="margin-top:14px">평가 상세</h1>
+    <div class="info"><div id="evaluationInfo" class="sub"></div></div>
+    <div id="evaluationItems"></div>
+  </section>
+</main>
+</div>
 </section>
 
 <script>
-const FIREBASE_API_KEY = "AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
-let idToken = null;
+const FIREBASE_API_KEY="AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
+const SESSION_KEY="ipass.session.v5";
+let loginMode="partner",session=null,currentUser=null;
 
-function authMessage(code){
-  const map={
-    EMAIL_NOT_FOUND:"등록되지 않은 이메일입니다.",
-    INVALID_PASSWORD:"비밀번호가 올바르지 않습니다.",
-    INVALID_LOGIN_CREDENTIALS:"이메일 또는 비밀번호가 올바르지 않습니다.",
-    USER_DISABLED:"사용 중지된 계정입니다.",
-    TOO_MANY_ATTEMPTS_TRY_LATER:"로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.",
-    OPERATION_NOT_ALLOWED:"Firebase의 이메일/비밀번호 로그인이 아직 활성화되지 않았습니다.",
-    INVALID_EMAIL:"이메일 형식이 올바르지 않습니다."
-  };
-  return map[code] || code;
-}
+const $=id=>document.getElementById(id);
+function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+function tag(s){const m={pending:["승인대기","orange"],approved:["승인","green"],rejected:["반려","red"],suspended:["사용중지","gray"],drafting:["작성중","gray"],submitted:["제출완료","green"],evaluating:["평가중","orange"],finalized:["평가완료","blue"]};const a=m[s]||[s||"-","gray"];return `<span class="tag ${a[1]}">${esc(a[0])}</span>`}
 
-async function firebase(endpoint, body){
-  const r=await fetch("https://identitytoolkit.googleapis.com/v1/"+endpoint+"?key="+encodeURIComponent(FIREBASE_API_KEY),{
-    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)
+async function firebasePost(endpoint,body,locale=true){
+  const r=await fetch(`https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{
+    method:"POST",
+    headers:{"content-type":"application/json",...(locale?{"X-Firebase-Locale":"ko"}:{})},
+    body:JSON.stringify(body)
   });
   const data=await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(authMessage(data?.error?.message || "AUTH_ERROR"));
+  if(!r.ok) throw new Error(firebaseMessage(data?.error?.message||"AUTH_ERROR"));
   return data;
 }
+function firebaseMessage(c){const m={EMAIL_EXISTS:"이미 가입된 이메일입니다.",EMAIL_NOT_FOUND:"등록되지 않은 이메일입니다.",INVALID_PASSWORD:"비밀번호가 올바르지 않습니다.",INVALID_LOGIN_CREDENTIALS:"이메일 또는 비밀번호가 올바르지 않습니다.",USER_DISABLED:"사용 중지된 계정입니다.",OPERATION_NOT_ALLOWED:"Firebase 이메일/비밀번호 로그인이 활성화되지 않았습니다.",WEAK_PASSWORD:"비밀번호는 6자 이상 입력하세요.",INVALID_EMAIL:"이메일 형식이 올바르지 않습니다.",TOO_MANY_ATTEMPTS_TRY_LATER:"로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요."};return m[c]||c}
 
-async function checkServer(){
-  const out=document.getElementById("serverResult");
+async function refreshToken(){
+  const body=new URLSearchParams({grant_type:"refresh_token",refresh_token:session.refreshToken});
+  const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body});
+  const d=await r.json();if(!r.ok) throw new Error("로그인 세션이 만료되었습니다.");
+  session.idToken=d.id_token;session.refreshToken=d.refresh_token||session.refreshToken;session.expiresAt=Date.now()+Number(d.expires_in||3600)*1000;
+  sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));return session.idToken;
+}
+async function token(){if(!session) throw new Error("로그인이 필요합니다.");if(Date.now()>session.expiresAt-60000)return refreshToken();return session.idToken}
+async function api(path,options={}){
+  const t=await token();const r=await fetch(path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${t}`,...(options.body?{"content-type":"application/json"}:{}),...(options.headers||{})}});
+  const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{throw new Error("서버 응답을 해석할 수 없습니다.")}
+  if(!r.ok) throw Object.assign(new Error(data.error||`HTTP ${r.status}`),{status:r.status,data});
+  return data;
+}
+async function publicApi(path){const r=await fetch(path,{headers:{Accept:"application/json"}});const t=await r.text();if(!r.ok)throw new Error(t||`HTTP ${r.status}`);return t?JSON.parse(t):{}}
+
+function showAuthCard(name){
+  ["authCard","registerCard","resetCard","statusCard"].forEach(id=>$(id).classList.add("hidden"));
+  $(name).classList.remove("hidden");
+}
+function showPublic(){ $("app").classList.add("hidden");$("publicPortal").classList.remove("hidden");showAuthCard("authCard") }
+function logout(){session=null;currentUser=null;sessionStorage.removeItem(SESSION_KEY);$("loginPassword").value="";showPublic()}
+
+document.querySelectorAll("[data-login-mode]").forEach(b=>b.onclick=()=>{
+  loginMode=b.dataset.loginMode;document.querySelectorAll("[data-login-mode]").forEach(x=>x.classList.toggle("active",x===b));
+  $("loginModeText").textContent=loginMode==="admin"?"관리자 계정으로 로그인하세요.":"승인된 협력사 담당자 계정으로 로그인하세요.";
+});
+document.querySelectorAll(".backLogin").forEach(b=>b.onclick=()=>showAuthCard("authCard"));
+$("openRegister").onclick=()=>{if(loginMode==="admin"){$("loginMessage").className="msg error";$("loginMessage").textContent="관리자 계정은 회원가입할 수 없습니다.";return}showAuthCard("registerCard")};
+$("openReset").onclick=()=>showAuthCard("resetCard");
+["openPrivacy","openPrivacy2"].forEach(id=>$(id).onclick=()=>$("privacyModal").classList.remove("hidden"));
+$("closePrivacy").onclick=()=>$("privacyModal").classList.add("hidden");
+$("privacyModal").onclick=e=>{if(e.target===$("privacyModal"))$("privacyModal").classList.add("hidden")};
+
+async function loadPublic(){
   try{
-    const r=await fetch("/api/me",{headers:{Authorization:"Bearer "+idToken,Accept:"application/json"}});
-    const text=await r.text();
-    if(!r.ok){out.textContent="Firebase 로그인은 성공했지만 I-PASS 서버 연결 실패: HTTP "+r.status+" "+text;return;}
-    const data=JSON.parse(text);
-    out.textContent="I-PASS 서버 연결 성공 · 역할: "+(data.user?.role || "-");
-  }catch(e){out.textContent="Firebase 로그인은 성공했지만 I-PASS 서버 확인 중 오류: "+e.message;}
+    const c=await publicApi("/api/public/companies");
+    $("regCompany").innerHTML='<option value="">회사 선택</option>'+((c.companies||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.company_name)}</option>`).join(""));
+  }catch{}
+  try{
+    const n=await publicApi("/api/public/notices?placement=login");
+    const list=n.notices||[];$("loginNotices").innerHTML=list.length?list.map(x=>`<div class="notice-item">${x.is_important?'<b>[중요]</b>':""}${esc(x.title)}</div>`).join(""):'<div class="sub">등록된 공지사항이 없습니다.</div>';
+  }catch{$("loginNotices").innerHTML='<div class="sub">공지사항을 불러오지 못했습니다.</div>'}
 }
 
-document.getElementById("loginForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const msg=document.getElementById("message");
-  msg.className="msg";msg.textContent="로그인 확인 중...";
+$("loginForm").onsubmit=async e=>{
+  e.preventDefault();const msg=$("loginMessage");msg.className="msg";msg.textContent="로그인 확인 중...";
   try{
-    const email=document.getElementById("email").value.trim();
-    const password=document.getElementById("password").value;
-    const data=await firebase("accounts:signInWithPassword",{email,password,returnSecureToken:true});
-    idToken=data.idToken;
+    const d=await firebasePost("accounts:signInWithPassword",{email:$("loginEmail").value.trim(),password:$("loginPassword").value,returnSecureToken:true},false);
+    session={idToken:d.idToken,refreshToken:d.refreshToken,expiresAt:Date.now()+Number(d.expiresIn||3600)*1000,email:d.email,uid:d.localId};
+    sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));
+    const me=await api("/api/me");await routeAfterLogin(me);
     msg.textContent="";
-    document.getElementById("loginPage").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
-    document.getElementById("who").textContent=data.email+" 계정으로 Firebase 로그인 성공";
-    await checkServer();
-  }catch(err){msg.className="msg error";msg.textContent=err.message;}
-});
-
-document.getElementById("resetBtn").addEventListener("click",async()=>{
-  const msg=document.getElementById("message");
-  const email=document.getElementById("email").value.trim();
-  if(!email){msg.className="msg error";msg.textContent="먼저 이메일을 입력하세요.";return;}
-  try{
-    await firebase("accounts:sendOobCode",{requestType:"PASSWORD_RESET",email});
-    msg.className="msg ok";msg.textContent="비밀번호 재설정 메일을 보냈습니다.";
-  }catch(err){msg.className="msg error";msg.textContent=err.message;}
-});
-
-document.getElementById("logoutBtn").onclick=()=>{
-  idToken=null;
-  document.getElementById("app").classList.add("hidden");
-  document.getElementById("loginPage").classList.remove("hidden");
-  document.getElementById("password").value="";
+  }catch(err){msg.className="msg error";msg.textContent=err.message}
 };
+
+$("registerForm").onsubmit=async e=>{
+  e.preventDefault();const msg=$("registerMessage");msg.className="msg";msg.textContent="회원가입 처리 중...";
+  try{
+    const email=$("regEmail").value.trim(),p1=$("regPassword").value,p2=$("regPassword2").value;
+    if(p1!==p2)throw new Error("비밀번호 확인이 일치하지 않습니다.");
+    if(!$("regPrivacy").checked)throw new Error("개인정보 수집·이용 동의가 필요합니다.");
+    const d=await firebasePost("accounts:signUp",{email,password:p1,returnSecureToken:true},false);
+    session={idToken:d.idToken,refreshToken:d.refreshToken,expiresAt:Date.now()+Number(d.expiresIn||3600)*1000,email:d.email,uid:d.localId};
+    sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));
+    await api("/api/auth/register",{method:"POST",body:JSON.stringify({company_id:$("regCompany").value,name:$("regName").value.trim(),position:$("regPosition").value.trim(),phone:$("regPhone").value.trim(),privacy_agreed:true})});
+    await firebasePost("accounts:sendOobCode",{requestType:"VERIFY_EMAIL",idToken:d.idToken},true);
+    showStatus("email_verification_required",null);
+    msg.textContent="";
+  }catch(err){msg.className="msg error";msg.textContent=err.message}
+};
+
+$("resetForm").onsubmit=async e=>{
+  e.preventDefault();const msg=$("resetMessage");msg.className="msg";msg.textContent="메일 발송 중...";
+  try{await firebasePost("accounts:sendOobCode",{requestType:"PASSWORD_RESET",email:$("resetEmail").value.trim()},true);msg.className="msg ok";msg.textContent="비밀번호 재설정 메일을 발송했습니다."}
+  catch(err){msg.className="msg error";msg.textContent=err.message}
+};
+
+$("resendVerify").onclick=async()=>{try{await firebasePost("accounts:sendOobCode",{requestType:"VERIFY_EMAIL",idToken:await token()},true);$("statusText").textContent="인증메일을 다시 발송했습니다. 이메일 인증 후 다시 로그인하세요."}catch(e){$("statusText").textContent=e.message}};
+$("statusLogout").onclick=logout;$("logoutBtn").onclick=logout;
+
+function showStatus(state,user){
+  $("publicPortal").classList.remove("hidden");$("app").classList.add("hidden");showAuthCard("statusCard");$("resendVerify").classList.add("hidden");
+  if(state==="email_verification_required"){$("statusIcon").textContent="✉️";$("statusTitle").textContent="이메일 인증이 필요합니다.";$("statusText").textContent="가입한 이메일로 발송된 인증메일을 확인한 뒤 다시 로그인하세요.";$("resendVerify").classList.remove("hidden")}
+  else if(state==="pending_approval"){$("statusIcon").textContent="⏳";$("statusTitle").textContent="가입 승인 대기중";$("statusText").textContent="이메일 인증이 완료되었습니다. 관리자의 가입 승인을 기다려주세요."}
+  else if(state==="rejected"){$("statusIcon").textContent="🚫";$("statusTitle").textContent="가입 신청 반려";$("statusText").textContent=(user?.rejection_reason?`반려사유: ${user.rejection_reason}`:"관리자에 의해 회원가입 신청이 반려되었습니다. 추후 관리자가 승인할 수 있습니다.")}
+  else if(state==="suspended"){$("statusIcon").textContent="⛔";$("statusTitle").textContent="사용 중지 계정";$("statusText").textContent="관리자에 의해 사용이 중지된 계정입니다."}
+  else if(state==="unregistered"){$("statusIcon").textContent="⚠️";$("statusTitle").textContent="등록되지 않은 계정";$("statusText").textContent="Firebase 계정은 존재하지만 i-PaSS 회원정보가 없습니다."}
+}
+
+async function routeAfterLogin(me){
+  if(me.auth_state!=="approved"){showStatus(me.auth_state,me.user);return}
+  currentUser=me.user;
+  if(loginMode==="admin"&&currentUser.role!=="admin"){logout();throw new Error("관리자 계정이 아닙니다.")}
+  if(loginMode==="partner"&&currentUser.role==="admin"){logout();throw new Error("관리자는 관리자 로그인 탭을 이용하세요.")}
+  $("publicPortal").classList.add("hidden");$("app").classList.remove("hidden");
+  $("userLabel").textContent=currentUser.name||currentUser.email;$("rolePill").textContent=currentUser.role==="admin"?"관리자":"협력사";
+  renderSidebar();
+  if(currentUser.role==="admin"){showPage("dashboard");await loadAdminDashboard()}else{showPage("partnerHome");await loadPartnerHome()}
+}
+
+function renderSidebar(){
+  const s=$("sidebar");
+  if(currentUser.role==="admin")s.innerHTML='<div class="nav" data-page="dashboard">대시보드</div><div class="nav" data-page="approvals">회원가입 승인</div><div class="nav" data-page="accounts">협력사 계정 관리</div><div class="nav" data-page="notices">공지사항 관리</div><div class="nav disabled">평가회차 관리</div><div class="nav disabled">평가표 관리</div>';
+  else s.innerHTML='<div class="nav" data-page="partnerHome">나의 평가</div>';
+  s.querySelectorAll(".nav[data-page]").forEach(n=>n.onclick=()=>{showPage(n.dataset.page);if(n.dataset.page==="approvals")loadApprovals();if(n.dataset.page==="accounts")loadAccounts();if(n.dataset.page==="notices")loadNotices();if(n.dataset.page==="partnerHome")loadPartnerHome()});
+}
+function showPage(name){document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(`page-${name}`)?.classList.add("active");document.querySelectorAll(".nav[data-page]").forEach(n=>n.classList.toggle("active",n.dataset.page===name))}
+
+async function loadAdminDashboard(){
+  try{
+    const c=await api("/api/cycles"),cycle=c.cycles?.[0];if(cycle)$("cycleText").textContent=`${cycle.cycle_name} · ${cycle.start_at||"-"} ~ ${cycle.end_at||"-"}`;
+    const d=(await api("/api/dashboard")).dashboard||{};$("targetCount").textContent=d.target_company_count??0;$("submittedCount").textContent=d.submitted_count??0;$("evaluatingCount").textContent=d.evaluating_count??0;$("completedCount").textContent=d.completed_count??0;$("unreadCount").textContent=d.unread_notification_count??0;
+    const t=await api("/api/targets"),list=(t.targets||[]).filter(x=>Number(x.is_selected)===1);$("companyTable").innerHTML=list.length?`<div class="table-wrap"><table><thead><tr><th>협력사</th><th>업종</th><th>상시근로자</th><th>상태</th></tr></thead><tbody>${list.map(x=>`<tr class="clickable" onclick="openEvaluation('${String(x.id).replaceAll("'","\\'")}')"><td><b>${esc(x.company_name)}</b></td><td>${esc(x.industry_name||"-")}</td><td>${x.worker_count??"-"}</td><td>${tag(x.status)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">평가대상이 없습니다.</div>';
+  }catch(e){$("companyTable").innerHTML=`<div class="error">${esc(e.message)}</div>`}
+}
+
+async function loadApprovals(){const data=await api("/api/admin/registrations"),list=(data.registrations||[]).filter(x=>x.approval_status==="pending");$("approvalTable").innerHTML=list.length?renderRegTable(list,true):'<div class="empty">승인 대기 회원이 없습니다.</div>'}
+async function loadAccounts(){const data=await api("/api/admin/registrations"),list=data.registrations||[];$("accountTable").innerHTML=list.length?renderRegTable(list,false):'<div class="empty">등록된 협력사 계정이 없습니다.</div>'}
+function renderRegTable(list,approvalOnly){return `<div class="table-wrap"><table><thead><tr><th>회사명</th><th>이름</th><th>직급</th><th>연락처</th><th>이메일</th><th>가입일</th>${approvalOnly?"":"<th>상태</th>"}<th>처리</th></tr></thead><tbody>${list.map(x=>`<tr><td>${esc(x.company_name||"-")}</td><td>${esc(x.name)}</td><td>${esc(x.position)}</td><td>${esc(x.phone)}</td><td>${esc(x.email)}</td><td>${esc(x.created_at||"-")}</td>${approvalOnly?"":`<td>${tag(x.approval_status)}</td>`}<td><div class="toolbar">${x.approval_status!=="approved"?`<button class="btn primary-small" onclick="accountAction('${x.id}','approve')">승인</button>`:""}${x.approval_status==="pending"?`<button class="btn danger" onclick="accountAction('${x.id}','reject')">반려</button>`:""}${x.approval_status==="approved"?`<button class="btn danger" onclick="accountAction('${x.id}','suspend')">사용중지</button>`:""}</div></td></tr>`).join("")}</tbody></table></div>`}
+async function accountAction(id,action){let reason="";if(action==="reject")reason=prompt("반려사유를 입력하세요. (선택)")||"";if(action==="suspend"&&!confirm("이 계정을 사용중지하시겠습니까?"))return;await api(`/api/admin/registrations/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify({action,reason})});await loadApprovals();await loadAccounts()}
+
+async function loadNotices(){const data=await api("/api/admin/notices"),list=data.notices||[];$("noticeAdminList").innerHTML=list.length?`<div class="table-wrap"><table><thead><tr><th>제목</th><th>중요</th><th>로그인</th><th>로그인 후</th><th>상태</th><th>작업</th></tr></thead><tbody>${list.map(n=>`<tr><td>${esc(n.title)}</td><td>${n.is_important?"Y":"-"}</td><td>${n.show_on_login?"Y":"-"}</td><td>${n.show_after_login?"Y":"-"}</td><td>${n.is_active?"게시":"중지"}</td><td><button class="btn danger" onclick="deleteNotice('${n.id}')">삭제</button></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">등록된 공지가 없습니다.</div>'}
+$("createNotice").onclick=async()=>{await api("/api/admin/notices",{method:"POST",body:JSON.stringify({title:$("noticeTitle").value,content:$("noticeContent").value,is_important:$("noticeImportant").checked,show_on_login:$("noticeLogin").checked,show_after_login:$("noticeAfter").checked})});$("noticeTitle").value="";$("noticeContent").value="";await loadNotices();await loadPublic()}
+async function deleteNotice(id){if(!confirm("공지사항을 삭제하시겠습니까?"))return;await api(`/api/admin/notices/${encodeURIComponent(id)}`,{method:"DELETE"});await loadNotices();await loadPublic()}
+
+async function loadPartnerHome(){
+  try{
+    const n=await publicApi("/api/public/notices?placement=after_login"),notices=n.notices||[];if(notices.length){$("afterLoginNoticeBox").classList.remove("hidden");$("afterLoginNotices").innerHTML=notices.map(x=>`<div class="notice-item">${x.is_important?'<b>[중요]</b>':""}<b>${esc(x.title)}</b><br>${esc(x.content)}</div>`).join("")}else $("afterLoginNoticeBox").classList.add("hidden");
+    const d=await api("/api/my/evaluations"),list=d.evaluations||[];$("myEvaluationTable").innerHTML=list.length?`<div class="table-wrap"><table><thead><tr><th>평가회차</th><th>기간</th><th>상태</th></tr></thead><tbody>${list.map(x=>`<tr class="clickable" onclick="openEvaluation('${String(x.id).replaceAll("'","\\'")}')"><td><b>${esc(x.cycle_name)}</b></td><td>${esc((x.start_at||"-")+" ~ "+(x.end_at||"-"))}</td><td>${tag(x.status)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">현재 배정된 평가가 없습니다.</div>';
+  }catch(e){$("myEvaluationTable").innerHTML=`<div class="error">${esc(e.message)}</div>`}
+}
+
+async function openEvaluation(id){showPage("evaluation");$("evaluationItems").innerHTML='<div class="loading">평가항목 불러오는 중...</div>';try{const d=await api(`/api/evaluations/${encodeURIComponent(id)}`),e=d.evaluation||{},t=e.target||{},items=e.items||[];$("evaluationTitle").textContent=`${t.company_name||"협력사"} 평가`;$("evaluationInfo").textContent=`${t.cycle_name||""} · ${t.industry_name||""} · 상시근로자 ${t.worker_count??"-"}명 · 상태 ${t.status||"-"}`;$("evaluationItems").innerHTML=items.length?items.map((i,n)=>`<div class="item ${n===0?"open":""}"><div class="item-head" onclick="this.parentElement.classList.toggle('open')"><div><b>${esc(i.item_code||"")} ${esc(i.item_name||"")}</b> <span class="tag blue">배점 ${i.max_score??0}점</span> ${Number(i.applicable)===0?'<span class="tag gray">N/A</span>':""}</div><div>⌄</div></div><div class="item-body"><div class="guide"><b>제출 가이드</b><br>${esc(i.guide_text||"등록된 가이드 없음")}</div><div class="detail"><div class="box"><b>협력사 설명</b><p>${esc(i.description||"등록된 설명 없음")}</p></div><div class="box"><b>평가 결과</b><p>${i.earned_score==null?"최종 공개 전":`${i.earned_score} / ${i.max_score_snapshot??i.max_score??0}점`}</p><p>${esc(i.evaluation_comment||"")}</p></div></div></div></div>`).join(""):'<div class="empty">등록된 평가항목이 없습니다.</div>'}catch(e){$("evaluationItems").innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+$("backBtn").onclick=()=>showPage(currentUser?.role==="admin"?"dashboard":"partnerHome");
+
+(async function boot(){await loadPublic();try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch{logout()}})();
 </script>
 </body>
 </html>
