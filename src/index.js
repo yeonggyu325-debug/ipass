@@ -1,5 +1,13 @@
 const FIREBASE_API_KEY = "AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
 
+// Firebase accounts:lookup is an external network call.
+// Keep a short-lived per-isolate cache so consecutive portal API calls do not
+// pay the same remote verification latency repeatedly. Portal approval/status
+// is still checked from D1 on every protected request.
+const FIREBASE_LOOKUP_CACHE = new Map();
+const FIREBASE_LOOKUP_TTL_MS = 4 * 60 * 1000;
+const FIREBASE_LOOKUP_CACHE_MAX = 300;
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -11,7 +19,7 @@ export default {
       }
 
       if (request.method === "GET" && path === "/api/health") {
-        return json({ success: true, service: "ipass", status: "ok", version: "16.3.0", annual_ipass_routes: true, committee_routes: true });
+        return json({ success: true, service: "ipass", status: "ok", version: "16.4.1", annual_ipass_routes: true, committee_routes: true });
       }
 
       if (request.method === "GET" && path === "/api/public/companies") {
@@ -293,49 +301,83 @@ export default {
       if (request.method === "GET" && path === "/api/committee") {
         const year = parseAnnualYear(url.searchParams.get("year"));
         if (user.role === "admin") {
-          const { results } = await env.partner_evaluation_db.prepare(`
-            SELECT
-              cm.id, cm.year, cm.meeting_date, cm.title, cm.note, cm.status,
-              cm.finalized_at, cm.created_at, cm.updated_at,
-              (SELECT COUNT(*) FROM committee_partner_attendance cpa WHERE cpa.meeting_id = cm.id AND cpa.attendance_status = 'present') AS partner_present_count,
-              (SELECT COUNT(*) FROM committee_partner_attendance cpa WHERE cpa.meeting_id = cm.id AND cpa.attendance_status = 'absent') AS partner_absent_count,
-              (SELECT COUNT(*) FROM committee_partner_attendance cpa WHERE cpa.meeting_id = cm.id AND cpa.attendance_status = 'pending') AS partner_pending_count
-            FROM committee_meetings cm
-            WHERE cm.year = ?
-            ORDER BY cm.meeting_date DESC, cm.created_at DESC
-          `).bind(year).all();
-          return json({ success: true, year, meetings: results || [] });
+          const [meetingResult, companyResult, departmentResult] = await env.partner_evaluation_db.batch([
+            env.partner_evaluation_db.prepare(`
+              SELECT
+                cm.id, cm.year, cm.meeting_month, cm.meeting_date, cm.title, cm.note, cm.status,
+                cm.finalized_at, cm.created_at, cm.updated_at,
+                (SELECT COUNT(*) FROM committee_partner_attendance cpa WHERE cpa.meeting_id = cm.id) AS partner_target_count,
+                (SELECT COUNT(*) FROM committee_partner_attendance cpa WHERE cpa.meeting_id = cm.id AND cpa.attendance_status = 'present') AS partner_present_count,
+                (SELECT COUNT(*) FROM committee_partner_attendance cpa WHERE cpa.meeting_id = cm.id AND cpa.attendance_status = 'absent') AS partner_absent_count,
+                (SELECT COUNT(*) FROM committee_partner_attendance cpa WHERE cpa.meeting_id = cm.id AND cpa.attendance_status = 'pending') AS partner_pending_count,
+                (SELECT COUNT(*) FROM committee_department_attendance cda WHERE cda.meeting_id = cm.id) AS department_target_count
+              FROM committee_meetings cm
+              WHERE cm.year = ?
+              ORDER BY cm.meeting_month DESC, cm.meeting_date DESC
+            `).bind(year),
+            env.partner_evaluation_db.prepare(`
+              SELECT id, company_name
+              FROM companies
+              WHERE status = 'active'
+              ORDER BY company_name COLLATE NOCASE
+            `),
+            env.partner_evaluation_db.prepare(`
+              SELECT id, department_name, sort_order
+              FROM committee_departments
+              WHERE is_active = 1
+              ORDER BY sort_order, department_name
+            `)
+          ]);
+          return json({
+            success: true,
+            year,
+            meetings: meetingResult?.results || [],
+            options: {
+              companies: companyResult?.results || [],
+              departments: departmentResult?.results || []
+            }
+          });
         }
 
         if (!user.company_id) return json({ success: false, error: "회사 연결정보가 없습니다." }, 400);
         const summary = await committeeCompanySummary(env, user.company_id, year);
         const { results } = await env.partner_evaluation_db.prepare(`
           SELECT
-            cm.id, cm.meeting_date, cm.title, cm.note,
+            cm.id, cm.meeting_month, cm.meeting_date, cm.title, cm.note,
             cpa.attendance_status, cpa.attendee_position, cpa.attendee_name
           FROM committee_meetings cm
           JOIN committee_partner_attendance cpa ON cpa.meeting_id = cm.id
           WHERE cm.year = ?
             AND cm.status = 'finalized'
             AND cpa.company_id = ?
-          ORDER BY cm.meeting_date DESC, cm.created_at DESC
+          ORDER BY cm.meeting_month DESC, cm.meeting_date DESC
         `).bind(year, user.company_id).all();
         return json({ success: true, year, summary, meetings: results || [] });
       }
 
       if (user.role === "admin" && request.method === "POST" && path === "/api/admin/committee") {
         const body = await request.json();
-        const meetingDate = String(body.meeting_date || "").trim();
-        const title = String(body.title || "").trim();
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(meetingDate)) return json({ success: false, error: "개최일을 입력하세요." }, 400);
-        if (!title) return json({ success: false, error: "협의체 명칭을 입력하세요." }, 400);
-        const year = parseAnnualYear(meetingDate.slice(0, 4));
+        const year = parseAnnualYear(body.year);
+        const month = Number(body.month);
+        if (!Number.isInteger(month) || month < 1 || month > 12) return json({ success: false, error: "협의체 월을 선택하세요." }, 400);
+        const mm = String(month).padStart(2, "0");
+        const meetingDate = String(body.meeting_date || `${year}-${mm}-01`).trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(meetingDate) || Number(meetingDate.slice(0,4)) !== year || Number(meetingDate.slice(5,7)) !== month) {
+          return json({ success: false, error: "개최일은 선택한 연도와 월 안에서 입력하세요." }, 400);
+        }
+        const exists = await env.partner_evaluation_db.prepare(`SELECT id FROM committee_meetings WHERE year = ? AND meeting_month = ? LIMIT 1`).bind(year, month).first();
+        if (exists) return json({ success: false, error: `${year}년 ${month}월 협의체는 이미 등록되어 있습니다. 월별 1개만 생성할 수 있습니다.` }, 409);
         const id = crypto.randomUUID();
-        await env.partner_evaluation_db.prepare(`
-          INSERT INTO committee_meetings (id, year, meeting_date, title, note, status, created_by)
-          VALUES (?, ?, ?, ?, ?, 'draft', ?)
-        `).bind(id, year, meetingDate, title, String(body.note || "").trim() || null, user.id).run();
-        await seedCommitteeMeetingRows(env, id);
+        const title = `${year}년 ${month}월 안전보건협의체`;
+        try {
+          await env.partner_evaluation_db.prepare(`
+            INSERT INTO committee_meetings (id, year, meeting_month, meeting_date, title, note, status, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)
+          `).bind(id, year, month, meetingDate, title, String(body.note || "").trim() || null, user.id).run();
+        } catch (e) {
+          if (String(e?.message || "").toLowerCase().includes("unique")) return json({ success: false, error: `${year}년 ${month}월 협의체는 이미 등록되어 있습니다.` }, 409);
+          throw e;
+        }
         const detail = await committeeMeetingDetail(env, id);
         return json({ success: true, meeting: detail }, 201);
       }
@@ -354,100 +396,76 @@ export default {
         const body = await request.json();
 
         const meetingDate = String(body.meeting_date ?? beforeMeeting.meeting_date).trim();
-        const title = String(body.title ?? beforeMeeting.title).trim();
-        const note = String(body.note ?? beforeMeeting.note ?? "").trim() || null;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(meetingDate)) return json({ success: false, error: "개최일을 확인하세요." }, 400);
-        if (!title) return json({ success: false, error: "협의체 명칭을 입력하세요." }, 400);
         const year = parseAnnualYear(meetingDate.slice(0, 4));
+        const month = Number(meetingDate.slice(5, 7));
+        if (!Number.isInteger(month) || month < 1 || month > 12) return json({ success: false, error: "개최월을 확인하세요." }, 400);
+        const duplicate = await env.partner_evaluation_db.prepare(`
+          SELECT id FROM committee_meetings WHERE year = ? AND meeting_month = ? AND id <> ? LIMIT 1
+        `).bind(year, month, meetingId).first();
+        if (duplicate) return json({ success: false, error: `${year}년 ${month}월 협의체가 이미 있습니다. 월별 1개만 운영할 수 있습니다.` }, 409);
 
+        const title = `${year}년 ${month}월 안전보건협의체`;
+        const note = String(body.note ?? beforeMeeting.note ?? "").trim() || null;
         const partners = Array.isArray(body.partners) ? body.partners : [];
-        for (const row of partners) {
-          const companyId = String(row.company_id || "").trim();
-          const status = normalizeCommitteeStatus(row.attendance_status);
-          if (!companyId || !status) return json({ success: false, error: "협력사 참석정보가 올바르지 않습니다." }, 400);
-          const allowed = await env.partner_evaluation_db.prepare(`SELECT company_id FROM committee_partner_companies WHERE company_id = ? AND is_active = 1`).bind(companyId).first();
-          if (!allowed) return json({ success: false, error: "협의체 대상 협력사가 아닙니다." }, 400);
-          const attendeePosition = String(row.attendee_position || "").trim() || null;
-          const attendeeName = String(row.attendee_name || "").trim() || null;
-          const old = await env.partner_evaluation_db.prepare(`SELECT * FROM committee_partner_attendance WHERE meeting_id = ? AND company_id = ?`).bind(meetingId, companyId).first();
-          await env.partner_evaluation_db.prepare(`
-            INSERT INTO committee_partner_attendance
-              (id, meeting_id, company_id, attendance_status, attendee_position, attendee_name, note, updated_by, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(meeting_id, company_id) DO UPDATE SET
-              attendance_status = excluded.attendance_status,
-              attendee_position = excluded.attendee_position,
-              attendee_name = excluded.attendee_name,
-              note = excluded.note,
-              updated_by = excluded.updated_by,
-              updated_at = CURRENT_TIMESTAMP
-          `).bind(old?.id || crypto.randomUUID(), meetingId, companyId, status, attendeePosition, attendeeName, String(row.note || "").trim() || null, user.id).run();
-          const after = { attendance_status: status, attendee_position: attendeePosition, attendee_name: attendeeName, note: String(row.note || "").trim() || null };
-          if (committeeSnapshotChanged(old, after)) await logCommitteeChange(env, meetingId, "partner", companyId, old, after, user.id);
-        }
-
         const departments = Array.isArray(body.departments) ? body.departments : [];
-        for (const row of departments) {
-          const departmentId = String(row.department_id || "").trim();
-          const status = normalizeCommitteeStatus(row.attendance_status);
-          if (!departmentId || !status) return json({ success: false, error: "부서 참석정보가 올바르지 않습니다." }, 400);
-          const allowed = await env.partner_evaluation_db.prepare(`SELECT id FROM committee_departments WHERE id = ? AND is_active = 1`).bind(departmentId).first();
-          if (!allowed) return json({ success: false, error: "등록되지 않은 부서입니다." }, 400);
-          const attendeePosition = String(row.attendee_position || "").trim() || null;
-          const attendeeName = String(row.attendee_name || "").trim() || null;
-          const old = await env.partner_evaluation_db.prepare(`SELECT * FROM committee_department_attendance WHERE meeting_id = ? AND department_id = ?`).bind(meetingId, departmentId).first();
-          await env.partner_evaluation_db.prepare(`
-            INSERT INTO committee_department_attendance
-              (id, meeting_id, department_id, attendance_status, attendee_position, attendee_name, note, updated_by, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(meeting_id, department_id) DO UPDATE SET
-              attendance_status = excluded.attendance_status,
-              attendee_position = excluded.attendee_position,
-              attendee_name = excluded.attendee_name,
-              note = excluded.note,
-              updated_by = excluded.updated_by,
-              updated_at = CURRENT_TIMESTAMP
-          `).bind(old?.id || crypto.randomUUID(), meetingId, departmentId, status, attendeePosition, attendeeName, String(row.note || "").trim() || null, user.id).run();
-          const after = { attendance_status: status, attendee_position: attendeePosition, attendee_name: attendeeName, note: String(row.note || "").trim() || null };
-          if (committeeSnapshotChanged(old, after)) await logCommitteeChange(env, meetingId, "department", departmentId, old, after, user.id);
-        }
+
+        const oldPartnerRows = await env.partner_evaluation_db.prepare(`SELECT company_id FROM committee_partner_attendance WHERE meeting_id = ?`).bind(meetingId).all();
+        const oldCompanyIds = (oldPartnerRows.results || []).map(r => r.company_id);
+
+        await replaceCommitteePartnerRows(env, meetingId, partners, user.id);
+        await replaceCommitteeDepartmentRows(env, meetingId, departments, user.id);
 
         const requestedStatus = body.finalize === true ? "finalized" : (body.status === "draft" ? "draft" : beforeMeeting.status);
         if (requestedStatus === "finalized") {
-          const pending = await env.partner_evaluation_db.prepare(`
-            SELECT COUNT(*) AS cnt
+          const counts = await env.partner_evaluation_db.prepare(`
+            SELECT
+              COUNT(*) AS target_count,
+              SUM(CASE WHEN attendance_status = 'pending' THEN 1 ELSE 0 END) AS pending_count
             FROM committee_partner_attendance
+            WHERE meeting_id = ?
+          `).bind(meetingId).first();
+          if (Number(counts?.target_count || 0) < 1) return json({ success: false, error: "이 달 협의체 대상 협력사를 1개 이상 선택하세요." }, 400);
+          if (Number(counts?.pending_count || 0) > 0) return json({ success: false, error: "선택한 모든 협력사의 참석 또는 불참을 지정한 뒤 확정하세요." }, 400);
+
+          const deptPending = await env.partner_evaluation_db.prepare(`
+            SELECT COUNT(*) AS cnt FROM committee_department_attendance
             WHERE meeting_id = ? AND attendance_status = 'pending'
           `).bind(meetingId).first();
-          if (Number(pending?.cnt || 0) > 0) return json({ success: false, error: "모든 협력사의 참석/불참/비대상을 지정한 뒤 확정하세요." }, 400);
-
-          const incomplete = await env.partner_evaluation_db.prepare(`
-            SELECT COUNT(*) AS cnt
-            FROM committee_partner_attendance
-            WHERE meeting_id = ? AND attendance_status = 'present'
-              AND (TRIM(COALESCE(attendee_position,'')) = '' OR TRIM(COALESCE(attendee_name,'')) = '')
-          `).bind(meetingId).first();
-          if (Number(incomplete?.cnt || 0) > 0) return json({ success: false, error: "참석 협력사의 직급과 성명을 모두 입력하세요." }, 400);
+          if (Number(deptPending?.cnt || 0) > 0) return json({ success: false, error: "선택한 사내 부서의 참석 또는 불참을 지정한 뒤 확정하세요." }, 400);
         }
 
         await env.partner_evaluation_db.prepare(`
           UPDATE committee_meetings
-          SET year = ?, meeting_date = ?, title = ?, note = ?, status = ?,
+          SET year = ?, meeting_month = ?, meeting_date = ?, title = ?, note = ?, status = ?,
               finalized_by = CASE WHEN ? = 'finalized' THEN ? ELSE NULL END,
               finalized_at = CASE WHEN ? = 'finalized' THEN COALESCE(finalized_at, CURRENT_TIMESTAMP) ELSE NULL END,
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).bind(year, meetingDate, title, note, requestedStatus, requestedStatus, user.id, requestedStatus, meetingId).run();
+        `).bind(year, month, meetingDate, title, note, requestedStatus, requestedStatus, user.id, requestedStatus, meetingId).run();
 
-        const afterMeeting = { year, meeting_date: meetingDate, title, note, status: requestedStatus };
+        const afterMeeting = { year, meeting_month: month, meeting_date: meetingDate, title, note, status: requestedStatus };
         if (committeeSnapshotChanged(beforeMeeting, afterMeeting)) await logCommitteeChange(env, meetingId, "meeting", meetingId, beforeMeeting, afterMeeting, user.id);
 
-        // 확정/수정 시 해당 연도의 모든 대상 협력사 점수를 다시 동기화합니다.
-        await syncCommitteeAnnualCountsForYear(env, Number(beforeMeeting.year));
-        if (year !== Number(beforeMeeting.year)) await syncCommitteeAnnualCountsForYear(env, year);
+        const newCompanyIds = partners.map(r => String(r.company_id || "").trim()).filter(Boolean);
+        const affected = [...new Set([...oldCompanyIds, ...newCompanyIds])];
+        for (const companyId of affected) {
+          await syncCommitteeAnnualCount(env, companyId, Number(beforeMeeting.year));
+          if (year !== Number(beforeMeeting.year)) await syncCommitteeAnnualCount(env, companyId, year);
+        }
 
         const detail = await committeeMeetingDetail(env, meetingId);
         return json({ success: true, meeting: detail });
+      }
+
+      if (user.role === "admin" && committeeAdminMatch && request.method === "DELETE") {
+        const meetingId = decodeURIComponent(committeeAdminMatch[1]);
+        const before = await env.partner_evaluation_db.prepare(`SELECT year FROM committee_meetings WHERE id = ? LIMIT 1`).bind(meetingId).first();
+        if (!before) return json({ success: false, error: "협의체 회차를 찾을 수 없습니다." }, 404);
+        const rows = await env.partner_evaluation_db.prepare(`SELECT company_id FROM committee_partner_attendance WHERE meeting_id = ?`).bind(meetingId).all();
+        await env.partner_evaluation_db.prepare(`DELETE FROM committee_meetings WHERE id = ?`).bind(meetingId).run();
+        for (const row of rows.results || []) await syncCommitteeAnnualCount(env, row.company_id, Number(before.year));
+        return json({ success: true });
       }
 
       if (request.method === "GET" && path === "/api/cycles") {
@@ -760,7 +778,7 @@ export default {
         return json({ success: true });
       }
 
-      return json({ success: false, error: "API route not found", method: request.method, path, version: "16.3.0" }, 404);
+      return json({ success: false, error: "API route not found", method: request.method, path, version: "16.4.1" }, 404);
     } catch (error) {
       console.error(error);
       return json({ success: false, error: error?.message || "Internal server error" }, 500);
@@ -772,13 +790,18 @@ async function firebaseUserFromRequest(request) {
   const header = request.headers.get("Authorization") || "";
   const match = header.match(/^Bearer\s+(.+)$/i);
   if (!match) return { ok: false, status: 401, error: "로그인이 필요합니다." };
+  const idToken = match[1];
+  const now = Date.now();
+  const cached = FIREBASE_LOOKUP_CACHE.get(idToken);
+  if (cached && cached.expiresAt > now) return { ok: true, user: cached.user };
+  if (cached) FIREBASE_LOOKUP_CACHE.delete(idToken);
 
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(FIREBASE_API_KEY)}`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ idToken: match[1] })
+      body: JSON.stringify({ idToken })
     }
   );
 
@@ -788,8 +811,14 @@ async function firebaseUserFromRequest(request) {
   const user = data.users?.[0];
   if (!user?.localId || user.disabled) return { ok: false, status: 401, error: "유효하지 않은 사용자입니다." };
 
+  if (FIREBASE_LOOKUP_CACHE.size >= FIREBASE_LOOKUP_CACHE_MAX) {
+    const oldestKey = FIREBASE_LOOKUP_CACHE.keys().next().value;
+    if (oldestKey) FIREBASE_LOOKUP_CACHE.delete(oldestKey);
+  }
+  FIREBASE_LOOKUP_CACHE.set(idToken, { user, expiresAt: now + FIREBASE_LOOKUP_TTL_MS });
   return { ok: true, user };
 }
+
 
 async function requireApprovedAccount(request, env) {
   const firebase = await firebaseUserFromRequest(request);
@@ -988,32 +1017,86 @@ async function annualIpassSummary(env, companyId, year) {
 
 function normalizeCommitteeStatus(value) {
   const s = String(value || "pending");
-  return ["pending", "present", "absent", "na"].includes(s) ? s : null;
+  return ["pending", "present", "absent"].includes(s) ? s : null;
 }
 
-async function seedCommitteeMeetingRows(env, meetingId) {
-  const { results: partners } = await env.partner_evaluation_db.prepare(`
-    SELECT cpc.company_id
-    FROM committee_partner_companies cpc
-    JOIN companies c ON c.id = cpc.company_id
-    WHERE cpc.is_active = 1 AND c.status = 'active'
-    ORDER BY cpc.sort_order, c.company_name
-  `).all();
-  for (const row of partners || []) {
+async function replaceCommitteePartnerRows(env, meetingId, rows, changedBy) {
+  const existingResult = await env.partner_evaluation_db.prepare(`SELECT * FROM committee_partner_attendance WHERE meeting_id = ?`).bind(meetingId).all();
+  const existing = new Map((existingResult.results || []).map(r => [r.company_id, r]));
+  const nextIds = new Set();
+
+  for (const row of rows) {
+    const companyId = String(row.company_id || "").trim();
+    const status = normalizeCommitteeStatus(row.attendance_status);
+    const position = String(row.attendee_position || "").trim() || null;
+    const name = String(row.attendee_name || "").trim() || null;
+    if (!companyId || !status) throw new Error("협력사 참석정보가 올바르지 않습니다.");
+    if (status === "present" && (!position || !name)) throw new Error("참석 협력사는 직급과 성명을 모두 입력하세요.");
+    if (nextIds.has(companyId)) throw new Error("같은 협력사를 중복 선택할 수 없습니다.");
+    const allowed = await env.partner_evaluation_db.prepare(`SELECT id FROM companies WHERE id = ? AND status = 'active' LIMIT 1`).bind(companyId).first();
+    if (!allowed) throw new Error("등록되지 않았거나 비활성화된 협력사입니다.");
+    nextIds.add(companyId);
+    const old = existing.get(companyId) || null;
     await env.partner_evaluation_db.prepare(`
-      INSERT OR IGNORE INTO committee_partner_attendance (id, meeting_id, company_id)
-      VALUES (?, ?, ?)
-    `).bind(crypto.randomUUID(), meetingId, row.company_id).run();
+      INSERT INTO committee_partner_attendance
+        (id, meeting_id, company_id, attendance_status, attendee_position, attendee_name, note, updated_by, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(meeting_id, company_id) DO UPDATE SET
+        attendance_status = excluded.attendance_status,
+        attendee_position = excluded.attendee_position,
+        attendee_name = excluded.attendee_name,
+        note = NULL,
+        updated_by = excluded.updated_by,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(old?.id || crypto.randomUUID(), meetingId, companyId, status, position, name, changedBy || null).run();
+    const after = { attendance_status: status, attendee_position: position, attendee_name: name };
+    if (committeeSnapshotChanged(old, after)) await logCommitteeChange(env, meetingId, "partner", companyId, old, after, changedBy);
   }
 
-  const { results: departments } = await env.partner_evaluation_db.prepare(`
-    SELECT id FROM committee_departments WHERE is_active = 1 ORDER BY sort_order, department_name
-  `).all();
-  for (const row of departments || []) {
+  for (const [companyId, old] of existing.entries()) {
+    if (nextIds.has(companyId)) continue;
+    await env.partner_evaluation_db.prepare(`DELETE FROM committee_partner_attendance WHERE meeting_id = ? AND company_id = ?`).bind(meetingId, companyId).run();
+    await logCommitteeChange(env, meetingId, "partner", companyId, old, null, changedBy);
+  }
+}
+
+async function replaceCommitteeDepartmentRows(env, meetingId, rows, changedBy) {
+  const existingResult = await env.partner_evaluation_db.prepare(`SELECT * FROM committee_department_attendance WHERE meeting_id = ?`).bind(meetingId).all();
+  const existing = new Map((existingResult.results || []).map(r => [r.department_id, r]));
+  const nextIds = new Set();
+
+  for (const row of rows) {
+    const departmentId = String(row.department_id || "").trim();
+    const status = normalizeCommitteeStatus(row.attendance_status);
+    const position = String(row.attendee_position || "").trim() || null;
+    const name = String(row.attendee_name || "").trim() || null;
+    if (!departmentId || !status) throw new Error("부서 참석정보가 올바르지 않습니다.");
+    if (status === "present" && (!position || !name)) throw new Error("참석 부서는 직급과 성명을 모두 입력하세요.");
+    if (nextIds.has(departmentId)) throw new Error("같은 부서를 중복 선택할 수 없습니다.");
+    const allowed = await env.partner_evaluation_db.prepare(`SELECT id FROM committee_departments WHERE id = ? AND is_active = 1 LIMIT 1`).bind(departmentId).first();
+    if (!allowed) throw new Error("등록되지 않았거나 비활성화된 부서입니다.");
+    nextIds.add(departmentId);
+    const old = existing.get(departmentId) || null;
     await env.partner_evaluation_db.prepare(`
-      INSERT OR IGNORE INTO committee_department_attendance (id, meeting_id, department_id)
-      VALUES (?, ?, ?)
-    `).bind(crypto.randomUUID(), meetingId, row.id).run();
+      INSERT INTO committee_department_attendance
+        (id, meeting_id, department_id, attendance_status, attendee_position, attendee_name, note, updated_by, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(meeting_id, department_id) DO UPDATE SET
+        attendance_status = excluded.attendance_status,
+        attendee_position = excluded.attendee_position,
+        attendee_name = excluded.attendee_name,
+        note = NULL,
+        updated_by = excluded.updated_by,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(old?.id || crypto.randomUUID(), meetingId, departmentId, status, position, name, changedBy || null).run();
+    const after = { attendance_status: status, attendee_position: position, attendee_name: name };
+    if (committeeSnapshotChanged(old, after)) await logCommitteeChange(env, meetingId, "department", departmentId, old, after, changedBy);
+  }
+
+  for (const [departmentId, old] of existing.entries()) {
+    if (nextIds.has(departmentId)) continue;
+    await env.partner_evaluation_db.prepare(`DELETE FROM committee_department_attendance WHERE meeting_id = ? AND department_id = ?`).bind(meetingId, departmentId).run();
+    await logCommitteeChange(env, meetingId, "department", departmentId, old, null, changedBy);
   }
 }
 
@@ -1022,30 +1105,25 @@ async function committeeMeetingDetail(env, meetingId) {
     SELECT * FROM committee_meetings WHERE id = ? LIMIT 1
   `).bind(meetingId).first();
   if (!meeting) return null;
-  await seedCommitteeMeetingRows(env, meetingId);
 
-  const { results: partners } = await env.partner_evaluation_db.prepare(`
-    SELECT
-      cpa.company_id, c.company_name, cpc.sort_order,
-      cpa.attendance_status, cpa.attendee_position, cpa.attendee_name, cpa.note
-    FROM committee_partner_attendance cpa
-    JOIN committee_partner_companies cpc ON cpc.company_id = cpa.company_id
-    JOIN companies c ON c.id = cpa.company_id
-    WHERE cpa.meeting_id = ? AND cpc.is_active = 1
-    ORDER BY cpc.sort_order, c.company_name
-  `).bind(meetingId).all();
+  const [partnerResult, departmentResult] = await env.partner_evaluation_db.batch([
+    env.partner_evaluation_db.prepare(`
+      SELECT cpa.company_id, c.company_name, cpa.attendance_status, cpa.attendee_position, cpa.attendee_name
+      FROM committee_partner_attendance cpa
+      JOIN companies c ON c.id = cpa.company_id
+      WHERE cpa.meeting_id = ?
+      ORDER BY c.company_name COLLATE NOCASE
+    `).bind(meetingId),
+    env.partner_evaluation_db.prepare(`
+      SELECT cda.department_id, cd.department_name, cd.sort_order, cda.attendance_status, cda.attendee_position, cda.attendee_name
+      FROM committee_department_attendance cda
+      JOIN committee_departments cd ON cd.id = cda.department_id
+      WHERE cda.meeting_id = ?
+      ORDER BY cd.sort_order, cd.department_name
+    `).bind(meetingId)
+  ]);
 
-  const { results: departments } = await env.partner_evaluation_db.prepare(`
-    SELECT
-      cda.department_id, cd.department_name, cd.sort_order,
-      cda.attendance_status, cda.attendee_position, cda.attendee_name, cda.note
-    FROM committee_department_attendance cda
-    JOIN committee_departments cd ON cd.id = cda.department_id
-    WHERE cda.meeting_id = ? AND cd.is_active = 1
-    ORDER BY cd.sort_order, cd.department_name
-  `).bind(meetingId).all();
-
-  return { ...meeting, partners: partners || [], departments: departments || [] };
+  return { ...meeting, partners: partnerResult?.results || [], departments: departmentResult?.results || [] };
 }
 
 async function committeeCompanySummary(env, companyId, year) {
@@ -1053,8 +1131,7 @@ async function committeeCompanySummary(env, companyId, year) {
     SELECT
       COUNT(*) AS finalized_meeting_count,
       SUM(CASE WHEN cpa.attendance_status = 'present' THEN 1 ELSE 0 END) AS present_count,
-      SUM(CASE WHEN cpa.attendance_status = 'absent' THEN 1 ELSE 0 END) AS absence_count,
-      SUM(CASE WHEN cpa.attendance_status = 'na' THEN 1 ELSE 0 END) AS na_count
+      SUM(CASE WHEN cpa.attendance_status = 'absent' THEN 1 ELSE 0 END) AS absence_count
     FROM committee_meetings cm
     JOIN committee_partner_attendance cpa ON cpa.meeting_id = cm.id
     WHERE cm.year = ? AND cm.status = 'finalized' AND cpa.company_id = ?
@@ -1064,7 +1141,6 @@ async function committeeCompanySummary(env, companyId, year) {
     finalized_meeting_count: Number(row?.finalized_meeting_count || 0),
     present_count: Number(row?.present_count || 0),
     absence_count: absence,
-    na_count: Number(row?.na_count || 0),
     score: Math.max(0, 10 - absence * 3)
   };
 }
@@ -1087,13 +1163,16 @@ async function syncCommitteeAnnualCount(env, companyId, year) {
 
 async function syncCommitteeAnnualCountsForYear(env, year) {
   const { results } = await env.partner_evaluation_db.prepare(`
-    SELECT company_id FROM committee_partner_companies WHERE is_active = 1 ORDER BY sort_order
-  `).all();
+    SELECT DISTINCT company_id
+    FROM committee_partner_attendance cpa
+    JOIN committee_meetings cm ON cm.id = cpa.meeting_id
+    WHERE cm.year = ?
+  `).bind(year).all();
   for (const row of results || []) await syncCommitteeAnnualCount(env, row.company_id, year);
 }
 
 function committeeSnapshotChanged(before, after) {
-  const fields = ["year","meeting_date","title","note","status","attendance_status","attendee_position","attendee_name"];
+  const fields = ["year","meeting_month","meeting_date","title","note","status","attendance_status","attendee_position","attendee_name"];
   return fields.some(k => String(before?.[k] ?? "") !== String(after?.[k] ?? ""));
 }
 
@@ -1101,7 +1180,7 @@ async function logCommitteeChange(env, meetingId, entityType, entityKey, before,
   const pick = value => {
     if (!value) return null;
     const out = {};
-    for (const key of ["year","meeting_date","title","note","status","attendance_status","attendee_position","attendee_name"]) {
+    for (const key of ["year","meeting_month","meeting_date","title","note","status","attendance_status"]) {
       if (value[key] !== undefined) out[key] = value[key];
     }
     return JSON.stringify(out);
