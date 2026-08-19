@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<title>Hniruja 협력사 EHS 포털 | 비밀번호 찾기</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{--primary:#285f8f;--primary-hover:#23557f;--text-strong:#191f28;--text:#4e5968;--muted:#8b95a1;--line:#e5e8eb;--line-strong:#d6dce1;--danger:#cf4b45;--success:#16845b;--radius:8px}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:"Pretendard Variable","Pretendard","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif;background:#f8fafb;color:var(--text-strong);letter-spacing:-.018em}
+body{font-size:14px}
+.wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px}
+.content{width:min(390px,92vw)}
+.eyebrow{display:none}
+h1{margin:0 0 28px;color:var(--text-strong);font-size:27px;font-weight:730}
+p{display:none}
+label{display:block;margin-bottom:8px;color:var(--text);font-size:13px;font-weight:600}
+input{width:100%;height:52px;border:1px solid var(--line-strong);border-radius:var(--radius);background:#fff;padding:0 13px;outline:none}
+input:focus{border-color:#80a9c5;box-shadow:0 0 0 3px rgba(47,107,154,.10)}
+button{width:100%;height:52px;margin-top:18px;border:0;border-radius:var(--radius);background:var(--primary);color:#fff;font-size:14px;font-weight:700}
+button:hover{background:var(--primary-hover)}
+.links{text-align:center;margin-top:18px}
+a{color:#667787;font-size:12px;text-decoration:none}
+.msg{margin-top:14px;text-align:center;color:var(--danger);font-size:12px}.msg:empty{display:none}.ok{color:var(--success)}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="content"><div class="eyebrow">HNIRUJA PARTNER PORTAL</div><h1>비밀번호 찾기</h1><form id="form"><label>이메일</label><input id="email" type="email" required><button type="submit">재설정 메일 발송</button></form><div id="message" class="msg"></div><div class="links"><a href="/">로그인으로 돌아가기</a></div></div></div>
+<script>
+const FIREBASE_API_KEY="AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
+document.getElementById("form").onsubmit=async e=>{e.preventDefault();const msg=document.getElementById("message");msg.className="msg";msg.textContent="메일 발송 중...";try{const r=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:"POST",headers:{"content-type":"application/json","X-Firebase-Locale":"ko"},body:JSON.stringify({requestType:"PASSWORD_RESET",email:document.getElementById("email").value.trim()})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.error?.message||"메일 발송에 실패했습니다.");msg.className="msg ok";msg.textContent="비밀번호 재설정 메일을 발송했습니다."}catch(err){msg.textContent=err.message}};
+</script>
+</body>
+</html>
