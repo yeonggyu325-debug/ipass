@@ -6,44 +6,45 @@
 <title>Hniruja Partner Portal | 회원가입</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-:root{--navy:#234e70;--ink:#273746;--muted:#7b8996;--line:#d9e3e9;--line-soft:#edf1f4;--bg:#f6f9fb;--danger:#b33f39;--success:#2c7758}
+:root{--primary:#2f6b9a;--primary-hover:#275d86;--text-strong:#191f28;--text:#4e5968;--muted:#8b95a1;--line:#e5e8eb;--line-strong:#d6dce1;--bg:#f7f8fa;--danger:#cf4b45;--success:#16845b;--radius:8px}
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;font-family:"Pretendard Variable","Pretendard","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif;color:var(--ink);background:var(--bg);letter-spacing:-.018em}
-body{font-size:110%}
+html,body{margin:0;min-height:100%;font-family:"Pretendard Variable","Pretendard","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif;color:var(--text-strong);background:var(--bg);letter-spacing:-.018em}
+body{font-size:14px}
 button,input,select{font:inherit}
-.header{height:72px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center}
-.header-inner{width:min(980px,92vw);display:flex;align-items:center;justify-content:space-between}
-.brand{color:var(--navy);font-size:22px;font-weight:760;letter-spacing:-.035em}
-.brand small{margin-left:9px;color:#8a98a5;font-size:10px;font-weight:600;letter-spacing:.04em}
-.back{color:#667d8e;font-size:11px;text-decoration:none}
-.wrap{width:min(860px,92vw);margin:48px auto 70px}
-.page-title{margin-bottom:28px}
-.page-title .eyebrow{color:#8292a0;font-size:10px;font-weight:800;letter-spacing:.11em}
-.page-title h1{margin:8px 0 0;color:#294459;font-size:28px;font-weight:730;letter-spacing:-.035em}
-.page-title p{display:none}
-.section{margin-top:20px;background:#fff;border-top:2px solid var(--navy)}
-.section-title{height:48px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--line);color:#365367;font-size:13px;font-weight:700}
-.section-body{padding:4px 18px 12px}
-.field{display:grid;grid-template-columns:170px minmax(0,1fr);align-items:center;gap:22px;min-height:68px;border-bottom:1px solid var(--line-soft)}
+.header{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.header-inner{width:min(900px,92vw);display:flex;align-items:center;justify-content:space-between}
+.brand{color:var(--text-strong);font-size:17px;font-weight:720}
+.brand small{margin-left:8px;color:var(--muted);font-size:10px;font-weight:600}
+.back{color:#6e7c88;font-size:12px;text-decoration:none}
+.wrap{width:min(760px,92vw);margin:44px auto 72px}
+.page-title{margin-bottom:28px}.page-title .eyebrow{display:none}
+.page-title h1{margin:0;color:var(--text-strong);font-size:28px;font-weight:730}
+.section{background:#fff;border-top:1px solid var(--line)}
+.section:first-of-type{border-radius:12px 12px 0 0}
+.section:nth-last-of-type(1){border-radius:0 0 12px 12px}
+.section-title{height:54px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--line);color:var(--text-strong);font-size:14px;font-weight:700}
+.section-body{padding:4px 20px 12px}
+.field{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:22px;min-height:70px;border-bottom:1px solid #f0f2f4}
 .field:last-child{border-bottom:0}
-.field label{color:#4b5f6f;font-size:12px;font-weight:650}
-.field input,.field select{width:100%;height:46px;border:1px solid #ccd8e1;background:#fff;padding:0 12px;outline:none}
-.field input:focus,.field select:focus{border-color:#79a1bc;box-shadow:0 0 0 3px rgba(91,140,174,.07)}
+.field label{color:var(--text);font-size:13px;font-weight:600}
+.field input,.field select{width:100%;max-width:430px;height:48px;border:1px solid var(--line-strong);border-radius:var(--radius);background:#fff;padding:0 13px;outline:none}
+.field input:focus,.field select:focus{border-color:#80a9c5;box-shadow:0 0 0 3px rgba(47,107,154,.10)}
 .help{display:none}
-.agree{margin-top:10px;padding:16px;border:1px solid var(--line);background:#fbfcfd;color:#5f7281;font-size:12px}
+.agree{margin-top:12px;padding:15px 16px;border:1px solid var(--line);border-radius:var(--radius);background:#fbfcfd;color:var(--text);font-size:12px}
 .agree-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
-.agree a{color:#4e728e}
-.actions{display:flex;justify-content:center;gap:8px;margin-top:28px}
-.btn{min-width:122px;height:44px;border:1px solid #ccd8e0;background:#fff;color:#4f6575}
-.btn.primary{border-color:var(--navy);background:var(--navy);color:#fff;font-weight:700}
-.msg{min-height:18px;margin-top:14px;text-align:center;font-size:12px}
-.msg.error{color:var(--danger)}.msg.ok{color:var(--success)}
-.footer{text-align:center;color:#89959f;font-size:10px;padding:20px}
-@media(max-width:650px){body{font-size:105%}.field{grid-template-columns:1fr;gap:7px;padding:13px 0}.header-inner{width:90vw}.brand small{display:none}.agree-row{align-items:flex-start;flex-direction:column}}
+.agree a{color:var(--primary)}
+.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:24px}
+.btn{min-width:110px;height:44px;border:1px solid var(--line-strong);border-radius:var(--radius);background:#fff;color:var(--text);font-weight:600}
+.btn.primary{border-color:var(--primary);background:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-hover)}
+.msg{min-height:18px;margin-top:14px;text-align:right;font-size:12px}
+.msg:empty{display:none}.msg.error{color:var(--danger)}.msg.ok{color:var(--success)}
+.footer{text-align:center;color:#929ca5;font-size:10px;padding:20px}
+@media(max-width:650px){.field{grid-template-columns:1fr;gap:7px;padding:13px 0}.field input,.field select{max-width:none}.header-inner{width:90vw}.brand small{display:none}.agree-row{align-items:flex-start;flex-direction:column}.actions{flex-direction:column-reverse}.btn{width:100%}.msg{text-align:center}}
 </style>
 </head>
 <body>
-<header class="header"><div class="header-inner"><div class="brand">Hniruja Partner Portal <small>협력사 포털</small></div><a class="back" href="/">로그인으로 돌아가기</a></div></header>
+<header class="header"><div class="header-inner"><div class="brand">Partner Portal</div><a class="back" href="/">로그인으로 돌아가기</a></div></header>
 
 <main class="wrap">
   <div class="page-title"><div class="eyebrow">HNIRUJA PARTNER PORTAL</div><h1>회원가입</h1></div>
