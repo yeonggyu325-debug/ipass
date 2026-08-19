@@ -3,318 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>I-PASS 협력사 이행수준평가</title>
+<title>I-PASS 로그인</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:#f4f6f8;color:#1f2937}
-button,input{font:inherit}.hidden{display:none!important}
-.login-page{min-height:100vh;display:grid;place-items:center;padding:24px;background:#eef3f8}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;background:#eef3f8;color:#1f2937}
+.hidden{display:none!important}
+.login-page{min-height:100vh;display:grid;place-items:center;padding:24px}
 .login-card{width:min(420px,100%);background:#fff;border:1px solid #dfe3e8;border-radius:16px;padding:30px;box-shadow:0 12px 36px rgba(15,23,42,.08)}
-.logo{width:48px;height:48px;border-radius:12px;background:#1f5aa6;color:white;display:grid;place-items:center;font-size:22px;font-weight:900;margin-bottom:18px}
-.login-card h1{font-size:24px;margin:0 0 7px}.muted{color:#6b7280;font-size:14px}.login-field{margin-top:16px}
-.login-field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.login-field input{width:100%;height:44px;border:1px solid #d0d5dd;border-radius:8px;padding:0 12px}
-.login-btn{width:100%;height:44px;border:0;border-radius:8px;background:#1f5aa6;color:#fff;font-weight:800;margin-top:20px;cursor:pointer}
-.login-link{border:0;background:none;color:#1f5aa6;margin-top:14px;cursor:pointer;padding:0}.login-msg{font-size:13px;margin-top:14px;min-height:18px}.login-msg.error{color:#b42318}.login-msg.ok{color:#15803d}
-header{height:64px;background:#fff;border-bottom:1px solid #dfe3e8;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:20}
-.brand{font-weight:800}.header-right{display:flex;align-items:center;gap:10px}.pill{font-size:12px;padding:7px 10px;border-radius:999px;background:#eef4fb;color:#1f5aa6;font-weight:800}
-.logout{border:1px solid #dfe3e8;background:#fff;border-radius:8px;padding:8px 11px;cursor:pointer}
-.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 64px)}
-aside{background:#fff;border-right:1px solid #dfe3e8;padding:18px 12px}.nav{padding:11px 12px;border-radius:8px;margin:3px 0;cursor:pointer}.nav.active,.nav:hover{background:#eef4fb;color:#1f5aa6;font-weight:700}
-main{padding:24px}.page{display:none}.page.active{display:block}.sub{color:#6b7280;font-size:14px;margin-bottom:18px}
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}.kpi,.card,.info,.item{background:#fff;border:1px solid #dfe3e8;border-radius:10px}
-.kpi{padding:16px}.kpi .label{font-size:13px;color:#6b7280}.kpi .value{font-size:28px;font-weight:800;margin-top:8px}
-.card{overflow:hidden}.card-title{padding:14px 16px;border-bottom:1px solid #dfe3e8;font-weight:700}
-table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #edf0f2;text-align:left;font-size:14px}th{background:#fafbfc;font-size:12px;color:#4b5563}tbody tr.clickable{cursor:pointer}tbody tr.clickable:hover{background:#f7fbff}
-.tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}.green{background:#ecfdf3;color:#15803d}.orange{background:#fff7ed;color:#b45309}.blue{background:#eaf2ff;color:#1d4ed8}.gray{background:#f3f4f6;color:#4b5563}
-.btn{border:1px solid #dfe3e8;background:#fff;padding:9px 12px;border-radius:7px;cursor:pointer}.info{padding:16px;margin-bottom:14px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.field label{display:block;font-size:12px;color:#6b7280;margin-bottom:5px}.field input{width:100%;height:40px;border:1px solid #dfe3e8;border-radius:7px;padding:0 10px;background:#f9fafb}
-.item{margin-bottom:12px;overflow:hidden}.item-head{padding:15px 16px;display:flex;justify-content:space-between;cursor:pointer}.item-body{display:none;border-top:1px solid #dfe3e8;padding:16px}.item.open .item-body{display:block}
-.guide{background:#f7fafc;border-left:4px solid #1f5aa6;padding:12px;margin-bottom:12px}.detail{display:grid;grid-template-columns:1fr 1fr;gap:12px}.box{border:1px solid #dfe3e8;border-radius:8px;padding:12px}
-.error{color:#b91c1c;padding:20px}.loading{padding:24px;color:#6b7280}
-@media(max-width:900px){.layout{grid-template-columns:1fr}aside{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.grid,.detail{grid-template-columns:1fr}}
+.logo{width:48px;height:48px;border-radius:12px;background:#1f5aa6;color:#fff;display:grid;place-items:center;font-size:22px;font-weight:900;margin-bottom:18px}
+h1{margin:0 0 7px;font-size:24px}.muted{color:#6b7280;font-size:14px}.field{margin-top:16px}
+.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.field input{width:100%;height:44px;border:1px solid #d0d5dd;border-radius:8px;padding:0 12px;font:inherit}
+.btn{width:100%;height:44px;border:0;border-radius:8px;background:#1f5aa6;color:#fff;font-weight:800;margin-top:20px;cursor:pointer;font:inherit}
+.link{border:0;background:none;color:#1f5aa6;margin-top:14px;cursor:pointer;padding:0;font:inherit}
+.msg{font-size:13px;margin-top:14px;min-height:18px}.msg.error{color:#b42318}.msg.ok{color:#15803d}
+.version{margin-top:18px;font-size:11px;color:#98a2b3;text-align:center}
+.app{padding:30px}.box{max-width:800px;margin:auto;background:#fff;border:1px solid #dfe3e8;border-radius:12px;padding:24px}
+.logout{border:1px solid #d0d5dd;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
 </style>
 </head>
 <body>
-
 <section id="loginPage" class="login-page">
   <div class="login-card">
     <div class="logo">I</div>
     <h1>I-PASS 로그인</h1>
     <div class="muted">협력사 이행수준평가 시스템</div>
-
     <form id="loginForm">
-      <div class="login-field">
-        <label>이메일</label>
-        <input id="loginEmail" type="email" autocomplete="username" required>
-      </div>
-      <div class="login-field">
-        <label>비밀번호</label>
-        <input id="loginPassword" type="password" autocomplete="current-password" required>
-      </div>
-      <button class="login-btn" type="submit">로그인</button>
+      <div class="field"><label for="email">이메일</label><input id="email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="password">비밀번호</label><input id="password" type="password" autocomplete="current-password" required></div>
+      <button class="btn" type="submit">로그인</button>
     </form>
-
-    <button class="login-link" id="resetPasswordBtn">비밀번호를 잊으셨나요?</button>
-    <div id="loginMessage" class="login-msg"></div>
+    <button class="link" id="resetBtn">비밀번호를 잊으셨나요?</button>
+    <div id="message" class="msg"></div>
+    <div class="version">Firebase Auth 연결 확인용 · v4</div>
   </div>
 </section>
 
-<section id="app" class="hidden">
-<header>
-  <div class="brand">I-PASS 협력사 이행수준평가</div>
-  <div class="header-right">
-    <span id="userEmail" class="muted"></span>
-    <span id="rolePill" class="pill"></span>
+<section id="app" class="app hidden">
+  <div class="box">
+    <h1>로그인 성공</h1>
+    <p id="who"></p>
+    <p id="serverResult" class="muted">I-PASS 서버 사용자 확인 중...</p>
     <button class="logout" id="logoutBtn">로그아웃</button>
   </div>
-</header>
-
-<div class="layout">
-<aside id="sidebar"></aside>
-
-<main>
-<section class="page" id="dashboard">
-<h1 id="dashboardTitle">평가 대시보드</h1><div class="sub" id="cycleText">평가회차 불러오는 중...</div>
-<div class="kpis">
-<div class="kpi"><div class="label">평가대상 업체</div><div class="value" id="targetCount">-</div></div>
-<div class="kpi"><div class="label">제출완료</div><div class="value" id="submittedCount">-</div></div>
-<div class="kpi"><div class="label">평가중</div><div class="value" id="evaluatingCount">-</div></div>
-<div class="kpi"><div class="label">평가완료</div><div class="value" id="completedCount">-</div></div>
-<div class="kpi"><div class="label">미확인 알림</div><div class="value" id="unreadCount">-</div></div>
-</div>
-<div class="card"><div class="card-title">협력사 진행현황</div><div id="companyTable" class="loading">불러오는 중...</div></div>
-</section>
-
-<section class="page" id="targets">
-<h1>평가대상 관리</h1><div class="sub">평가회차별 협력사 선정 현황</div>
-<div class="card"><div id="targetTable" class="loading">불러오는 중...</div></div>
-</section>
-
-<section class="page" id="partnerHome">
-<h1>나의 평가</h1><div class="sub">현재 회사에 배정된 평가회차</div>
-<div class="card"><div id="myEvaluationTable" class="loading">불러오는 중...</div></div>
-</section>
-
-<section class="page" id="evaluation">
-<button class="btn" id="backBtn">← 돌아가기</button>
-<h1 id="evaluationTitle">평가 상세</h1>
-<div class="info"><div class="grid">
-<div class="field"><label>회사명</label><input id="companyName" readonly></div>
-<div class="field"><label>업종</label><input id="industryName" readonly></div>
-<div class="field"><label>사업자등록번호</label><input id="businessNumber" readonly></div>
-<div class="field"><label>대표자명</label><input id="representativeName" readonly></div>
-<div class="field"><label>상시근로자 수</label><input id="workerCount" readonly></div>
-<div class="field"><label>진행상태</label><input id="targetStatus" readonly></div>
-</div></div>
-<div id="evaluationItems"></div>
-</section>
-</main>
-</div>
 </section>
 
 <script>
 const FIREBASE_API_KEY = "AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
-const SESSION_KEY = "ipass.firebase.session.v1";
-let currentUser = null;
-let session = null;
+let idToken = null;
 
-function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;")}
-function tag(s){const m={pending:['대기','gray'],drafting:['작성중','gray'],submitted:['제출완료','green'],evaluating:['평가중','orange'],finalized:['평가완료','blue']};const a=m[s]||[s||'-','gray'];return `<span class="tag ${a[1]}">${esc(a[0])}</span>`}
-
-async function firebasePost(endpoint, body, headers={}) {
-  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${encodeURIComponent(FIREBASE_API_KEY)}`, {
-    method:"POST",
-    headers:{"content-type":"application/json", ...headers},
-    body:JSON.stringify(body)
-  });
-  const data = await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(firebaseErrorMessage(data?.error?.message || "AUTH_ERROR"));
-  return data;
-}
-
-function firebaseErrorMessage(code){
+function authMessage(code){
   const map={
     EMAIL_NOT_FOUND:"등록되지 않은 이메일입니다.",
     INVALID_PASSWORD:"비밀번호가 올바르지 않습니다.",
     INVALID_LOGIN_CREDENTIALS:"이메일 또는 비밀번호가 올바르지 않습니다.",
-    USER_DISABLED:"사용이 중지된 계정입니다.",
+    USER_DISABLED:"사용 중지된 계정입니다.",
     TOO_MANY_ATTEMPTS_TRY_LATER:"로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.",
-    OPERATION_NOT_ALLOWED:"Firebase 이메일/비밀번호 로그인이 활성화되지 않았습니다.",
+    OPERATION_NOT_ALLOWED:"Firebase의 이메일/비밀번호 로그인이 아직 활성화되지 않았습니다.",
     INVALID_EMAIL:"이메일 형식이 올바르지 않습니다."
   };
   return map[code] || code;
 }
 
-async function login(email,password){
-  const data = await firebasePost("accounts:signInWithPassword", {
-    email, password, returnSecureToken:true
+async function firebase(endpoint, body){
+  const r=await fetch("https://identitytoolkit.googleapis.com/v1/"+endpoint+"?key="+encodeURIComponent(FIREBASE_API_KEY),{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)
   });
-  session = {
-    idToken:data.idToken,
-    refreshToken:data.refreshToken,
-    expiresAt:Date.now() + Number(data.expiresIn||3600)*1000,
-    email:data.email,
-    uid:data.localId
-  };
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  await enterApp();
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(authMessage(data?.error?.message || "AUTH_ERROR"));
+  return data;
 }
 
-async function refreshToken(){
-  if(!session?.refreshToken) throw new Error("로그인이 필요합니다.");
-  const body = new URLSearchParams({
-    grant_type:"refresh_token",
-    refresh_token:session.refreshToken
-  });
-  const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{
-    method:"POST",
-    headers:{"content-type":"application/x-www-form-urlencoded"},
-    body
-  });
-  const data=await r.json();
-  if(!r.ok) throw new Error("로그인 세션이 만료되었습니다.");
-  session.idToken=data.id_token;
-  session.refreshToken=data.refresh_token || session.refreshToken;
-  session.expiresAt=Date.now()+Number(data.expires_in||3600)*1000;
-  sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));
-  return session.idToken;
-}
-
-async function getToken(){
-  if(!session) throw new Error("로그인이 필요합니다.");
-  if(Date.now() > session.expiresAt - 60000) return refreshToken();
-  return session.idToken;
-}
-
-async function api(path, options={}){
-  const token=await getToken();
-  const r=await fetch(path,{
-    ...options,
-    headers:{
-      Accept:"application/json",
-      ...(options.body?{"content-type":"application/json"}:{}),
-      Authorization:`Bearer ${token}`,
-      ...(options.headers||{})
-    }
-  });
-  const text=await r.text();
-  if(r.status===401){
-    logout();
-    throw new Error("로그인 세션이 만료되었습니다.");
-  }
-  if(!r.ok) throw new Error(`HTTP ${r.status}${text?" · "+text.slice(0,180):""}`);
-  if(!text) return {};
-  return JSON.parse(text);
-}
-
-function logout(){
-  session=null;currentUser=null;sessionStorage.removeItem(SESSION_KEY);
-  document.getElementById("app").classList.add("hidden");
-  document.getElementById("loginPage").classList.remove("hidden");
-  document.getElementById("loginPassword").value="";
-}
-
-async function enterApp(){
-  const me=await api("/api/me");
-  currentUser=me.user;
-  document.getElementById("userEmail").textContent=currentUser.email||session.email||"";
-  document.getElementById("rolePill").textContent=currentUser.role==="admin"?"관리자":"협력사";
-  renderSidebar();
-  document.getElementById("loginPage").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
-
-  if(currentUser.role==="admin"){
-    showPage("dashboard");
-    await loadAdminDashboard();
-  }else{
-    showPage("partnerHome");
-    await loadPartnerHome();
-  }
-}
-
-function renderSidebar(){
-  const side=document.getElementById("sidebar");
-  if(currentUser.role==="admin"){
-    side.innerHTML=`
-      <div class="nav" data-page="dashboard">대시보드</div>
-      <div class="nav" data-page="targets">평가대상 관리</div>
-      <div class="nav">평가회차 관리</div>
-      <div class="nav">평가표 관리</div>
-      <div class="nav">협력사 관리</div>`;
-  }else{
-    side.innerHTML=`<div class="nav" data-page="partnerHome">나의 평가</div>`;
-  }
-  side.querySelectorAll(".nav[data-page]").forEach(n=>n.onclick=()=>{
-    showPage(n.dataset.page);
-    if(n.dataset.page==="targets") loadTargets();
-    if(n.dataset.page==="partnerHome") loadPartnerHome();
-  });
-}
-
-function showPage(name){
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  document.getElementById(name)?.classList.add("active");
-  document.querySelectorAll(".nav[data-page]").forEach(n=>n.classList.toggle("active",n.dataset.page===name));
-}
-
-async function loadAdminDashboard(){
+async function checkServer(){
+  const out=document.getElementById("serverResult");
   try{
-    const c=await api("/api/cycles");const cycle=c.cycles?.[0];
-    if(cycle){dashboardTitle.textContent=cycle.cycle_name+" 대시보드";cycleText.textContent=(cycle.start_at||"-")+" ~ "+(cycle.end_at||"-")}
-    const d=(await api("/api/dashboard")).dashboard||{};
-    targetCount.textContent=d.target_company_count??0;submittedCount.textContent=d.submitted_count??0;evaluatingCount.textContent=d.evaluating_count??0;completedCount.textContent=d.completed_count??0;unreadCount.textContent=d.unread_notification_count??0;
-    const data=await api("/api/targets");const list=(data.targets||[]).filter(x=>Number(x.is_selected)===1);
-    companyTable.innerHTML=list.length?`<table><thead><tr><th>협력사</th><th>업종</th><th>상시근로자</th><th>상태</th></tr></thead><tbody>${list.map(t=>`<tr class="clickable" onclick="openEvaluation('${String(t.id).replaceAll("'","\\\\'")}')"><td><b>${esc(t.company_name)}</b></td><td>${esc(t.industry_name||"-")}</td><td>${t.worker_count??"-"}</td><td>${tag(t.status)}</td></tr>`).join("")}</tbody></table>`:'<div class="loading">평가대상이 없습니다.</div>';
-  }catch(e){companyTable.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
-}
-
-async function loadTargets(){
-  try{
-    const data=await api("/api/targets");const list=data.targets||[];
-    targetTable.innerHTML=`<table><thead><tr><th>협력사</th><th>업종</th><th>선정여부</th><th>제외사유</th><th>상태</th></tr></thead><tbody>${list.map(t=>`<tr><td>${esc(t.company_name)}</td><td>${esc(t.industry_name||"-")}</td><td>${Number(t.is_selected)===1?"평가대상":"제외"}</td><td>${esc(t.exclusion_reason||"-")}</td><td>${tag(t.status)}</td></tr>`).join("")}</tbody></table>`;
-  }catch(e){targetTable.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
-}
-
-async function loadPartnerHome(){
-  try{
-    const data=await api("/api/my/evaluations");const list=data.evaluations||[];
-    myEvaluationTable.innerHTML=list.length?`<table><thead><tr><th>평가회차</th><th>기간</th><th>상태</th></tr></thead><tbody>${list.map(t=>`<tr class="clickable" onclick="openEvaluation('${String(t.id).replaceAll("'","\\\\'")}')"><td><b>${esc(t.cycle_name)}</b></td><td>${esc((t.start_at||"-")+" ~ "+(t.end_at||"-"))}</td><td>${tag(t.status)}</td></tr>`).join("")}</tbody></table>`:'<div class="loading">현재 배정된 평가가 없습니다.</div>';
-  }catch(e){myEvaluationTable.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
-}
-
-async function openEvaluation(id){
-  showPage("evaluation");evaluationItems.innerHTML='<div class="loading">평가항목 불러오는 중...</div>';
-  try{
-    const data=await api("/api/evaluations/"+encodeURIComponent(id));const e=data.evaluation||{},t=e.target||{},items=e.items||[];
-    evaluationTitle.textContent=(t.company_name||"협력사")+" 평가";
-    companyName.value=t.company_name||"";industryName.value=t.industry_name||"";businessNumber.value=t.business_number||"";representativeName.value=t.representative_name||"";workerCount.value=t.worker_count??"";targetStatus.value=t.status||"";
-    evaluationItems.innerHTML=items.length?items.map((i,n)=>`<div class="item ${n===0?"open":""}"><div class="item-head" onclick="this.parentElement.classList.toggle('open')"><div><b>${esc(i.item_code||"")} ${esc(i.item_name||"")}</b> <span class="tag blue">배점 ${i.max_score??0}점</span> ${Number(i.applicable)===0?'<span class="tag gray">N/A</span>':""}</div><div>⌄</div></div><div class="item-body"><div class="guide"><b>제출 가이드</b><br>${esc(i.guide_text||"등록된 가이드 없음")}</div><div class="detail"><div class="box"><b>협력사 설명</b><p>${esc(i.description||"등록된 설명 없음")}</p></div><div class="box"><b>평가 결과</b><p>${i.earned_score==null?"최종 공개 전":`${i.earned_score} / ${i.max_score_snapshot??i.max_score??0}점`}</p><p>${esc(i.evaluation_comment||"")}</p></div></div></div></div>`).join(""):'<div class="loading">등록된 평가항목이 없습니다.</div>';
-  }catch(e){evaluationItems.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
+    const r=await fetch("/api/me",{headers:{Authorization:"Bearer "+idToken,Accept:"application/json"}});
+    const text=await r.text();
+    if(!r.ok){out.textContent="Firebase 로그인은 성공했지만 I-PASS 서버 연결 실패: HTTP "+r.status+" "+text;return;}
+    const data=JSON.parse(text);
+    out.textContent="I-PASS 서버 연결 성공 · 역할: "+(data.user?.role || "-");
+  }catch(e){out.textContent="Firebase 로그인은 성공했지만 I-PASS 서버 확인 중 오류: "+e.message;}
 }
 
 document.getElementById("loginForm").addEventListener("submit",async e=>{
-  e.preventDefault();const msg=loginMessage;msg.className="login-msg";msg.textContent="로그인 확인 중...";
-  try{await login(loginEmail.value.trim(),loginPassword.value);msg.textContent=""}
-  catch(err){msg.className="login-msg error";msg.textContent=err.message}
+  e.preventDefault();
+  const msg=document.getElementById("message");
+  msg.className="msg";msg.textContent="로그인 확인 중...";
+  try{
+    const email=document.getElementById("email").value.trim();
+    const password=document.getElementById("password").value;
+    const data=await firebase("accounts:signInWithPassword",{email,password,returnSecureToken:true});
+    idToken=data.idToken;
+    msg.textContent="";
+    document.getElementById("loginPage").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    document.getElementById("who").textContent=data.email+" 계정으로 Firebase 로그인 성공";
+    await checkServer();
+  }catch(err){msg.className="msg error";msg.textContent=err.message;}
 });
 
-document.getElementById("resetPasswordBtn").addEventListener("click",async()=>{
-  const email=loginEmail.value.trim();const msg=loginMessage;
-  if(!email){msg.className="login-msg error";msg.textContent="먼저 이메일을 입력하세요.";return}
+document.getElementById("resetBtn").addEventListener("click",async()=>{
+  const msg=document.getElementById("message");
+  const email=document.getElementById("email").value.trim();
+  if(!email){msg.className="msg error";msg.textContent="먼저 이메일을 입력하세요.";return;}
   try{
-    await firebasePost("accounts:sendOobCode",{requestType:"PASSWORD_RESET",email});
-    msg.className="login-msg ok";msg.textContent="비밀번호 재설정 메일을 보냈습니다.";
-  }catch(err){msg.className="login-msg error";msg.textContent=err.message}
+    await firebase("accounts:sendOobCode",{requestType:"PASSWORD_RESET",email});
+    msg.className="msg ok";msg.textContent="비밀번호 재설정 메일을 보냈습니다.";
+  }catch(err){msg.className="msg error";msg.textContent=err.message;}
 });
 
-document.getElementById("logoutBtn").onclick=logout;
-document.getElementById("backBtn").onclick=()=>showPage(currentUser?.role==="admin"?"dashboard":"partnerHome");
-
-(async function restore(){
-  try{
-    const raw=sessionStorage.getItem(SESSION_KEY);
-    if(raw){session=JSON.parse(raw);await enterApp()}
-  }catch(e){logout()}
-})();
+document.getElementById("logoutBtn").onclick=()=>{
+  idToken=null;
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("loginPage").classList.remove("hidden");
+  document.getElementById("password").value="";
+};
 </script>
 </body>
 </html>
