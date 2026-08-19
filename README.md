@@ -1,17 +1,13 @@
-# I-PASS Firebase Auth v3
+# Hniruja 협력사 EHS 포털 V16.4.1
 
-GitHub 저장소에 아래 파일을 덮어쓴 뒤 Commit 하세요.
+## 협의체
+- 연도/월당 협의체 1개
+- 월별 대상 협력사/사내부서를 관리자가 직접 선택
+- 선택 대상은 참석/불참 + 직급 + 성명 기록
+- 참석 시 직급/성명 필수, 불참 시 비워둘 수 있음
+- 협력사 불참 1회당 -3점, 10점 만점/최소 0점
+- 사내 부서 참석은 점수 미적용
+- V16.4 속도 최적화 유지
 
-- public/index.html
-- src/index.js
-- wrangler.jsonc
-- package.json
-
-전제:
-1. Firebase Authentication에서 Email/Password가 활성화되어 있어야 합니다.
-2. Firebase UID가 D1 users.firebase_uid에 연결되어 있어야 합니다.
-3. Cloudflare Worker의 D1 binding 이름은 partner_evaluation_db 이어야 합니다.
-
-배포 후:
-- https://ipass.i-pass-eval.workers.dev/
-- Firebase에서 만든 관리자 이메일/비밀번호로 로그인
+## 배포
+ZIP을 풀고 이 폴더 안의 public, src, migrations, package.json, wrangler.jsonc 등을 GitHub 저장소 루트에 그대로 덮어씁니다. ZIP 파일 자체를 저장소에 올리는 것이 아닙니다.

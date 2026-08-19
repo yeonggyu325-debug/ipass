@@ -1,0 +1,20 @@
+Hniruja EHS Portal - 전체 프로젝트 업로드
+
+1. 이 ZIP을 PC에서 압축 해제
+2. GitHub의 현재 프로젝트 저장소를 엽니다.
+3. 저장소 루트에서 Add file > Upload files
+4. 압축 푼 폴더 안의 아래 항목을 한꺼번에 선택해서 드래그
+   - public/
+   - src/
+   - migrations/
+   - package.json
+   - wrangler.jsonc
+   - README.md
+   - UPLOAD_GUIDE.txt
+5. 기존 파일과 같은 이름은 교체되도록 올립니다.
+6. 아래 Commit changes를 눌러 main 브랜치에 커밋합니다.
+7. GitHub-Cloudflare 자동 배포가 연결되어 있으면 커밋 후 자동으로 Worker가 재배포됩니다.
+
+주의: ZIP 파일 하나만 GitHub에 올리면 Cloudflare는 그 안의 src/index.js나 public/index.html을 사용하지 못합니다. 반드시 압축을 풀어서 프로젝트 파일/폴더 자체를 저장소 루트에 올리세요.
+
+D1: V16.4의 0005_committee_monthly_targets.sql을 아직 실행하지 않았다면 1회 실행하세요. 이미 실행했다면 다시 실행하지 않아도 됩니다. V16.4.1은 추가 migration이 없습니다.
