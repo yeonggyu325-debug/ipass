@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>파트너 포털 | Hniruja</title>
+<title>협력사 EHS 포털 | Hniruja</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 
@@ -760,6 +760,76 @@ tbody tr:last-child td{border-bottom:0}
   .company-info-row .split-left,.company-info-row .split-right{font-size:10px;white-space:normal}
 }
 
+
+/* ===== V15.5 requested refinements ===== */
+
+/* Logo: 148px baseline -> 150% = 222px */
+.login-brand .login-brand-logo{
+  width:222px !important;
+  max-width:68vw !important;
+}
+
+/* Rename is in HTML; keep title visually secondary */
+.partner-portal-title{
+  font-size:15px !important;
+  font-weight:600 !important;
+}
+
+/* Partner capsule text about +2px larger */
+.partner-capsule{
+  min-width:74px !important;
+  height:26px !important;
+  padding:0 16px !important;
+  font-size:11.5px !important;
+  font-weight:700 !important;
+}
+
+/* Last company/address line: center the whole group, not the divider axis */
+.company-info-row{
+  width:100% !important;
+  min-height:22px;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  flex-wrap:wrap !important;
+  gap:0 !important;
+  text-align:center !important;
+}
+.company-info-row > span:not(.company-inline-divider){
+  color:#9da5ab;
+  font-size:11px;
+  line-height:18px;
+  font-weight:600;
+  white-space:nowrap;
+}
+.company-inline-divider{
+  width:1px;
+  height:11px;
+  margin:0 14px;
+  flex:0 0 1px;
+  background:#e1e5e8;
+}
+
+@media(max-width:560px){
+  .login-brand .login-brand-logo{
+    width:200px !important;
+    max-width:74vw !important;
+  }
+  .partner-capsule{
+    min-width:70px !important;
+    height:25px !important;
+    padding:0 14px !important;
+    font-size:11px !important;
+  }
+  .company-info-row > span:not(.company-inline-divider){
+    font-size:10px;
+    white-space:normal;
+  }
+  .company-inline-divider{
+    margin:0 10px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -769,7 +839,7 @@ tbody tr:last-child td{border-bottom:0}
     <div class="login-brand">
       <img class="login-brand-logo" src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja">
       <div class="partner-portal-lockup">
-        <span class="partner-portal-title">파트너 포털</span>
+        <span class="partner-portal-title">협력사 EHS 포털</span>
         <span class="partner-capsule">Partner</span>
       </div>
     </div>
@@ -808,10 +878,10 @@ tbody tr:last-child td{border-bottom:0}
         <button class="split-right" id="openPrivacy" type="button">개인정보처리방침</button>
       </div>
 
-      <div class="split-row company-info-row">
-        <span class="split-left">주식회사 에이치앤이루자</span>
-        <span class="center-divider" aria-hidden="true"></span>
-        <span class="split-right">충청남도 아산시 둔포면 아산밸리북로 110</span>
+      <div class="company-info-row">
+        <span>주식회사 에이치앤이루자</span>
+        <span class="company-inline-divider" aria-hidden="true"></span>
+        <span>충청남도 아산시 둔포면 아산밸리북로 110</span>
       </div>
 
       <div class="login-company-copy">COPYRIGHTⓒ Hniruja, ALL RIGHTS RESERVED.</div>
@@ -822,12 +892,12 @@ tbody tr:last-child td{border-bottom:0}
 <div id="termsModal" class="modal hidden">
   <div class="modal-card">
     <div class="modal-head">
-      <h3>파트너 포털 이용약관</h3>
+      <h3>협력사 EHS 포털 이용약관</h3>
       <button class="modal-close" id="closeTerms" aria-label="닫기">×</button>
     </div>
     <div class="modal-body">
       <h4>제1조 목적</h4>
-      <p>본 약관은 Hniruja 파트너 포털의 이용에 필요한 기본 사항과 회사 및 이용자의 권리·의무를 정하는 것을 목적으로 합니다.</p>
+      <p>본 약관은 Hniruja 협력사 EHS 포털의 이용에 필요한 기본 사항과 회사 및 이용자의 권리·의무를 정하는 것을 목적으로 합니다.</p>
       <h4>제2조 계정 이용</h4>
       <p>이용자는 승인된 본인 계정을 사용해야 하며, 계정정보를 타인에게 양도하거나 공유해서는 안 됩니다.</p>
       <h4>제3조 서비스 이용</h4>
@@ -837,16 +907,16 @@ tbody tr:last-child td{border-bottom:0}
       <h4>제5조 서비스 운영</h4>
       <p>회사는 안정적인 서비스 운영을 위해 필요한 경우 점검 또는 운영정책 변경을 진행할 수 있습니다.</p>
       <h4>제6조 기타</h4>
-      <p>본 약관의 세부 운영 기준은 회사의 파트너 포털 운영정책에 따릅니다.</p>
+      <p>본 약관의 세부 운영 기준은 회사의 협력사 EHS 포털 운영정책에 따릅니다.</p>
     </div>
   </div>
 </div>
 
 <div id="privacyModal" class="modal hidden">
   <div class="modal-card">
-    <div class="modal-head"><h3>파트너 포털 개인정보처리방침</h3><button class="modal-close" id="closePrivacy">×</button></div>
+    <div class="modal-head"><h3>협력사 EHS 포털 개인정보처리방침</h3><button class="modal-close" id="closePrivacy">×</button></div>
     <div class="modal-body">
-      <p><b>Hniruja</b>(이하 “회사”)는 Hniruja <b>파트너 포털</b>를 운영함에 있어 관계 법령을 준수하며 개인정보를 안전하게 처리합니다.</p>
+      <p><b>Hniruja</b>(이하 “회사”)는 Hniruja <b>협력사 EHS 포털</b>를 운영함에 있어 관계 법령을 준수하며 개인정보를 안전하게 처리합니다.</p>
       <h4>개인정보 처리 목적</h4>
       <p>회원가입 및 회원관리, 이메일 인증과 로그인, 협력사 담당자 관리, 협력사 포털 회원관리, i-PaSS 평가자료 제출 및 결과 확인, 증빙자료 관리, 공지사항·자료실 이용, 서비스 운영·보안을 위해 개인정보를 처리합니다.</p>
       <h4>처리 항목</h4>
@@ -896,7 +966,7 @@ tbody tr:last-child td{border-bottom:0}
 
 <section id="app" class="hidden">
 <header class="app-header">
-  <div class="app-brand"><img src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja"><span>파트너 포털</span></div>
+  <div class="app-brand"><img src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja"><span>협력사 EHS 포털</span></div>
   <div class="app-right"><span id="userLabel" class="sub"></span><span id="rolePill" class="pill"></span><button class="btn" id="logoutBtn">로그아웃</button></div>
 </header>
 <div class="app-layout">
@@ -906,7 +976,7 @@ tbody tr:last-child td{border-bottom:0}
     <div class="portal-home-head">
       <div>
         <div class="portal-home-kicker">HNIRUJA PARTNER PORTAL</div>
-        <h1>파트너 포털</h1>
+        <h1>협력사 EHS 포털</h1>
       </div>
       <div class="sub" id="portalWelcome"></div>
     </div>
