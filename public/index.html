@@ -3,27 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Hniruja Partner Portal</title>
+<title>파트너 포털 | Hniruja</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 
 
+
 :root{
-  --primary:#2f6b9a;
-  --primary-hover:#275d86;
+  --primary:#2878d4;
+  --primary-hover:#1f69bd;
   --success:#16845b;
   --warning:#c57a12;
   --danger:#cf4b45;
-
-  --text-strong:#191f28;
+  --text-strong:#202632;
   --text:#4e5968;
   --text-muted:#8b95a1;
   --line:#e5e8eb;
-  --line-strong:#d6dce1;
+  --line-strong:#d8dde3;
   --surface:#ffffff;
   --surface-subtle:#f7f8fa;
   --surface-page:#f5f7f9;
-
   --radius-sm:6px;
   --radius:8px;
   --radius-lg:12px;
@@ -34,7 +33,7 @@ html,body{
   min-height:100%;
   font-family:"Pretendard Variable","Pretendard","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif;
   color:var(--text-strong);
-  background:var(--surface-page);
+  background:#fff;
   letter-spacing:-.018em;
 }
 body{font-size:14px}
@@ -42,57 +41,45 @@ button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
 
-/* ===== Login ===== */
+/* ===== Login / Centered Partner Portal ===== */
 .login-shell{
   min-height:100vh;
   display:flex;
-  flex-direction:column;
-  background:#f8fafb;
-}
-.login-center{
-  flex:1;
-  display:flex;
   align-items:center;
   justify-content:center;
-  padding:48px 24px 32px;
-  transform:translateY(-2.5vh);
+  padding:44px 24px;
+  background:#fff;
 }
 .login-stage{
-  width:min(430px,92vw);
+  width:min(420px,92vw);
+  margin:0 auto;
+  text-align:center;
 }
 .login-brand{
-  text-align:center;
-  margin-bottom:34px;
+  margin-bottom:38px;
 }
-.brand-logo{
-  width:94px;
-  height:auto;
-  object-fit:contain;
+.login-brand img{
   display:block;
-  margin:0 auto 18px;
+  width:148px;
+  max-width:48vw;
+  height:auto;
+  margin:0 auto 22px;
+  object-fit:contain;
 }
-.brand-title{
-  color:var(--text-strong);
-  font-size:28px;
-  line-height:1.15;
-  font-weight:750;
+.login-brand h1{
+  margin:0;
+  color:#252b34;
+  font-size:30px;
+  line-height:1.2;
+  font-weight:760;
   letter-spacing:-.045em;
 }
-.login-form-wrap{
-  width:100%;
-}
-.login-title{
-  margin:0 0 26px;
-  color:var(--text-strong);
-  font-size:22px;
-  line-height:1.2;
-  font-weight:700;
-}
+.login-form-wrap{text-align:left}
 .field{margin-top:18px}
 .field label{
   display:block;
   margin-bottom:8px;
-  color:var(--text);
+  color:#4e5968;
   font-size:13px;
   font-weight:600;
 }
@@ -115,44 +102,69 @@ button{cursor:pointer}
   resize:vertical;
 }
 .field input:focus,.field select:focus,.field textarea:focus{
-  border-color:#80a9c5;
-  box-shadow:0 0 0 3px rgba(47,107,154,.10);
+  border-color:#73a9df;
+  box-shadow:0 0 0 3px rgba(40,120,212,.10);
+}
+.login-options{
+  display:flex;
+  justify-content:flex-start;
+  align-items:center;
+  min-height:24px;
+  margin-top:12px;
+}
+.save-id{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:#66717d;
+  font-size:12px;
+  cursor:pointer;
+  user-select:none;
+}
+.save-id input{
+  width:16px;
+  height:16px;
+  margin:0;
+  accent-color:var(--primary);
 }
 .login-btn{
   width:100%;
   height:52px;
-  margin-top:24px;
+  margin-top:20px;
   border:0;
   border-radius:var(--radius);
   background:var(--primary);
   color:#fff;
   font-size:15px;
   font-weight:700;
-  transition:background .15s ease,opacity .15s ease;
+  transition:background .15s ease,transform .08s ease,opacity .15s ease;
 }
 .login-btn:hover{background:var(--primary-hover)}
+.login-btn:active{transform:translateY(1px)}
 .login-btn:disabled{opacity:.58;cursor:default}
-.login-links{
+.login-links,.policy-links{
   display:flex;
   justify-content:center;
   align-items:center;
   flex-wrap:wrap;
   gap:10px;
-  margin-top:18px;
   font-size:12px;
 }
-.login-links a,.login-links button{
+.login-links{margin-top:20px}
+.policy-links{margin-top:28px;font-size:11px}
+.login-links a,.policy-links button{
   border:0;
   padding:0;
   background:none;
-  color:#667787;
+  color:#66717d;
   text-decoration:none;
 }
-.login-links a:hover,.login-links button:hover{
+.policy-links button{color:#8a949e}
+.login-links a:hover,.policy-links button:hover{
   color:var(--primary);
   text-decoration:underline;
 }
-.sep{color:#cbd2d8}
+.sep{color:#c9cfd5}
 .login-msg{
   margin-top:12px;
   color:var(--danger);
@@ -160,22 +172,14 @@ button{cursor:pointer}
   text-align:center;
 }
 .login-msg:empty{display:none}
-.login-footer{
-  padding:12px 20px 26px;
-  color:#87929c;
-  font-size:11px;
-  line-height:1.6;
+
+@media(max-width:560px){
+  .login-shell{padding:32px 22px}
+  .login-stage{width:100%}
+  .login-brand{margin-bottom:32px}
+  .login-brand img{width:132px}
+  .login-brand h1{font-size:27px}
 }
-.footer-brand{
-  max-width:92vw;
-  margin:0 auto;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:14px;
-}
-.footer-brand img{width:78px;height:auto;object-fit:contain}
-.footer-text{text-align:left}
 
 /* ===== Modal ===== */
 .modal{
@@ -620,71 +624,229 @@ tbody tr:last-child td{border-bottom:0}
   table.mobile-stack .toolbar{justify-content:flex-start}
 }
 @media(max-width:560px){
-  .login-center{padding:34px 22px 24px;transform:none}
-  .brand-logo{width:84px}
-  .brand-title{font-size:25px}
-  .footer-brand{flex-direction:column;gap:7px}
-  .footer-text{text-align:center}
-  .app-right #userLabel{display:none}
+        .app-right #userLabel{display:none}
   .action-kpis,.kpis{grid-template-columns:1fr}
   .quick-row{min-height:58px}
   table.mobile-stack td{grid-template-columns:92px minmax(0,1fr)}
 }
+
+/* ===== Corporate footer ===== */
+.login-company-footer{
+  margin-top:44px;
+  text-align:center;
+}
+.login-company-line{
+  color:#7e8992;
+  font-size:11.5px;
+  line-height:1.6;
+  font-weight:650;
+  letter-spacing:-.012em;
+}
+.login-company-copy{
+  margin-top:4px;
+  color:#a6aeb5;
+  font-size:9.5px;
+  line-height:1.55;
+  font-weight:400;
+  letter-spacing:.015em;
+}
+@media(max-width:560px){
+  .login-company-footer{margin-top:36px}
+  .login-company-line{font-size:10.5px}
+  .login-company-copy{font-size:9px}
+}
+
+
+
+
+/* ===== V15.4 exact-centered login ===== */
+.sr-only{
+  position:absolute!important;width:1px!important;height:1px!important;padding:0!important;
+  margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;border:0!important;
+}
+.login-shell{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:42px 24px;background:#fff;
+}
+.login-stage{width:min(420px,92vw);margin:0 auto;text-align:center}
+.login-brand{margin-bottom:34px;text-align:center}
+.login-brand .login-brand-logo{
+  display:block;width:185px;max-width:62vw;height:auto;margin:0 auto 18px;object-fit:contain;
+}
+.partner-portal-lockup{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.partner-portal-title{
+  color:#5d666e;font-size:15px;line-height:23px;font-weight:600;letter-spacing:-.025em;
+}
+.partner-capsule{
+  min-width:68px;height:23px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:999px;background:#4d5b66;color:#fff;font-size:9.5px;line-height:1;
+  font-weight:700;letter-spacing:.015em;
+}
+
+.login-form-wrap{text-align:left}
+.login-field{margin-top:10px}
+.login-field:first-child{margin-top:0}
+.login-field input{
+  width:100%;height:54px;padding:0 16px;border:1px solid #edf0f2;border-radius:7px;
+  background:#fafbfc;color:#303941;font-size:14px;font-weight:400;outline:none;box-shadow:none;
+}
+.login-field input::placeholder{color:#c3c9ce;opacity:1;font-size:14px;font-weight:400}
+.login-field input:focus{
+  border-color:#cdd7df;background:#fff;box-shadow:0 0 0 2px rgba(40,120,212,.055);
+}
+.login-options{display:flex;align-items:center;justify-content:flex-start;min-height:22px;margin-top:11px}
+.save-id{display:inline-flex;align-items:center;gap:7px;color:#969ea5;font-size:12px;font-weight:400}
+.save-id input{width:15px;height:15px;margin:0;accent-color:#2878d4}
+.login-btn{
+  width:100%;height:54px;margin-top:16px;border:0;border-radius:7px;background:#2878d4;
+  color:#fff;font-size:14px;font-weight:700;
+}
+.login-btn:hover{background:#226fc8}
+
+/* exact screen-center divider system */
+.split-row{
+  width:100%;display:grid;
+  grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);
+  column-gap:14px;align-items:center;
+}
+.split-left{justify-self:end;text-align:right}
+.split-right{justify-self:start;text-align:left}
+.center-divider{
+  width:1px;height:12px;background:#e1e5e8;justify-self:center;align-self:center;
+}
+
+.account-links{margin-top:19px;min-height:24px}
+.account-links a{
+  color:#56636d;font-size:14px;line-height:24px;font-weight:600;text-decoration:none;white-space:nowrap;
+}
+.account-links a:hover{color:#2878d4}
+
+.login-company-footer{
+  width:min(720px,92vw);margin-top:48px;margin-left:50%;transform:translateX(-50%);text-align:center;
+}
+.policy-links{width:min(420px,92vw);margin:0 auto 18px;min-height:22px}
+.policy-links button{
+  height:22px;border:0;padding:0;background:none;color:#989fa5;font-size:11px;
+  line-height:22px;font-weight:400;white-space:nowrap;
+}
+.policy-links button:hover{color:#68747d}
+
+.company-info-row{width:100%;min-height:22px}
+.company-info-row .split-left,.company-info-row .split-right{
+  color:#9da5ab;font-size:11px;line-height:18px;font-weight:600;white-space:nowrap;
+}
+.login-company-copy{
+  margin-top:4px;color:#bcc2c7;font-size:9.5px;line-height:17px;font-weight:400;letter-spacing:.01em;
+}
+.login-msg{margin-top:12px;color:var(--danger);font-size:12px;text-align:center}
+.login-msg:empty{display:none}
+
+@media(max-width:760px){
+  .login-company-footer{width:min(620px,94vw)}
+  .company-info-row .split-left,.company-info-row .split-right{white-space:normal}
+}
+@media(max-width:560px){
+  .login-shell{padding:30px 20px}
+  .login-stage{width:min(400px,100%)}
+  .login-brand{margin-bottom:30px}
+  .login-brand .login-brand-logo{width:168px;max-width:64vw}
+  .partner-portal-title{font-size:14px}
+  .partner-capsule{min-width:62px;height:22px;padding:0 12px;font-size:9px}
+  .account-links a{font-size:13px}
+  .login-company-footer{width:100%;margin-top:40px;margin-left:0;transform:none}
+  .policy-links{width:100%}
+  .company-info-row{column-gap:10px}
+  .company-info-row .split-left,.company-info-row .split-right{font-size:10px;white-space:normal}
+}
+
 </style>
 </head>
 <body>
 
 <section id="publicPortal" class="login-shell">
-  <div class="login-center">
-    <div class="login-stage">
-      <div class="login-brand">
-        <img class="brand-logo" src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja">
-        <div class="brand-title">Partner Portal</div>
+  <div class="login-stage">
+    <div class="login-brand">
+      <img class="login-brand-logo" src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja">
+      <div class="partner-portal-lockup">
+        <span class="partner-portal-title">파트너 포털</span>
+        <span class="partner-capsule">Partner</span>
       </div>
+    </div>
 
-      <div class="login-form-wrap">
-        <div class="login-title">로그인</div>
-
-        <form id="loginForm">
-          <div class="field">
-            <label for="loginEmail">이메일</label>
-            <input id="loginEmail" type="email" autocomplete="username" required>
-          </div>
-          <div class="field">
-            <label for="loginPassword">비밀번호</label>
-            <input id="loginPassword" type="password" autocomplete="current-password" required>
-          </div>
-          <button class="login-btn" id="loginBtn" type="submit">로그인</button>
-        </form>
-
-        <div class="login-links">
-          <a href="/signup.html">회원가입</a>
-          <span class="sep">·</span>
-          <a href="/reset.html">비밀번호 찾기</a>
-          <span class="sep">·</span>
-          <button id="openPrivacy" type="button">개인정보처리방침</button>
+    <div class="login-form-wrap">
+      <form id="loginForm">
+        <div class="field login-field">
+          <label class="sr-only" for="loginEmail">이메일</label>
+          <input id="loginEmail" type="email" autocomplete="username" required placeholder="이메일">
         </div>
-        <div id="loginMessage" class="login-msg"></div>
+        <div class="field login-field">
+          <label class="sr-only" for="loginPassword">비밀번호</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="비밀번호">
+        </div>
+
+        <div class="login-options">
+          <label class="save-id"><input id="saveLoginId" type="checkbox"> 아이디 저장</label>
+        </div>
+
+        <button class="login-btn" id="loginBtn" type="submit">로그인</button>
+      </form>
+
+      <div class="split-row account-links">
+        <a class="split-left" href="/signup.html">회원가입</a>
+        <span class="center-divider" aria-hidden="true"></span>
+        <a class="split-right" href="/reset.html">비밀번호 찾기</a>
       </div>
+
+      <div id="loginMessage" class="login-msg"></div>
+    </div>
+
+    <div class="login-company-footer">
+      <div class="split-row policy-links">
+        <button class="split-left" id="openTerms" type="button">이용약관</button>
+        <span class="center-divider" aria-hidden="true"></span>
+        <button class="split-right" id="openPrivacy" type="button">개인정보처리방침</button>
+      </div>
+
+      <div class="split-row company-info-row">
+        <span class="split-left">주식회사 에이치앤이루자</span>
+        <span class="center-divider" aria-hidden="true"></span>
+        <span class="split-right">충청남도 아산시 둔포면 아산밸리북로 110</span>
+      </div>
+
+      <div class="login-company-copy">COPYRIGHTⓒ Hniruja, ALL RIGHTS RESERVED.</div>
     </div>
   </div>
-
-  <footer class="login-footer">
-    <div class="footer-brand">
-      <img src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja">
-      <div class="footer-text">
-        충청남도 아산시 둔포면 아산밸리북로 110<br>
-        COPYRIGHTⓒ Hniruja, ALL RIGHTS RESERVED.
-      </div>
-    </div>
-  </footer>
 </section>
+
+<div id="termsModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>파트너 포털 이용약관</h3>
+      <button class="modal-close" id="closeTerms" aria-label="닫기">×</button>
+    </div>
+    <div class="modal-body">
+      <h4>제1조 목적</h4>
+      <p>본 약관은 Hniruja 파트너 포털의 이용에 필요한 기본 사항과 회사 및 이용자의 권리·의무를 정하는 것을 목적으로 합니다.</p>
+      <h4>제2조 계정 이용</h4>
+      <p>이용자는 승인된 본인 계정을 사용해야 하며, 계정정보를 타인에게 양도하거나 공유해서는 안 됩니다.</p>
+      <h4>제3조 서비스 이용</h4>
+      <p>이용자는 협력사 안전관리 업무를 위해 제공되는 평가, 자료 제출, 공지 확인 등 포털 기능을 정해진 절차에 따라 이용합니다.</p>
+      <h4>제4조 자료의 등록</h4>
+      <p>이용자는 업무와 관련된 정확한 자료를 등록해야 하며, 제출한 자료에 변경이 필요한 경우 서비스에서 허용하는 기간과 절차에 따라 수정합니다.</p>
+      <h4>제5조 서비스 운영</h4>
+      <p>회사는 안정적인 서비스 운영을 위해 필요한 경우 점검 또는 운영정책 변경을 진행할 수 있습니다.</p>
+      <h4>제6조 기타</h4>
+      <p>본 약관의 세부 운영 기준은 회사의 파트너 포털 운영정책에 따릅니다.</p>
+    </div>
+  </div>
+</div>
 
 <div id="privacyModal" class="modal hidden">
   <div class="modal-card">
-    <div class="modal-head"><h3>i-PaSS 개인정보처리방침</h3><button class="modal-close" id="closePrivacy">×</button></div>
+    <div class="modal-head"><h3>파트너 포털 개인정보처리방침</h3><button class="modal-close" id="closePrivacy">×</button></div>
     <div class="modal-body">
-      <p><b>Hniruja</b>(이하 “회사”)는 Hniruja <b>협력사 포털</b>를 운영함에 있어 관계 법령을 준수하며 개인정보를 안전하게 처리합니다.</p>
+      <p><b>Hniruja</b>(이하 “회사”)는 Hniruja <b>파트너 포털</b>를 운영함에 있어 관계 법령을 준수하며 개인정보를 안전하게 처리합니다.</p>
       <h4>개인정보 처리 목적</h4>
       <p>회원가입 및 회원관리, 이메일 인증과 로그인, 협력사 담당자 관리, 협력사 포털 회원관리, i-PaSS 평가자료 제출 및 결과 확인, 증빙자료 관리, 공지사항·자료실 이용, 서비스 운영·보안을 위해 개인정보를 처리합니다.</p>
       <h4>처리 항목</h4>
@@ -734,7 +896,7 @@ tbody tr:last-child td{border-bottom:0}
 
 <section id="app" class="hidden">
 <header class="app-header">
-  <div class="app-brand"><img src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja"><span>Partner Portal</span></div>
+  <div class="app-brand"><img src="https://hniruja.com/wp-content/uploads/2024/02/h-%EC%9D%B4%EB%A3%A8%EC%9E%90.png" alt="Hniruja"><span>파트너 포털</span></div>
   <div class="app-right"><span id="userLabel" class="sub"></span><span id="rolePill" class="pill"></span><button class="btn" id="logoutBtn">로그아웃</button></div>
 </header>
 <div class="app-layout">
@@ -744,7 +906,7 @@ tbody tr:last-child td{border-bottom:0}
     <div class="portal-home-head">
       <div>
         <div class="portal-home-kicker">HNIRUJA PARTNER PORTAL</div>
-        <h1>협력사 포털</h1>
+        <h1>파트너 포털</h1>
       </div>
       <div class="sub" id="portalWelcome"></div>
     </div>
@@ -910,16 +1072,20 @@ function formatNoticeDate(v){if(!v)return"";const d=new Date(v);if(Number.isNaN(
 async function showLatestNotice(placement){try{const data=await publicApi(`/api/public/notices?placement=${encodeURIComponent(placement)}`);const notice=(data.notices||[])[0];if(!notice)return;const key=`ipass.notice.hide.${placement}.${notice.id}`;if(localStorage.getItem(key)===todayKey())return;activeNoticeKey=key;$("hideNoticeToday").checked=false;$("noticePopupTitle").textContent=(notice.is_important?"[중요] ":"")+notice.title;$("noticePopupDate").textContent=formatNoticeDate(notice.created_at);$("noticePopupContent").innerHTML=`<div style="white-space:pre-wrap">${esc(notice.content||"")}</div>`;$("noticeModal").classList.remove("hidden")}catch{}}
 function closeNoticePopup(){if(activeNoticeKey&&$("hideNoticeToday").checked)localStorage.setItem(activeNoticeKey,todayKey());$("noticeModal").classList.add("hidden");activeNoticeKey=null}
 $("closeNoticePopup").onclick=closeNoticePopup;$("closeNoticePopupBottom").onclick=closeNoticePopup;$("noticeModal").onclick=e=>{if(e.target===$("noticeModal"))closeNoticePopup()};
+$("openTerms").onclick=()=>$("termsModal").classList.remove("hidden");$("closeTerms").onclick=()=>$("termsModal").classList.add("hidden");$("termsModal").onclick=e=>{if(e.target===$("termsModal"))$("termsModal").classList.add("hidden")};
 $("openPrivacy").onclick=()=>$("privacyModal").classList.remove("hidden");$("closePrivacy").onclick=()=>$("privacyModal").classList.add("hidden");$("privacyModal").onclick=e=>{if(e.target===$("privacyModal"))$("privacyModal").classList.add("hidden")};
 
 $("loginForm").onsubmit=async e=>{
   e.preventDefault();
   const msg=$("loginMessage"),btn=$("loginBtn");
+  const email=$("loginEmail").value.trim();
+  if($("saveLoginId").checked)localStorage.setItem("ipass.savedLoginId",email);
+  else localStorage.removeItem("ipass.savedLoginId");
   msg.textContent="";
   btn.disabled=true;
   btn.textContent="로그인 중...";
   try{
-    const d=await firebasePost("accounts:signInWithPassword",{email:$("loginEmail").value.trim(),password:$("loginPassword").value,returnSecureToken:true});
+    const d=await firebasePost("accounts:signInWithPassword",{email,password:$("loginPassword").value,returnSecureToken:true});
     session={idToken:d.idToken,refreshToken:d.refreshToken,expiresAt:Date.now()+Number(d.expiresIn||3600)*1000,email:d.email,uid:d.localId};
     sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));
     const me=await api("/api/me");
@@ -1143,7 +1309,10 @@ async function openEvaluation(id){
 }
 $("backBtn").onclick=()=>showPage(currentUser?.role==="admin"?"dashboard":"partnerHome");
 
-(async function boot(){showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch{logout()}})();
+(async function boot(){
+  const savedId=localStorage.getItem("ipass.savedLoginId")||"";
+  if(savedId){$("loginEmail").value=savedId;$("saveLoginId").checked=true;}
+  showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch{logout()}})();
 </script>
 </body>
 </html>
