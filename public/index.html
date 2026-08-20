@@ -1356,7 +1356,7 @@ main{
 .committee-score-card{padding:16px;background:#fff;border:1px solid #e5eaed;border-radius:11px}.committee-score-card .label{color:#82909a;font-size:10.5px;font-weight:650}.committee-score-card .value{margin-top:8px;color:#293640;font-size:22px;font-weight:760}.committee-score-card .meta{margin-top:4px;color:#a0a9b0;font-size:10px}
 .committee-admin-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px;align-items:start}.committee-list,.committee-editor{background:#fff;border:1px solid #e4e9ec;border-radius:13px;overflow:hidden}.committee-list-head,.committee-editor-head{min-height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #edf0f2}.committee-list-head strong,.committee-editor-head strong{font-size:13px;color:#37444e}.committee-meeting-item{width:100%;padding:13px 15px;border:0;border-bottom:1px solid #eff2f4;background:#fff;text-align:left;cursor:pointer}.committee-meeting-item:hover,.committee-meeting-item.active{background:#f7fafc}.committee-meeting-item .title{color:#46535e;font-size:12px;font-weight:650}.committee-meeting-item .meta{margin-top:5px;color:#9aa4ab;font-size:10px}.committee-status-badge{display:inline-flex;padding:3px 6px;border-radius:6px;font-size:9px;font-weight:700;background:#f0f3f5;color:#7e8991}.committee-status-badge.finalized{background:#edf6f1;color:#4c846b}
 .committee-editor-body{padding:16px}.committee-meeting-fields{display:grid;grid-template-columns:160px minmax(0,1fr);gap:10px;margin-bottom:16px}.committee-meeting-fields .wide{grid-column:1/-1}.committee-meeting-fields label{display:block;margin-bottom:6px;color:#75828c;font-size:10.5px;font-weight:650}.committee-meeting-fields input,.committee-meeting-fields textarea{width:100%;border:1px solid #dfe5e9;border-radius:8px;background:#fff;color:#42505a}.committee-meeting-fields input{height:40px;padding:0 11px}.committee-meeting-fields textarea{min-height:68px;padding:9px 11px;resize:vertical}
-.committee-subhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:22px 0 9px}.committee-subhead h3{margin:0;color:#35424c;font-size:13px}.committee-subhead span{color:#9ba5ac;font-size:10px}.committee-table-wrap{overflow:auto;border:1px solid #e7ebee;border-radius:9px}.committee-table{width:100%;min-width:760px;border-collapse:collapse}.committee-table th{height:36px;padding:0 10px;background:#f8fafb;color:#7b8790;font-size:10px;text-align:left;border-bottom:1px solid #e8ecef}.committee-table td{padding:7px 10px;border-bottom:1px solid #eef1f3;color:#4c5963;font-size:11px}.committee-table tr:last-child td{border-bottom:0}.committee-table select,.committee-table input{width:100%;height:34px;border:1px solid #dfe5e9;border-radius:7px;background:#fff;padding:0 8px;color:#4c5963;font-size:11px}.committee-table .org-name{font-weight:650;white-space:nowrap}.committee-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.committee-note{margin-top:8px;color:#8d989f;font-size:10.5px;line-height:1.55}
+.committee-subhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:22px 0 9px}.committee-subhead h3{margin:0;color:#35424c;font-size:13px}.committee-subhead span{color:#9ba5ac;font-size:10px}.committee-table-wrap{overflow:auto;border:1px solid #e7ebee;border-radius:9px}.committee-table{width:100%;min-width:760px;border-collapse:collapse}.committee-table th{height:36px;padding:0 10px;background:#f8fafb;color:#7b8790;font-size:10px;text-align:left;border-bottom:1px solid #e8ecef}.committee-table td{padding:7px 10px;border-bottom:1px solid #eef1f3;color:#4c5963;font-size:11px}.committee-table tr:last-child td{border-bottom:0}.committee-table select,.committee-table input{width:100%;height:34px;border:1px solid #dfe5e9;border-radius:7px;background:#fff;padding:0 8px;color:#4c5963;font-size:11px}.committee-table .org-name{font-weight:650;white-space:nowrap}.committee-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.committee-note{margin-top:8px;color:#8d989f;font-size:10.5px;line-height:1.55}.committee-save-state{margin-right:auto;color:#4f7d69;font-size:10.5px;font-weight:700;min-width:96px}
 .committee-partner-list{background:#fff;border:1px solid #e5eaed;border-radius:12px;overflow:hidden}.committee-partner-row{display:grid;grid-template-columns:110px minmax(0,1fr) 90px 100px;gap:10px;align-items:center;min-height:52px;padding:0 15px;border-bottom:1px solid #eef1f3}.committee-partner-row:last-child{border-bottom:0}.committee-partner-row .date{color:#7c8992;font-size:10.5px}.committee-partner-row .title{color:#45525c;font-size:11.5px;font-weight:600}.committee-partner-row .person{color:#87939b;font-size:10.5px}.committee-state{font-size:10px;font-weight:700}.committee-state.present{color:#3f8b69}.committee-state.absent{color:#bf5a52}.committee-state.na{color:#8d979e}.committee-empty{padding:30px;text-align:center;color:#99a3aa;font-size:11.5px}
 @media(max-width:900px){.committee-admin-layout{grid-template-columns:1fr}.committee-list{max-height:260px;overflow:auto}.committee-score-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.committee-toolbar{align-items:flex-start}.committee-score-strip{grid-template-columns:1fr 1fr}.committee-meeting-fields{grid-template-columns:1fr}.committee-partner-row{grid-template-columns:82px minmax(0,1fr);padding:10px 12px}.committee-partner-row .person,.committee-partner-row .committee-state{grid-column:2}}
@@ -1824,7 +1824,7 @@ async function firebasePost(endpoint,body,locale=false){
 function firebaseMessage(c){const m={EMAIL_NOT_FOUND:"등록되지 않은 이메일입니다.",INVALID_PASSWORD:"비밀번호가 올바르지 않습니다.",INVALID_LOGIN_CREDENTIALS:"이메일 또는 비밀번호가 올바르지 않습니다.",USER_DISABLED:"사용 중지된 계정입니다.",INVALID_EMAIL:"이메일 형식이 올바르지 않습니다.",TOO_MANY_ATTEMPTS_TRY_LATER:"로그인 시도가 너무 많습니다."};return m[c]||c}
 async function refreshToken(){const body=new URLSearchParams({grant_type:"refresh_token",refresh_token:session.refreshToken});const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body});const d=await r.json();if(!r.ok)throw new Error("로그인 세션이 만료되었습니다.");session.idToken=d.id_token;session.refreshToken=d.refresh_token||session.refreshToken;session.expiresAt=Date.now()+Number(d.expires_in||3600)*1000;sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));return session.idToken}
 async function token(){if(!session)throw new Error("로그인이 필요합니다.");if(Date.now()>session.expiresAt-60000)return refreshToken();return session.idToken}
-async function api(path,options={}){const t=await token();let r;try{r=await fetch(API_BASE+path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${t}`,...(options.body?{"content-type":"application/json"}:{}),...(options.headers||{})}})}catch{throw new Error("i-PaSS API에 연결하지 못했습니다.")}const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{throw new Error("서버 응답을 해석할 수 없습니다.")}if(!r.ok){const message=(r.status===404&&data.error==="API route not found")?"Worker 백엔드가 이전 버전입니다. V16.4 전체 프로젝트(src/index.js 포함)를 다시 배포해 주세요.":(data.error||`HTTP ${r.status}`);throw Object.assign(new Error(message),{status:r.status,data})}return data}
+async function api(path,options={}){const t=await token();let r;try{r=await fetch(API_BASE+path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${t}`,...(options.body?{"content-type":"application/json"}:{}),...(options.headers||{})}})}catch{throw new Error("i-PaSS API에 연결하지 못했습니다.")}const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{throw new Error("서버 응답을 해석할 수 없습니다.")}if(!r.ok){const message=(r.status===404&&data.error==="API route not found")?"Worker 백엔드가 이전 버전입니다. V16.5 전체 프로젝트(src/index.js 포함)를 다시 배포해 주세요.":(data.error||`HTTP ${r.status}`);throw Object.assign(new Error(message),{status:r.status,data})}return data}
 async function publicApi(path){const r=await fetch(API_BASE+path,{headers:{Accept:"application/json"}});const t=await r.text();if(!r.ok)throw new Error(t||`HTTP ${r.status}`);return t?JSON.parse(t):{}}
 const GET_CACHE=new Map(),GET_INFLIGHT=new Map();
 function cachedGet(key,loader,ttl=15000){
@@ -1911,6 +1911,7 @@ async function routeAfterLogin(me){
   $("userCompanyLabel").textContent=company;
   $("userDropdownName").textContent=displayName;
   $("rolePill").textContent=currentUser.role==="admin"?"관리자 계정":"협력사 계정";
+  setHeaderUnread(Number(currentUser.unread_notification_count||0));
   $("userAvatar").textContent=displayName.trim().slice(0,1).toUpperCase();
   $("homeUserName").textContent=displayName;
   $("portalWelcome").textContent=`${company}의 EHS 업무를 한 화면에서 확인하세요.`;
@@ -1993,11 +1994,11 @@ async function annualApi(year,companyId=""){
 }
 async function loadAnnualIpassOverview(){
   const box=$("portalIpassOverview");
-  box.innerHTML='<div class="loading">i-PaSS 점수를 불러오는 중...</div>';
+  if(!box.dataset.loaded)box.innerHTML='<div class="loading">i-PaSS 점수를 불러오는 중...</div>';
 
   if(currentUser?.role==="admin"){
     box.innerHTML=`<div class="ipass-admin-empty"><div><strong>협력사별 연간 i-PaSS 종합점수</strong><span>i-PaSS 관리에서 협력사를 선택해 상·하반기 점수를 확인하거나 수동 입력할 수 있습니다.</span></div><button class="btn primary-small" type="button" onclick="openPortalService('ipass')">점수 관리</button></div>`;
-    try{const d=(await api("/api/dashboard")).dashboard||{};setHeaderUnread(Number(d.unread_notification_count||0))}catch{}
+    box.dataset.loaded="1";
     return;
   }
 
@@ -2031,6 +2032,7 @@ async function loadAnnualIpassOverview(){
         ${ipassMetric({label:"산업재해 발생 건수",value:String(a.industrial_accident_count||0),unit:"건",scoreText:`재해점수 ${formatScore(a.industrial_accident_score)} / 10점`})}
         ${ipassMetric({label:"불합리 적발 건수",value:String(a.unreasonable_finding_count||0),unit:"건",scoreText:`${Number(a.unreasonable_deduction||0)?`-${formatScore(a.unreasonable_deduction)}점`:"감점 없음"} · 1건당 -3점`,negative:Number(a.unreasonable_deduction||0)>0})}
       </div>`;
+    box.dataset.loaded="1";
     setHeaderUnread(0);
   }catch(e){
     box.innerHTML=`<div class="empty">i-PaSS 종합점수를 불러오지 못했습니다.<div class="sub" style="margin-top:6px">연간 점수 DB migration 적용 여부를 확인하세요.</div></div>`;
@@ -2126,6 +2128,7 @@ function setHeaderUnread(count){
 
 let committeeAdminOptions={companies:[],departments:[]};
 let committeeMeetingsCache=[];
+const committeeDetailCache=new Map();
 
 function committeeStatusLabel(status){
   const map={present:["참석","present"],absent:["불참","absent"],pending:["확인 전",""]};
@@ -2201,6 +2204,7 @@ async function createCommitteeMeeting(){
     const d=await api('/api/admin/committee',{method:'POST',body:JSON.stringify({year,month,meeting_date})});
     invalidateGetCache('/api/committee?');
     committeeMeetingsCache=[{...d.meeting,partner_target_count:0,partner_absent_count:0,partner_present_count:0,partner_pending_count:0,department_target_count:0},...committeeMeetingsCache].sort((a,b)=>Number(b.meeting_month)-Number(a.meeting_month));
+    committeeDetailCache.set(d.meeting.id,d.meeting);
     renderCommitteeAdminList(committeeMeetingsCache,year,false);
     renderCommitteeEditor(d.meeting);
   }catch(e){await askAction({title:"등록 실패",message:e.message,confirmText:"확인"})}
@@ -2208,9 +2212,11 @@ async function createCommitteeMeeting(){
 }
 async function loadCommitteeMeetingEditor(id){
   const editor=$("committeeEditor");if(!editor)return;
-  editor.innerHTML='<div class="loading">상세를 불러오는 중...</div>';
   document.querySelectorAll(".committee-meeting-item").forEach(b=>b.classList.toggle("active",b.dataset.id===id));
-  try{const d=await apiCached(`/api/admin/committee/${encodeURIComponent(id)}`,8000);renderCommitteeEditor(d.meeting)}catch(e){editor.innerHTML=`<div class="error">${esc(e.message)}</div>`}
+  const local=committeeDetailCache.get(id);
+  if(local){renderCommitteeEditor(local);return}
+  editor.innerHTML='<div class="loading">상세를 불러오는 중...</div>';
+  try{const d=await apiCached(`/api/admin/committee/${encodeURIComponent(id)}`,15000);committeeDetailCache.set(id,d.meeting);renderCommitteeEditor(d.meeting)}catch(e){editor.innerHTML=`<div class="error">${esc(e.message)}</div>`}
 }
 function renderCommitteeTargetRows(options,selected,type){
   const map=new Map((selected||[]).map(r=>[type==="partner"?r.company_id:r.department_id,r]));
@@ -2246,7 +2252,7 @@ function renderCommitteeEditor(m){
     <div class="committee-batch"><button class="btn" type="button" onclick="committeeSetAll('committeeDepartmentRows','present')">선택 대상 모두 참석</button><button class="btn" type="button" onclick="committeeClearTargets('committeeDepartmentRows')">선택 해제</button></div>
     <div class="committee-target-grid departments" id="committeeDepartmentRows">${renderCommitteeTargetRows(committeeAdminOptions.departments,m.departments,'department')}</div>
     <div class="committee-note">선택하지 않은 협력사·부서는 해당 월 협의체 대상이 아닙니다. 참석 대상은 직급과 성명을 입력해야 확정할 수 있으며, 협력사의 불참만 i-PaSS 점수에 반영됩니다.</div>
-    <div class="committee-actions"><button class="btn danger" id="committeeDelete" type="button">회차 삭제</button><span class="committee-action-spacer"></span><button class="btn" id="committeeSaveDraft" type="button">${m.status==="finalized"?"수정 저장":"임시저장"}</button><button class="btn primary-small" id="committeeFinalize" type="button">${m.status==="finalized"?"확정 내용 저장":"회의 확정"}</button></div>
+    <div class="committee-actions"><button class="btn danger" id="committeeDelete" type="button">회차 삭제</button><span class="committee-action-spacer"></span><span class="committee-save-state" id="committeeSaveState"></span><button class="btn" id="committeeSaveDraft" type="button">${m.status==="finalized"?"수정 저장":"임시저장"}</button><button class="btn primary-small" id="committeeFinalize" type="button">${m.status==="finalized"?"확정 내용 저장":"회의 확정"}</button></div>
   </div>`;
   bindCommitteeTargetRows('committeePartnerRows');bindCommitteeTargetRows('committeeDepartmentRows');
   $("committeeSaveDraft").onclick=()=>saveCommitteeMeeting(m.id,false,m.status);
@@ -2272,26 +2278,65 @@ function collectCommitteeRows(){
     }));
   return {partners:collect('committeePartnerRows','company_id'),departments:collect('committeeDepartmentRows','department_id')};
 }
+function committeeListEntryFromDetail(m){
+  const partners=m.partners||[],departments=m.departments||[];
+  return {
+    ...m,
+    partner_target_count:partners.length,
+    partner_present_count:partners.filter(r=>r.attendance_status==="present").length,
+    partner_absent_count:partners.filter(r=>r.attendance_status==="absent").length,
+    partner_pending_count:partners.filter(r=>r.attendance_status==="pending").length,
+    department_target_count:departments.length
+  };
+}
+function updateCommitteeLocalMeeting(detail){
+  const row=committeeListEntryFromDetail(detail);
+  const idx=committeeMeetingsCache.findIndex(x=>x.id===detail.id);
+  if(idx>=0)committeeMeetingsCache[idx]={...committeeMeetingsCache[idx],...row};
+  else committeeMeetingsCache.push(row);
+  committeeMeetingsCache.sort((a,b)=>Number(b.meeting_month||0)-Number(a.meeting_month||0));
+}
+function setCommitteeSaving(saving,label=""){
+  const a=$("committeeSaveDraft"),b=$("committeeFinalize"),state=$("committeeSaveState");
+  if(a)a.disabled=saving;if(b)b.disabled=saving;
+  if(state)state.textContent=label;
+}
 async function saveCommitteeMeeting(id,finalize,currentStatus){
   const rows=collectCommitteeRows();
   const body={meeting_date:$("committeeMeetingDate").value,note:$("committeeMeetingNote").value.trim(),partners:rows.partners,departments:rows.departments,finalize:finalize===true};
   if(!finalize&&currentStatus==="draft")body.status="draft";
+  setCommitteeSaving(true,"저장 중...");
   try{
     const d=await api(`/api/admin/committee/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(body)});
-    invalidateGetCache('/api/committee');invalidateGetCache('/api/annual-ipass');
-    await loadCommittee(true);
+    invalidateGetCache('/api/committee');invalidateGetCache(`/api/admin/committee/${encodeURIComponent(id)}`);invalidateGetCache('/api/annual-ipass');
+    committeeDetailCache.set(id,d.meeting);
+    updateCommitteeLocalMeeting(d.meeting);
+    const year=Number($("committeeYear")?.value||new Date().getFullYear());
+    renderCommitteeAdminList(committeeMeetingsCache,year,false);
     renderCommitteeEditor(d.meeting);
-    if(finalize)loadAnnualIpassOverview();
-  }catch(e){await askAction({title:"저장 실패",message:e.message,confirmText:"확인"})}
+    const state=$("committeeSaveState");if(state)state.textContent=`✓ 저장됨 ${new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})}`;
+    if(finalize)void loadAnnualIpassOverview();
+  }catch(e){
+    setCommitteeSaving(false,"");
+    await askAction({title:"저장 실패",message:e.message,confirmText:"확인"});
+  }
 }
 async function deleteCommitteeMeeting(id,month){
   const result=await askAction({title:"협의체 삭제",message:`${month}월 협의체를 삭제할까요? 참석기록도 함께 삭제됩니다.`,confirmText:"삭제",danger:true});
   if(!result.confirmed)return;
+  const btn=$("committeeDelete");if(btn){btn.disabled=true;btn.textContent="삭제 중..."}
   try{
     await api(`/api/admin/committee/${encodeURIComponent(id)}`,{method:"DELETE"});
-    invalidateGetCache('/api/committee');invalidateGetCache('/api/annual-ipass');
-    await loadCommittee(true);loadAnnualIpassOverview();
-  }catch(e){await askAction({title:"삭제 실패",message:e.message,confirmText:"확인"})}
+    invalidateGetCache('/api/committee');invalidateGetCache(`/api/admin/committee/${encodeURIComponent(id)}`);invalidateGetCache('/api/annual-ipass');
+    committeeDetailCache.delete(id);
+    committeeMeetingsCache=committeeMeetingsCache.filter(x=>x.id!==id);
+    const year=Number($("committeeYear")?.value||new Date().getFullYear());
+    renderCommitteeAdminList(committeeMeetingsCache,year,false);
+    void loadAnnualIpassOverview();
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent="회차 삭제"}
+    await askAction({title:"삭제 실패",message:e.message,confirmText:"확인"});
+  }
 }
 
 function showServicePlaceholder(service){
@@ -2340,10 +2385,11 @@ async function loadPortalNotices(){
 
 async function loadAdminDashboard(){
   try{
-    const c=await api("/api/cycles"),cycle=c.cycles?.[0];
+    const data=await apiCached("/api/admin/dashboard-bundle",8000);
+    const cycle=data.cycles?.[0];
     if(cycle)$("cycleText").textContent=`${cycle.cycle_name} · ${cycle.start_at||"-"} ~ ${cycle.end_at||"-"}`;
 
-    const d=(await api("/api/dashboard")).dashboard||{};
+    const d=data.dashboard||{};
     const target=Number(d.target_company_count||0);
     const submitted=Number(d.submitted_count||0);
     $("targetCount").textContent=target;
@@ -2352,10 +2398,11 @@ async function loadAdminDashboard(){
     $("completedCount").textContent=d.completed_count??0;
     $("unreadCount").textContent=d.unread_notification_count??0;
     $("unsubmittedCount").textContent=Math.max(0,target-submitted);
+    setHeaderUnread(Number(d.unread_notification_count||0));
 
-    const t=await api("/api/targets");
-    await initAnnualAdminManager(t.targets||[]);
-    const list=(t.targets||[]).filter(x=>Number(x.is_selected)===1);
+    const targets=data.targets||[];
+    await initAnnualAdminManager(targets);
+    const list=targets.filter(x=>Number(x.is_selected)===1);
     $("companyTable").innerHTML=list.length
       ? `<div class="table-wrap"><table class="mobile-stack"><thead><tr><th>협력사</th><th>업종</th><th>상시근로자</th><th>상태</th></tr></thead><tbody>${list.map(x=>`<tr class="clickable" onclick="openEvaluation('${String(x.id).replaceAll("'","\\'")}')"><td data-label="협력사"><b>${esc(x.company_name)}</b></td><td data-label="업종">${esc(x.industry_name||"-")}</td><td data-label="상시근로자">${x.worker_count??"-"}</td><td data-label="상태">${tag(x.status)}</td></tr>`).join("")}</tbody></table></div>`
       : '<div class="empty">평가대상이 없습니다.</div>';
@@ -2363,8 +2410,18 @@ async function loadAdminDashboard(){
     $("companyTable").innerHTML=`<div class="error">${esc(e.message)}</div>`;
   }
 }
-async function loadApprovals(){const data=await api("/api/admin/registrations"),list=(data.registrations||[]).filter(x=>x.approval_status==="pending");$("approvalTable").innerHTML=list.length?renderRegTable(list,true):'<div class="empty">승인 대기 회원이 없습니다.</div>'}
-async function loadAccounts(){const data=await api("/api/admin/registrations"),list=data.registrations||[];$("accountTable").innerHTML=list.length?renderRegTable(list,false):'<div class="empty">등록된 협력사 계정이 없습니다.</div>'}
+async function registrationData(force=false){
+  if(force)invalidateGetCache('/api/admin/registrations');
+  return apiCached('/api/admin/registrations',force?1:8000);
+}
+function renderRegistrationViews(data){
+  const all=data.registrations||[];
+  const pending=all.filter(x=>x.approval_status==="pending");
+  if($("approvalTable"))$("approvalTable").innerHTML=pending.length?renderRegTable(pending,true):'<div class="empty">승인 대기 회원이 없습니다.</div>';
+  if($("accountTable"))$("accountTable").innerHTML=all.length?renderRegTable(all,false):'<div class="empty">등록된 협력사 계정이 없습니다.</div>';
+}
+async function loadApprovals(){try{renderRegistrationViews(await registrationData())}catch(e){$("approvalTable").innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadAccounts(){try{renderRegistrationViews(await registrationData())}catch(e){$("accountTable").innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 function renderRegTable(list,approvalOnly){
   return `<div class="table-wrap"><table class="mobile-stack"><thead><tr><th>회사명</th><th>이름</th><th>직급</th><th>연락처</th><th>이메일</th><th>가입일</th>${approvalOnly?"":"<th>상태</th>"}<th>처리</th></tr></thead><tbody>${list.map(x=>`<tr><td data-label="회사명">${esc(x.company_name||"-")}</td><td data-label="이름">${esc(x.name)}</td><td data-label="직급">${esc(x.position)}</td><td data-label="연락처">${esc(x.phone)}</td><td data-label="이메일">${esc(x.email)}</td><td data-label="가입일">${esc(String(x.created_at||"-").slice(0,10))}</td>${approvalOnly?"":`<td data-label="상태">${tag(x.approval_status)}</td>`}<td data-label="처리"><div class="toolbar">${x.approval_status!=="approved"?`<button class="btn primary-small" onclick="accountAction('${x.id}','approve','${String(x.name||"").replaceAll("'","\\'")}')">승인</button>`:""}${x.approval_status==="pending"?`<button class="btn danger" onclick="accountAction('${x.id}','reject','${String(x.name||"").replaceAll("'","\\'")}')">반려</button>`:""}${x.approval_status==="approved"?`<button class="btn danger" onclick="accountAction('${x.id}','suspend','${String(x.name||"").replaceAll("'","\\'")}')">사용중지</button>`:""}</div></td></tr>`).join("")}</tbody></table></div>`;
 }
@@ -2375,8 +2432,7 @@ async function accountAction(id,action,name=""){
   const result=await askAction({title:cfg[0],message:cfg[1],confirmText:cfg[2],danger:cfg[3],reason:cfg[4]});
   if(!result.confirmed)return;
   await api(`/api/admin/registrations/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify({action,reason:result.reason||""})});
-  await loadApprovals();
-  await loadAccounts();
+  renderRegistrationViews(await registrationData(true));
 }
 async function loadNotices(){const data=await api("/api/admin/notices"),list=data.notices||[];$("noticeAdminList").innerHTML=list.length?`<div class="table-wrap"><table><thead><tr><th>제목</th><th>중요</th><th>로그인</th><th>로그인 후</th><th>상태</th><th>작업</th></tr></thead><tbody>${list.map(n=>`<tr><td>${esc(n.title)}</td><td>${n.is_important?"Y":"-"}</td><td>${n.show_on_login?"Y":"-"}</td><td>${n.show_after_login?"Y":"-"}</td><td>${n.is_active?"게시":"중지"}</td><td><button class="btn danger" onclick="deleteNotice('${n.id}')">삭제</button></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">등록된 공지가 없습니다.</div>'}
 $("createNotice").onclick=async()=>{await api("/api/admin/notices",{method:"POST",body:JSON.stringify({title:$("noticeTitle").value,content:$("noticeContent").value,is_important:$("noticeImportant").checked,show_on_login:$("noticeLogin").checked,show_after_login:$("noticeAfter").checked})});$("noticeTitle").value="";$("noticeContent").value="";await loadNotices()}
