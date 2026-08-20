@@ -96,7 +96,6 @@ export default {
         if (Number(countRow?.cnt || 0) >= 3 && !existing) {
           return json({ success: false, error: "해당 회사는 담당자 계정을 최대 3개까지 등록할 수 있습니다." }, 409);
         }
-
         const id = existing?.id || crypto.randomUUID();
         await env.partner_evaluation_db.prepare(`
           INSERT INTO portal_accounts (
@@ -167,11 +166,11 @@ export default {
             account.email_verified = firebase.user.emailVerified ? 1 : 0;
           }
 
-let authState = "approved";
-if (account.role !== "admin" && !firebase.user.emailVerified) authState = "email_verification_required";
-else if (account.approval_status === "pending") authState = "pending_approval";
-else if (account.approval_status === "rejected") authState = "rejected";
-else if (account.approval_status === "suspended") authState = "suspended";
+          let authState = "approved";
+          if (account.role !== "admin" && !firebase.user.emailVerified) authState = "email_verification_required";
+          else if (account.approval_status === "pending") authState = "pending_approval";
+          else if (account.approval_status === "rejected") authState = "rejected";
+          else if (account.approval_status === "suspended") authState = "suspended";
 
           if (authState === "approved") rememberApprovedAccount(firebase.user.localId, {
             id: account.id, email: account.email, role: account.role, company_id: account.company_id, approval_status: account.approval_status
@@ -236,7 +235,6 @@ else if (account.approval_status === "suspended") authState = "suspended";
       const auth = await requireApprovedAccount(request, env);
       if (!auth.ok) return json({ success: false, error: auth.error, auth_state: auth.auth_state }, auth.status);
       const user = auth.account;
-
 
       if (request.method === "GET" && path === "/api/annual-ipass") {
         const year = parseAnnualYear(url.searchParams.get("year"));
@@ -395,7 +393,6 @@ else if (account.approval_status === "suspended") authState = "suspended";
             }
           });
         }
-
         if (!user.company_id) return json({ success: false, error: "회사 연결정보가 없습니다." }, 400);
         const [summaryResult, meetingResult] = await env.partner_evaluation_db.batch([
           env.partner_evaluation_db.prepare(`
@@ -472,6 +469,13 @@ else if (account.approval_status === "suspended") authState = "suspended";
         ]);
         const beforeMeeting = meetingResult?.results?.[0];
         if (!beforeMeeting) return json({ success: false, error: "협의체 회차를 찾을 수 없습니다." }, 404);
+
+        if (beforeMeeting.status === "finalized" && body.reopen !== true) {
+          return json({ success: false, error: "확정된 협의체 회차입니다. 재오픈 후에만 수정할 수 있습니다.", locked: true }, 409);
+        }
+        if (body.expected_updated_at && String(body.expected_updated_at) !== String(beforeMeeting.updated_at)) {
+          return json({ success: false, error: "다른 관리자가 먼저 저장했습니다. 새로고침 후 다시 시도하세요.", conflict: true }, 409);
+        }
 
         const meetingDate = String(body.meeting_date ?? beforeMeeting.meeting_date).trim();
         if (!/^\d{4}-\d{2}-\d{2}$/.test(meetingDate)) return json({ success: false, error: "개최일을 확인하세요." }, 400);
@@ -608,12 +612,15 @@ else if (account.approval_status === "suspended") authState = "suspended";
       if (user.role === "admin" && committeeAdminMatch && request.method === "DELETE") {
         const meetingId = decodeURIComponent(committeeAdminMatch[1]);
         const [meetingResult, partnerResult] = await env.partner_evaluation_db.batch([
-          env.partner_evaluation_db.prepare(`SELECT year FROM committee_meetings WHERE id = ? LIMIT 1`).bind(meetingId),
-          env.partner_evaluation_db.prepare(`SELECT company_id FROM committee_partner_attendance WHERE meeting_id = ?`).bind(meetingId),
-          env.partner_evaluation_db.prepare(`DELETE FROM committee_meetings WHERE id = ?`).bind(meetingId)
+          env.partner_evaluation_db.prepare(`SELECT year, status FROM committee_meetings WHERE id = ? LIMIT 1`).bind(meetingId),
+          env.partner_evaluation_db.prepare(`SELECT company_id FROM committee_partner_attendance WHERE meeting_id = ?`).bind(meetingId)
         ]);
         const before = meetingResult?.results?.[0];
         if (!before) return json({ success: false, error: "협의체 회차를 찾을 수 없습니다." }, 404);
+        if (before.status === "finalized" && !url.searchParams.has("force")) {
+          return json({ success: false, error: "확정된 협의체 회차는 삭제할 수 없습니다. 필요하면 재오픈 후 삭제하세요.", locked: true }, 409);
+        }
+        await env.partner_evaluation_db.prepare(`DELETE FROM committee_meetings WHERE id = ?`).bind(meetingId).run();
         const pairs = (partnerResult?.results || []).map(r => ({ companyId: r.company_id, year: Number(before.year) }));
         background(syncCommitteeAnnualCountsBatch(env, pairs));
         return json({ success: true });
@@ -673,7 +680,6 @@ else if (account.approval_status === "suspended") authState = "suspended";
 
       if (request.method === "GET" && path === "/api/dashboard") {
         if (user.role !== "admin") return forbidden();
-
         const cycleId = url.searchParams.get("cycle_id");
         let row;
         if (cycleId) {
@@ -1091,7 +1097,6 @@ if (portal) {
   rememberApprovedAccount(uid, account);
   return { ok: true, account, firebase: firebase.user };
 }
-
 
 function parseAnnualYear(value) {
   const current = new Date().getFullYear();
