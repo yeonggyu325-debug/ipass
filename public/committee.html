@@ -1,56 +1,33 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>안전보건협의체 | Hniruja EHS</title>
-  <style>
-    html,body{width:100%;height:100%;margin:0;background:#f5f7f9}
-    #portal{width:100%;height:100%;border:0;display:block}
-    #error{position:fixed;inset:0;display:none;place-items:center;padding:24px;background:#f5f7f9;color:#26323b;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center}
-    #error div{max-width:360px;padding:28px;background:#fff;border:1px solid #e5e9ec;border-radius:12px}
-    #error button{margin-top:16px;height:38px;padding:0 14px;border:0;border-radius:8px;background:#2878d4;color:#fff;font-weight:700;cursor:pointer}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>안전보건협의체 | Hniruja EHS</title>
+<style>
+:root{--blue:#2878d4;--line:#e5e9ec;--text:#26323b;--muted:#82909a;--bg:#f5f7f9;--danger:#c14e49}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}.head{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(20px,calc((100% - 1100px)/2))}.brand{font-weight:750}.head button,.btn{height:36px;padding:0 12px;border:1px solid #d9e1e6;border-radius:8px;background:#fff;color:#53616b;font-weight:650;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.wrap{max-width:1100px;margin:0 auto;padding:32px 20px}.crumb{color:#98a3aa;font-size:12px}.top{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0 22px}h1{margin:0;font-size:26px;letter-spacing:-.04em}.sub{margin-top:8px;color:var(--muted);font-size:12px}.year{height:38px;border:1px solid #dfe5e9;border-radius:8px;background:#fff;padding:0 10px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}.card,.panel{background:#fff;border:1px solid var(--line);border-radius:12px}.card{padding:16px}.label{color:var(--muted);font-size:11px;font-weight:650}.value{margin-top:8px;font-size:23px;font-weight:760}.meta{margin-top:4px;color:#9ba5ac;font-size:10px}.panel-head{min-height:54px;padding:0 17px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eef1f3}.panel-head strong{font-size:14px}.list{padding:0}.row{display:grid;grid-template-columns:88px minmax(0,1fr) auto;gap:14px;align-items:center;min-height:62px;padding:0 17px;border-bottom:1px solid #eef1f3}.row:last-child{border:0}.title{font-weight:650}.date,.status{font-size:11px;color:var(--muted)}.status.present,.status.finalized{color:#3f8b69;font-weight:700}.status.absent{color:var(--danger);font-weight:700}.empty,.error{padding:34px;text-align:center;color:var(--muted)}.error{color:var(--danger)}.hidden{display:none!important}@media(max-width:700px){.cards{grid-template-columns:1fr 1fr}.row{grid-template-columns:62px minmax(0,1fr)}.row .action{grid-column:2}.top{align-items:start;flex-direction:column}}
+</style>
 </head>
 <body>
-  <iframe id="portal" src="index.html" title="Hniruja EHS 포털"></iframe>
-  <div id="error"><div><strong>협의체 화면을 열지 못했습니다.</strong><p>포털 로그인 상태를 확인한 뒤 다시 시도해 주세요.</p><button type="button" onclick="location.replace('index.html')">포털로 돌아가기</button></div></div>
-  <script>
-    const frame=document.getElementById('portal');
-    const error=document.getElementById('error');
-    let tries=0;
-    function isLoggedIn(win){
-      try{
-        const app=win.document.getElementById('app');
-        return !!app && !app.classList.contains('hidden');
-      }catch(_){return false;}
-    }
-    function isLoginScreenVisible(win){
-      try{
-        const portal=win.document.getElementById('publicPortal');
-        return !!portal && !portal.classList.contains('hidden');
-      }catch(_){return false;}
-    }
-    function openCommittee(){
-      const win=frame.contentWindow;
-      if(!win){scheduleRetry();return;}
-      if(isLoggedIn(win) && typeof win.navigatePage==='function'){
-        win.navigatePage('committee');
-        return;
-      }
-      if(isLoginScreenVisible(win) && tries>10){
-        frame.style.display='none';
-        error.style.display='grid';
-        return;
-      }
-      scheduleRetry();
-    }
-    function scheduleRetry(){
-      if(++tries<100){setTimeout(openCommittee,100);return;}
-      frame.style.display='none';
-      error.style.display='grid';
-    }
-    frame.addEventListener('load',()=>setTimeout(openCommittee,80));
-  </script>
+<header class="head"><div class="brand">Hniruja EHS</div><button type="button" onclick="location.href='/index.html'">포털 홈</button></header>
+<main class="wrap">
+  <div class="crumb">홈 · EHS 업무 · 안전보건협의체</div>
+  <div class="top"><div><h1>안전보건협의체</h1><div class="sub" id="subtitle">참석 현황을 불러오는 중입니다.</div></div><div><select id="year" class="year" aria-label="연도"></select> <button id="create" class="btn primary hidden" type="button">+ 협의체 등록</button></div></div>
+  <div id="summary"></div>
+  <section class="panel"><div class="panel-head"><strong id="listTitle">협의체 현황</strong><span class="meta" id="count"></span></div><div id="content" class="empty">불러오는 중...</div></section>
+</main>
+<script>
+const API_ORIGIN=location.hostname==='ipass.i-pass-eval.workers.dev'?'':'https://ipass.i-pass-eval.workers.dev';
+const KEY='ipass.session.v10';let session=null,currentUser=null;const $=id=>document.getElementById(id);const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+async function refresh(){const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:session.refreshToken});const r=await fetch('https://securetoken.googleapis.com/v1/token?key=AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});const d=await r.json();if(!r.ok)throw Error('로그인 세션이 만료되었습니다.');session.idToken=d.id_token;session.refreshToken=d.refresh_token||session.refreshToken;session.expiresAt=Date.now()+Number(d.expires_in||3600)*1000;sessionStorage.setItem(KEY,JSON.stringify(session));return session.idToken}
+async function api(path,opt={},retry=true){if(!session)throw Error('로그인이 필요합니다.');const t=Date.now()>session.expiresAt-60000?await refresh():session.idToken;let r;try{r=await fetch(API_ORIGIN+path,{...opt,headers:{Accept:'application/json',Authorization:`Bearer ${t}`,...(opt.body?{'content-type':'application/json'}:{}),...(opt.headers||{})}})}catch{throw Error('i-PaSS API에 연결하지 못했습니다.')}if(r.status===401&&retry){await refresh();return api(path,opt,false)}const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
+function years(){const select=$('year'),now=new Date().getFullYear();for(let n=now+1;n>=now-4;n--){const o=document.createElement('option');o.value=n;o.textContent=`${n}년`;select.append(o)}select.onchange=load}
+function state(v){return v==='present'?'<span class="status present">참석</span>':v==='absent'?'<span class="status absent">불참</span>':'<span class="status">미정</span>'}
+function renderPartner(d){const s=d.summary||{},meet=d.meetings||[];$('summary').innerHTML=`<div class="cards"><div class="card"><div class="label">협의체 점수</div><div class="value">${s.score??10}<small>/10</small></div><div class="meta">불참 1회당 -3점</div></div><div class="card"><div class="label">확정 회차</div><div class="value">${s.finalized_meeting_count||0}</div></div><div class="card"><div class="label">참석</div><div class="value">${s.present_count||0}</div></div><div class="card"><div class="label">불참</div><div class="value">${s.absence_count||0}</div></div></div>`;$('count').textContent=`${meet.length}건`;$('content').innerHTML=meet.length?`<div class="list">${meet.map(m=>`<div class="row"><div class="date">${esc(m.meeting_date)}</div><div><div class="title">${esc(m.title)}</div><div class="meta">${m.attendance_status==='present'?esc(`${m.attendee_position||''} ${m.attendee_name||''}`):''}</div></div><div>${state(m.attendance_status)}</div></div>`).join('')}</div>`:'<div class="empty">확정된 협의체 참석 내역이 없습니다.</div>'}
+function renderAdmin(d){const meet=d.meetings||[];$('summary').innerHTML='';$('count').textContent=`${meet.length}건`;$('content').innerHTML=meet.length?`<div class="list">${meet.map(m=>`<div class="row"><div class="date">${esc(m.meeting_date)}</div><div><div class="title">${esc(m.title)}</div><div class="meta">대상 ${m.partner_target_count||0} · 참석 ${m.partner_present_count||0} · 불참 ${m.partner_absent_count||0}</div></div><div class="action"><span class="status ${m.status==='finalized'?'finalized':''}">${m.status==='finalized'?'확정':'작성중'}</span></div></div>`).join('')}</div>`:'<div class="empty">등록된 협의체가 없습니다. 월별 협의체를 등록하세요.</div>'}
+async function load(){const y=$('year').value;$('content').className='empty';$('content').textContent='불러오는 중...';try{const d=await api(`/api/committee?year=${encodeURIComponent(y)}`);if(currentUser.role==='admin')renderAdmin(d);else renderPartner(d)}catch(e){$('content').className='error';$('content').textContent=e.message}}
+$('create').onclick=async()=>{const year=$('year').value,month=prompt('개최 월을 입력하세요. (1~12)');if(!month)return;const mm=String(Number(month)).padStart(2,'0');const meetingDate=prompt('개최일을 입력하세요. (YYYY-MM-DD)',`${year}-${mm}-01`);if(!meetingDate)return;try{await api('/api/admin/committee',{method:'POST',body:JSON.stringify({year:Number(year),month:Number(month),meeting_date:meetingDate})});await load()}catch(e){alert(e.message)}};
+(async()=>{try{session=JSON.parse(sessionStorage.getItem(KEY)||'null');if(!session){location.replace('/index.html');return}years();const me=await api('/api/me');if(me.auth_state!=='approved')throw Error('포털 로그인 및 계정 승인이 필요합니다.');currentUser=me.user;$('subtitle').textContent=currentUser.role==='admin'?'월별 협의체 대상과 참석 현황을 관리합니다.':'확정된 월별 참석 현황과 점수를 확인합니다.';$('create').classList.toggle('hidden',currentUser.role!=='admin');$('listTitle').textContent=currentUser.role==='admin'?'월별 협의체 관리':'확정된 참석 현황';await load()}catch(e){$('content').className='error';$('content').innerHTML=`${esc(e.message)}<br><br><button class="btn" onclick="location.href='/index.html'">포털 로그인으로 이동</button>`}})();
+</script>
 </body>
 </html>
