@@ -167,11 +167,11 @@ export default {
             account.email_verified = firebase.user.emailVerified ? 1 : 0;
           }
 
-          let authState = "approved";
-          if (!firebase.user.emailVerified) authState = "email_verification_required";
-          else if (account.approval_status === "pending") authState = "pending_approval";
-          else if (account.approval_status === "rejected") authState = "rejected";
-          else if (account.approval_status === "suspended") authState = "suspended";
+let authState = "approved";
+if (account.role !== "admin" && !firebase.user.emailVerified) authState = "email_verification_required";
+else if (account.approval_status === "pending") authState = "pending_approval";
+else if (account.approval_status === "rejected") authState = "rejected";
+else if (account.approval_status === "suspended") authState = "suspended";
 
           if (authState === "approved") rememberApprovedAccount(firebase.user.localId, {
             id: account.id, email: account.email, role: account.role, company_id: account.company_id, approval_status: account.approval_status
@@ -1034,9 +1034,14 @@ async function requireApprovedAccount(request, env) {
   const uid = firebase.user.localId;
   const cached = APPROVED_ACCOUNT_CACHE.get(uid);
   if (cached && cached.expiresAt > Date.now()) {
-    if (!firebase.user.emailVerified) return { ok: false, status: 403, error: "이메일 인증이 필요합니다.", auth_state: "email_verification_required" };
-    return { ok: true, account: cached.account, firebase: firebase.user };
-  }
+  if (cached.account.role !== "admin" && !firebase.user.emailVerified) return {
+    ok: false,
+    status: 403,
+    error: "이메일 인증이 필요합니다.",
+    auth_state: "email_verification_required"
+  };
+  return { ok: true, account: cached.account, firebase: firebase.user };
+}
   if (cached) APPROVED_ACCOUNT_CACHE.delete(uid);
 
   const portal = await env.partner_evaluation_db.prepare(`
@@ -1046,10 +1051,15 @@ async function requireApprovedAccount(request, env) {
     LIMIT 1
   `).bind(uid).first();
 
-  if (portal) {
-    if (!firebase.user.emailVerified) {
-      return { ok: false, status: 403, error: "이메일 인증이 필요합니다.", auth_state: "email_verification_required" };
-    }
+if (portal) {
+  if (portal.role !== "admin" && !firebase.user.emailVerified) {
+    return {
+      ok: false,
+      status: 403,
+      error: "이메일 인증이 필요합니다.",
+      auth_state: "email_verification_required"
+    };
+  }
     if (portal.approval_status !== "approved") {
       const messages = {
         pending: "가입 승인 대기중입니다.",
