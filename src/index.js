@@ -28,7 +28,7 @@ export default {
       }
 
       if (request.method === "GET" && path === "/api/health") {
-        return json({ success: true, service: "ipass", status: "ok", version: "16.5.0", annual_ipass_routes: true, committee_routes: true });
+        return json({ success: true, service: "ipass", status: "ok", version: "16.6.0", annual_ipass_routes: true, committee_routes: true, voc_routes: true });
       }
 
       if (request.method === "GET" && path === "/api/public/companies") {
@@ -626,6 +626,89 @@ export default {
         return json({ success: true });
       }
 
+      // ===== VOC (건의) =====
+      if (request.method === "POST" && path === "/api/voc") {
+        if (user.role !== "partner") return forbidden();
+        if (!user.company_id) return json({ success: false, error: "회사 연결정보가 없습니다." }, 400);
+        const body = await request.json();
+        const title = String(body.title || "").trim();
+        const content = String(body.content || "").trim();
+        const category = ["general","safety","facility","other"].includes(body.category) ? body.category : "general";
+        if (!title || !content) return json({ success: false, error: "제목과 내용을 입력하세요." }, 400);
+
+        const id = crypto.randomUUID();
+        await env.partner_evaluation_db.prepare(`
+          INSERT INTO voc_submissions (id, company_id, created_by, category, title, content, status, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, 'received', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `).bind(id, user.company_id, user.id, category, title, content).run();
+
+        return json({ success: true, voc: { id, company_id: user.company_id, category, title, content, status: "received" } }, 201);
+      }
+
+      if (request.method === "GET" && path === "/api/voc") {
+        if (user.role === "admin") {
+          const { results } = await env.partner_evaluation_db.prepare(`
+            SELECT v.id, v.company_id, c.company_name, v.category, v.title, v.status,
+                   v.created_at, v.updated_at, v.replied_at
+            FROM voc_submissions v
+            LEFT JOIN companies c ON c.id = v.company_id
+            ORDER BY
+              CASE v.status WHEN 'received' THEN 1 WHEN 'in_review' THEN 2 WHEN 'resolved' THEN 3 ELSE 4 END,
+              v.created_at DESC
+          `).all();
+          return json({ success: true, voc: results });
+        }
+        if (!user.company_id) return json({ success: false, error: "회사 연결정보가 없습니다." }, 400);
+        const { results } = await env.partner_evaluation_db.prepare(`
+          SELECT id, category, title, status, admin_reply, replied_at, created_at, updated_at
+          FROM voc_submissions
+          WHERE company_id = ?
+          ORDER BY created_at DESC
+        `).bind(user.company_id).all();
+        return json({ success: true, voc: results });
+      }
+
+      const vocDetailMatch = path.match(/^\/api\/voc\/([^/]+)$/);
+      if (request.method === "GET" && vocDetailMatch) {
+        const item = await env.partner_evaluation_db.prepare(`
+          SELECT v.*, c.company_name
+          FROM voc_submissions v
+          LEFT JOIN companies c ON c.id = v.company_id
+          WHERE v.id = ?
+          LIMIT 1
+        `).bind(vocDetailMatch[1]).first();
+        if (!item) return json({ success: false, error: "건의 내역을 찾을 수 없습니다." }, 404);
+        if (user.role !== "admin" && item.company_id !== user.company_id) return forbidden();
+        return json({ success: true, voc: item });
+      }
+
+      const vocAdminMatch = path.match(/^\/api\/admin\/voc\/([^/]+)$/);
+      if (user.role === "admin" && vocAdminMatch && request.method === "PATCH") {
+        const vocId = vocAdminMatch[1];
+        const body = await request.json();
+        const before = await env.partner_evaluation_db.prepare(`SELECT * FROM voc_submissions WHERE id = ? LIMIT 1`).bind(vocId).first();
+        if (!before) return json({ success: false, error: "건의 내역을 찾을 수 없습니다." }, 404);
+
+        const status = ["received","in_review","resolved","closed"].includes(body.status) ? body.status : before.status;
+        const adminReply = body.admin_reply !== undefined ? String(body.admin_reply || "").trim() || null : before.admin_reply;
+        const repliedAt = (adminReply && adminReply !== before.admin_reply) ? new Date().toISOString() : before.replied_at;
+        const repliedBy = (adminReply && adminReply !== before.admin_reply) ? user.id : before.replied_by;
+
+        await env.partner_evaluation_db.batch([
+          env.partner_evaluation_db.prepare(`
+            UPDATE voc_submissions
+            SET status = ?, admin_reply = ?, replied_by = ?, replied_at = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).bind(status, adminReply, repliedBy, repliedAt, vocId),
+          env.partner_evaluation_db.prepare(`
+            INSERT INTO voc_change_logs (voc_id, before_json, after_json, changed_by)
+            VALUES (?, ?, ?, ?)
+          `).bind(vocId, JSON.stringify({ status: before.status, admin_reply: before.admin_reply }), JSON.stringify({ status, admin_reply: adminReply }), user.id)
+        ]);
+
+        return json({ success: true, voc: { id: vocId, status, admin_reply: adminReply, replied_by: repliedBy, replied_at: repliedAt } });
+      }
+
       if (request.method === "GET" && path === "/api/admin/dashboard-bundle") {
         if (user.role !== "admin") return forbidden();
         const [cycleResult, dashboardResult, targetResult] = await env.partner_evaluation_db.batch([
@@ -978,7 +1061,7 @@ export default {
         return json({ success: true });
       }
 
-      return json({ success: false, error: "API route not found", method: request.method, path, version: "16.5.0" }, 404);
+      return json({ success: false, error: "API route not found", method: request.method, path, version: "16.6.0" }, 404);
     } catch (error) {
       console.error(error);
       return json({ success: false, error: error?.message || "Internal server error" }, 500);
