@@ -19,15 +19,34 @@
     const frame=document.getElementById('portal');
     const error=document.getElementById('error');
     let tries=0;
-    function openCommittee(){
+    function isLoggedIn(win){
       try{
-        const win=frame.contentWindow;
-        if(typeof win.navigatePage==='function'){
-          win.navigatePage('committee');
-          return;
-        }
-      }catch(_){}
-      if(++tries<80){setTimeout(openCommittee,100);return;}
+        const app=win.document.getElementById('app');
+        return !!app && !app.classList.contains('hidden');
+      }catch(_){return false;}
+    }
+    function isLoginScreenVisible(win){
+      try{
+        const portal=win.document.getElementById('publicPortal');
+        return !!portal && !portal.classList.contains('hidden');
+      }catch(_){return false;}
+    }
+    function openCommittee(){
+      const win=frame.contentWindow;
+      if(!win){scheduleRetry();return;}
+      if(isLoggedIn(win) && typeof win.navigatePage==='function'){
+        win.navigatePage('committee');
+        return;
+      }
+      if(isLoginScreenVisible(win) && tries>10){
+        frame.style.display='none';
+        error.style.display='grid';
+        return;
+      }
+      scheduleRetry();
+    }
+    function scheduleRetry(){
+      if(++tries<100){setTimeout(openCommittee,100);return;}
       frame.style.display='none';
       error.style.display='grid';
     }
