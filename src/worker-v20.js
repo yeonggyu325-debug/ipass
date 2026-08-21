@@ -1,5 +1,6 @@
 import app from './worker-v19.js';
 import { handleSystemAdmin, recordRequestAudit } from './system-admin.js';
+import { handleEvaluationScoring } from './evaluation-scoring.js';
 
 function isApi(path){return path.startsWith('/api/')}
 function requestId(request){
@@ -65,7 +66,8 @@ export default {
     const traced=new Request(request,{headers:nextHeaders});
     try{
       const systemResponse=await handleSystemAdmin(traced,env,ctx,app);
-      let raw=systemResponse||await app.fetch(traced,env,ctx);
+      const scoringResponse=systemResponse?null:await handleEvaluationScoring(traced,env,ctx,app);
+      let raw=systemResponse||scoringResponse||await app.fetch(traced,env,ctx);
       if(request.method==='GET')raw=await augmentSubmission(raw,url.pathname,env);
       const response=await attach(raw,id,url.pathname);
       if(shouldAudit(request.method,url.pathname,response.status)){
