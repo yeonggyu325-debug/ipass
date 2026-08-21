@@ -1,6 +1,6 @@
 import innerWorker from './worker-v18.js';
 
-const COMMON_ASSETS='<link rel="stylesheet" href="/ehs-common.css?v=1"><script src="/ehs-common.js?v=1"></script>';
+const COMMON_ASSETS='<link rel="stylesheet" href="/ehs-common.css?v=2"><script src="/ehs-common.js?v=2"></script>';
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{const s=JSON.parse(sessionStorage.getItem("ipass.session.v10")||"null");if(!s||!s.idToken)location.replace("/")}catch(_){location.replace("/")}</script>';
 
 function assetRequest(request,path){
@@ -8,16 +8,17 @@ function assetRequest(request,path){
   return new Request(u.toString(),{method:'GET',headers:request.headers});
 }
 
+function injectHead(html,content,marker){
+  if(html.includes(marker))return html;
+  return html.includes('</head>')?html.replace('</head>',content+'</head>'):content+html;
+}
+
 async function serveAssetHtml(request,env,path,{home=false}={}){
   const response=await env.ASSETS.fetch(assetRequest(request,path));
   if(!response.ok)return response;
   let html=await response.text();
-  if(home){
-    html=html.includes('</head>')?html.replace('</head>',HOME_BOOT+'</head>'):HOME_BOOT+html;
-  }
-  if(!html.includes('/ehs-common.css')){
-    html=html.includes('</body>')?html.replace('</body>',COMMON_ASSETS+'</body>'):html+COMMON_ASSETS;
-  }
+  if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
+  html=injectHead(html,COMMON_ASSETS,'/ehs-common.css?v=2');
   const headers=new Headers(response.headers);
   headers.delete('content-length');headers.delete('content-encoding');
   headers.set('content-type','text/html;charset=utf-8');
@@ -29,12 +30,8 @@ async function injectCommon(response,{home=false}={}){
   const type=response.headers.get('content-type')||'';
   if(!type.includes('text/html'))return response;
   let html=await response.text();
-  if(home&&!html.includes('ehs-home-boot')){
-    html=html.includes('</head>')?html.replace('</head>',HOME_BOOT+'</head>'):HOME_BOOT+html;
-  }
-  if(!html.includes('/ehs-common.css')){
-    html=html.includes('</body>')?html.replace('</body>',COMMON_ASSETS+'</body>'):html+COMMON_ASSETS;
-  }
+  if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
+  html=injectHead(html,COMMON_ASSETS,'/ehs-common.css?v=2');
   const headers=new Headers(response.headers);
   headers.delete('content-length');headers.delete('content-encoding');headers.set('cache-control','no-store');
   return new Response(html,{status:response.status,statusText:response.statusText,headers});
