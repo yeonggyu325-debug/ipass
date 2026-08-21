@@ -30,23 +30,7 @@ async function ensureQuotaSchema(env){
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
     env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_upload_reservations_v2_target ON evaluation_upload_reservations_v2(target_id,created_at)`),
-    env.partner_evaluation_db.prepare(`CREATE TRIGGER IF NOT EXISTS trg_evidence_upload_quota_v2
-      BEFORE INSERT ON evaluation_upload_reservations_v2
-      BEGIN
-        SELECT CASE WHEN (
-          COALESCE((SELECT SUM(file_size) FROM evaluation_evidence_files_v2 WHERE deleted_at IS NULL),0)
-          + COALESCE((SELECT SUM(file_size) FROM evaluation_upload_reservations_v2 WHERE created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')),0)
-          + NEW.file_size
-        ) > ${GLOBAL_LIMIT_BYTES}
-        THEN RAISE(ABORT,'GLOBAL_STORAGE_LIMIT') END;
-
-        SELECT CASE WHEN (
-          COALESCE((SELECT SUM(file_size) FROM evaluation_evidence_files_v2 WHERE target_id=NEW.target_id AND deleted_at IS NULL),0)
-          + COALESCE((SELECT SUM(file_size) FROM evaluation_upload_reservations_v2 WHERE target_id=NEW.target_id AND created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')),0)
-          + NEW.file_size
-        ) > ${TARGET_LIMIT_BYTES}
-        THEN RAISE(ABORT,'TARGET_STORAGE_LIMIT') END;
-      END`)
+    env.partner_evaluation_db.prepare(`DROP TRIGGER IF EXISTS trg_evidence_upload_quota_v2`)
   ]);
   await env.partner_evaluation_db.prepare(`DELETE FROM evaluation_upload_reservations_v2 WHERE created_at < datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`).run();
 }
@@ -68,15 +52,23 @@ async function storageUsage(env,targetId){
 
 async function reserve(env,targetId,fileSize){
   const id=crypto.randomUUID();
-  try{
-    await env.partner_evaluation_db.prepare(`INSERT INTO evaluation_upload_reservations_v2 (id,target_id,file_size) VALUES (?,?,?)`).bind(id,targetId,fileSize).run();
-    return {ok:true,id};
-  }catch(e){
-    const message=String(e?.message||e||'');
-    if(message.includes('GLOBAL_STORAGE_LIMIT'))return {ok:false,scope:'global'};
-    if(message.includes('TARGET_STORAGE_LIMIT'))return {ok:false,scope:'company_cycle'};
-    throw e;
-  }
+  const sql=`INSERT INTO evaluation_upload_reservations_v2 (id,target_id,file_size)
+    SELECT ?,?,?
+    WHERE (
+      COALESCE((SELECT SUM(file_size) FROM evaluation_evidence_files_v2 WHERE deleted_at IS NULL),0)
+      + COALESCE((SELECT SUM(file_size) FROM evaluation_upload_reservations_v2 WHERE created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')),0)
+      + ?
+    ) <= ?
+    AND (
+      COALESCE((SELECT SUM(file_size) FROM evaluation_evidence_files_v2 WHERE target_id=? AND deleted_at IS NULL),0)
+      + COALESCE((SELECT SUM(file_size) FROM evaluation_upload_reservations_v2 WHERE target_id=? AND created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')),0)
+      + ?
+    ) <= ?`;
+  const result=await env.partner_evaluation_db.prepare(sql).bind(id,targetId,fileSize,fileSize,GLOBAL_LIMIT_BYTES,targetId,targetId,fileSize,TARGET_LIMIT_BYTES).run();
+  if(Number(result?.meta?.changes||0)>0)return {ok:true,id};
+  const usage=await storageUsage(env,targetId);
+  const globalBlocked=usage.global.used_bytes+fileSize>GLOBAL_LIMIT_BYTES;
+  return {ok:false,scope:globalBlocked?'global':'company_cycle',usage};
 }
 async function release(env,id){if(!id)return;await env.partner_evaluation_db.prepare(`DELETE FROM evaluation_upload_reservations_v2 WHERE id=?`).bind(id).run().catch(()=>{})}
 
@@ -92,13 +84,13 @@ async function augmentWorkspaceResponse(response,env,targetId){
 
 export async function handlePartnerSubmissionWithQuota(request,env,ctx,baseWorker){
   const url=new URL(request.url),path=url.pathname;if(!path.startsWith('/api/partner/submission'))return null;
-  await ensureQuotaSchema(env);
+  try{await ensureQuotaSchema(env)}catch(e){console.error('quota schema init failed',e);return json({success:false,error:'증빙자료 저장공간을 준비하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',code:'STORAGE_INIT_FAILED'},503)}
 
   const root=path.match(/^\/api\/partner\/submission\/([^/]+)$/);
   if(root&&request.method==='GET'){
     const targetId=decodeURIComponent(root[1]);
     const response=await handlePartnerSubmission(request,env,ctx,baseWorker);
-    return augmentWorkspaceResponse(response,env,targetId);
+    try{return await augmentWorkspaceResponse(response,env,targetId)}catch(e){console.error('quota usage read failed',e);return response}
   }
 
   const upload=path.match(/^\/api\/partner\/submission\/([^/]+)\/items\/([^/]+)\/files$/);
@@ -111,9 +103,10 @@ export async function handlePartnerSubmissionWithQuota(request,env,ctx,baseWorke
     const exists=await env.partner_evaluation_db.prepare(`SELECT id FROM evaluation_targets_v2 WHERE id=? AND is_selected=1 LIMIT 1`).bind(targetId).first();
     if(!exists)return handlePartnerSubmission(request,env,ctx,baseWorker);
 
-    const reservation=await reserve(env,targetId,file.size);
+    let reservation;
+    try{reservation=await reserve(env,targetId,file.size)}catch(e){console.error('quota reservation failed',e);return json({success:false,error:'저장공간 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',code:'STORAGE_QUOTA_CHECK_FAILED'},503)}
     if(!reservation.ok){
-      const usage=await storageUsage(env,targetId);
+      const usage=reservation.usage||await storageUsage(env,targetId);
       if(reservation.scope==='global')return json({success:false,error:'전체 증빙자료 저장공간이 8.5GB 한도에 도달하여 신규 파일 업로드가 중지되었습니다.',code:'GLOBAL_STORAGE_LIMIT',storage_usage:usage},507);
       return json({success:false,error:'이 회사의 해당 평가회차 증빙자료가 500MB 한도에 도달하여 신규 파일 업로드가 중지되었습니다.',code:'COMPANY_CYCLE_STORAGE_LIMIT',storage_usage:usage},507);
     }
@@ -124,7 +117,8 @@ export async function handlePartnerSubmissionWithQuota(request,env,ctx,baseWorke
       return response;
     }catch(e){
       await release(env,reservation.id);
-      throw e;
+      console.error('evidence upload failed',e);
+      return json({success:false,error:'증빙자료 업로드 처리 중 오류가 발생했습니다.',code:'EVIDENCE_UPLOAD_FAILED'},500);
     }
   }
 
