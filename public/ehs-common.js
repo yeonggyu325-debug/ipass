@@ -1,9 +1,9 @@
 (function(){
   const SESSION_KEY='ipass.session.v10';
   const path=location.pathname;
-  const businessPath=path==='/home'||path==='/committee'||path==='/committee.html'||path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html';
 
   function readSession(){
+    if(window.EHSAuth?.readSession)return window.EHSAuth.readSession();
     try{
       const raw=sessionStorage.getItem(SESSION_KEY);
       if(!raw)return null;
@@ -13,7 +13,10 @@
   }
   function hasSession(){return !!readSession()}
   function goHome(){if(location.pathname!=='/home')location.href='/home'}
-  function goLogin(){if(location.pathname!=='/')location.replace('/')}
+  function goLogin(next=location.pathname+location.search){
+    const safe=String(next||'').startsWith('/')?String(next):'/home';
+    location.replace('/?next='+encodeURIComponent(safe));
+  }
 
   function normalizeButtons(){
     document.querySelectorAll('button,a').forEach(el=>{
@@ -65,13 +68,8 @@
     normalizeCurrentUrl();
   }
 
-  /* Do not perform a second auth decision when a page already owns its login flow.
-     Only guard dedicated authenticated entry routes that never render a login form. */
-  if(businessPath&&path!=='/evaluation-submit.html'&&!hasSession()){
-    goLogin();
-    return;
-  }
-
+  /* Authentication decisions belong to each page during migration, and later to EHSAuth.
+     This common shell must never clear sessions or redirect on its own. */
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
 
