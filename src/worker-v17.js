@@ -1,10 +1,11 @@
 import baseWorker from './index.js';
 import { handleEvaluationManagement } from './evaluation-management.js';
 import { handleEvaluationRuntime } from './evaluation-runtime.js';
+import { handlePartnerSubmission } from './partner-submission.js';
 
-const EVALUATION_MANAGEMENT_MENU_SCRIPT = `<script>
+const PORTAL_EXTENSION_SCRIPT = `<script>
 (function(){
-  function installEvaluationManagementMenu(){
+  function installAdminMenu(){
     var menu=document.querySelector('#adminNavGroup .gnb-menu');
     if(!menu||menu.querySelector('[data-evaluation-template-management]')) return false;
     var templateButton=document.createElement('button');
@@ -22,31 +23,41 @@ const EVALUATION_MANAGEMENT_MENU_SCRIPT = `<script>
     else{menu.appendChild(templateButton);menu.appendChild(cycleButton);}
     return true;
   }
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',function(){
-      if(installEvaluationManagementMenu()) return;
-      var observer=new MutationObserver(function(){if(installEvaluationManagementMenu()) observer.disconnect();});
-      observer.observe(document.documentElement,{childList:true,subtree:true});
-      setTimeout(function(){observer.disconnect();},10000);
-    });
-  }else if(!installEvaluationManagementMenu()){
-    var observer=new MutationObserver(function(){if(installEvaluationManagementMenu()) observer.disconnect();});
-    observer.observe(document.documentElement,{childList:true,subtree:true});
-    setTimeout(function(){observer.disconnect();},10000);
+  function installPartnerEvaluationNavigation(){
+    if(typeof window.openEvaluation!=='function'||window.openEvaluation.__partnerSubmissionWrapped) return false;
+    var original=window.openEvaluation;
+    var wrapped=function(id){
+      try{
+        if(window.currentUser&&window.currentUser.role==='partner'){
+          location.href='/evaluation-submit.html?target='+encodeURIComponent(id);
+          return;
+        }
+      }catch(_){}
+      return original.apply(this,arguments);
+    };
+    wrapped.__partnerSubmissionWrapped=true;
+    window.openEvaluation=wrapped;
+    return true;
   }
+  function installAll(){installAdminMenu();installPartnerEvaluationNavigation();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installAll);else installAll();
+  var tries=0,t=setInterval(function(){installAll();if(++tries>40)clearInterval(t);},250);
 })();
 </script>`;
 
-async function injectAdminMenu(response) {
+async function injectPortalExtensions(response) {
   const type = response.headers.get('content-type') || '';
   if (!type.includes('text/html')) return response;
   const html = await response.text();
-  if (html.includes('data-evaluation-template-management')) {
-    return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});
+  if (html.includes('__partnerSubmissionWrapped')) {
+    const headers = new Headers(response.headers);
+    headers.delete('content-length');
+    headers.delete('content-encoding');
+    return new Response(html,{status:response.status,statusText:response.statusText,headers});
   }
   const next = html.includes('</body>')
-    ? html.replace('</body>', `${EVALUATION_MANAGEMENT_MENU_SCRIPT}</body>`)
-    : html + EVALUATION_MANAGEMENT_MENU_SCRIPT;
+    ? html.replace('</body>', `${PORTAL_EXTENSION_SCRIPT}</body>`)
+    : html + PORTAL_EXTENSION_SCRIPT;
   const headers = new Headers(response.headers);
   headers.delete('content-length');
   headers.delete('content-encoding');
@@ -62,11 +73,14 @@ export default {
     const management = await handleEvaluationManagement(request, env, ctx, baseWorker);
     if (management) return management;
 
+    const submission = await handlePartnerSubmission(request, env, ctx, baseWorker);
+    if (submission) return submission;
+
     const runtime = await handleEvaluationRuntime(request, env, ctx, baseWorker);
     if (runtime) {
       const url = new URL(request.url);
       if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
-        return injectAdminMenu(runtime);
+        return injectPortalExtensions(runtime);
       }
       return runtime;
     }
@@ -74,7 +88,7 @@ export default {
     const response = await baseWorker.fetch(request, env, ctx);
     const url = new URL(request.url);
     if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
-      return injectAdminMenu(response);
+      return injectPortalExtensions(response);
     }
     return response;
   }
