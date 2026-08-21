@@ -26,9 +26,10 @@ const PORTAL_EXTENSION_SCRIPT = `<script>
   function installPartnerEvaluationNavigation(){
     if(typeof window.openEvaluation!=='function'||window.openEvaluation.__partnerSubmissionWrapped) return false;
     var original=window.openEvaluation;
-    var wrapped=function(id){
+    var wrapped=async function(id){
       try{
-        if(window.currentUser&&window.currentUser.role==='partner'){
+        if(window.currentUser&&window.currentUser.role==='partner'&&typeof window.api==='function'){
+          await window.api('/api/partner/submission/'+encodeURIComponent(id));
           location.href='/evaluation-submit.html?target='+encodeURIComponent(id);
           return;
         }
