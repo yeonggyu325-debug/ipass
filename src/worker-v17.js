@@ -2,6 +2,7 @@ import baseWorker from './index.js';
 import { handleEvaluationManagement } from './evaluation-management.js';
 import { handleEvaluationRuntime } from './evaluation-runtime.js';
 import { handlePartnerSubmissionWithQuota } from './partner-submission-quota.js';
+import { handleStorageAdmin } from './storage-admin.js';
 
 const PORTAL_EXTENSION_SCRIPT = `<script>
 (function(){
@@ -73,6 +74,9 @@ export default {
   async fetch(request, env, ctx) {
     const management = await handleEvaluationManagement(request, env, ctx, baseWorker);
     if (management) return management;
+
+    const storageAdmin = await handleStorageAdmin(request, env, ctx, baseWorker);
+    if (storageAdmin) return storageAdmin;
 
     const submission = await handlePartnerSubmissionWithQuota(request, env, ctx, baseWorker);
     if (submission) return submission;
