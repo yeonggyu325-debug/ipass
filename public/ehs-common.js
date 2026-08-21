@@ -1,26 +1,18 @@
 (function(){
-  const SESSION_KEY='ipass.session.v10';
+  'use strict';
   const path=location.pathname;
-  const PROTECTED = path==='/home'||path==='/committee'||path==='/committee.html'||path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html';
+  const PROTECTED=path==='/home'||path==='/committee'||path==='/committee.html'||path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html';
 
-  function readSession(){
-    if(window.EHSAuth?.readSession)return window.EHSAuth.readSession();
-    try{
-      const raw=sessionStorage.getItem(SESSION_KEY);
-      if(!raw)return null;
-      const s=JSON.parse(raw);
-      return s&&s.idToken?s:null;
-    }catch{return null}
-  }
+  function readSession(){return window.EHSAuth?.readSession?.()||null}
   function hasSession(){return !!readSession()}
   function goHome(){if(location.pathname!=='/home')location.href='/home'}
   function goLogin(next=location.pathname+location.search){
+    if(window.EHSAuth?.redirectToLogin){window.EHSAuth.redirectToLogin(next);return}
     const safe=String(next||'').startsWith('/')&&!String(next).startsWith('//')?String(next):'/home';
     location.replace('/?next='+encodeURIComponent(safe));
   }
   function logout(){
-    try{window.EHSAuth?.clearSession()}catch(_){}
-    try{sessionStorage.removeItem(SESSION_KEY)}catch(_){}
+    if(window.EHSAuth?.logout){window.EHSAuth.logout();return}
     location.replace('/');
   }
 
@@ -53,8 +45,7 @@
   }
 
   function wireLogout(){
-    const selectors=['#logoutBtn','[data-ehs-logout]'];
-    document.querySelectorAll(selectors.join(',')).forEach(el=>{
+    document.querySelectorAll('#logoutBtn,[data-ehs-logout]').forEach(el=>{
       if(el.dataset.ehsLogoutBound==='1')return;
       el.dataset.ehsLogoutBound='1';
       el.addEventListener('click',function(e){
@@ -75,9 +66,17 @@
     });
   }
 
+  function normalizeLegacyButtons(){
+    document.querySelectorAll('button[onclick]').forEach(el=>{
+      const code=el.getAttribute('onclick')||'';
+      if(code.includes("'/committee.html'")||code.includes('"/committee.html"'))el.setAttribute('onclick',"location.href='/committee'");
+      else if(code.includes("'/evaluation-management.html'")||code.includes('"/evaluation-management.html"'))el.setAttribute('onclick',"location.href='/ipass/templates'");
+      else if(code.includes("'/evaluation-cycle.html'")||code.includes('"/evaluation-cycle.html"'))el.setAttribute('onclick',"location.href='/ipass/cycles'");
+    });
+  }
+
   function normalizeCurrentUrl(){
     if(path==='/index.html'&&hasSession())history.replaceState({},'', '/home');
-    if(path==='/committee.html')history.replaceState({},'', '/committee');
   }
 
   function install(){
@@ -85,6 +84,7 @@
     wireBrand();
     wireLogout();
     normalizeLegacyLinks();
+    normalizeLegacyButtons();
     normalizeCurrentUrl();
   }
 
