@@ -1,4 +1,5 @@
 import app from './worker-v19.js';
+import { handleSystemAdmin, recordRequestAudit } from './system-admin.js';
 
 function isApi(path){return path.startsWith('/api/')}
 function requestId(request){
@@ -26,20 +27,33 @@ async function attach(response,id,path){
   }
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
+function shouldAudit(method,path,status){
+  if(!isApi(path))return false;
+  if(method!=='GET'&&method!=='OPTIONS')return true;
+  return status>=400;
+}
 
 export default {
   async fetch(request,env,ctx){
-    const url=new URL(request.url),id=requestId(request);
+    const url=new URL(request.url),id=requestId(request),started=Date.now();
     if(request.method==='OPTIONS'&&isApi(url.pathname)){
       const headers=new Headers({'x-request-id':id});cors(headers);return new Response(null,{status:204,headers});
     }
+    const nextHeaders=new Headers(request.headers);nextHeaders.set('x-request-id',id);
+    const traced=new Request(request,{headers:nextHeaders});
     try{
-      const nextHeaders=new Headers(request.headers);nextHeaders.set('x-request-id',id);
-      const traced=new Request(request,{headers:nextHeaders});
-      const response=await app.fetch(traced,env,ctx);
-      return attach(response,id,url.pathname);
+      const systemResponse=await handleSystemAdmin(traced,env,ctx,app);
+      const raw=systemResponse||await app.fetch(traced,env,ctx);
+      const response=await attach(raw,id,url.pathname);
+      if(shouldAudit(request.method,url.pathname,response.status)){
+        const task=recordRequestAudit(env,{requestId:id,method:request.method,path:url.pathname,status:response.status,durationMs:Date.now()-started});
+        if(ctx?.waitUntil)ctx.waitUntil(task);else void task;
+      }
+      return response;
     }catch(error){
       console.error('unhandled request error',{request_id:id,path:url.pathname,method:request.method,error:error?.stack||String(error)});
+      const task=recordRequestAudit(env,{requestId:id,method:request.method,path:url.pathname,status:500,durationMs:Date.now()-started});
+      if(ctx?.waitUntil)ctx.waitUntil(task);else void task;
       if(!isApi(url.pathname))return new Response('서비스 처리 중 오류가 발생했습니다.',{status:500,headers:{'content-type':'text/plain;charset=utf-8','x-request-id':id}});
       const headers=new Headers({'content-type':'application/json;charset=utf-8','x-request-id':id});cors(headers);
       return new Response(JSON.stringify({success:false,error:'서버 처리 중 오류가 발생했습니다.',code:'UNHANDLED_SERVER_ERROR',request_id:id}),{status:500,headers});
