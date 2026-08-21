@@ -41,7 +41,7 @@ export async function handleSystemAdmin(request,env,ctx,innerApp){
     const checks={d1:false,r2:!!env.EVIDENCE_FILES,assets:!!env.ASSETS};
     let dbError=null;
     try{await env.partner_evaluation_db.prepare('SELECT 1 AS ok').first();checks.d1=true}catch(error){dbError=String(error?.message||error)}
-    const tables=['evaluation_templates_v2','evaluation_cycles_v2','evaluation_targets_v2','evaluation_target_items_v2','evaluation_evidence_files_v2','system_request_audit_v2'];
+    const tables=['evaluation_templates_v2','evaluation_cycles_v2','evaluation_targets_v2','evaluation_target_items_v2','evaluation_evidence_files_v2','evaluation_partner_submission_logs_v2','evaluation_scoring_logs_v2','system_request_audit_v2'];
     const present={};
     for(const table of tables){
       try{const row=await env.partner_evaluation_db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).bind(table).first();present[table]=!!row}catch{present[table]=false}
@@ -55,6 +55,26 @@ export async function handleSystemAdmin(request,env,ctx,innerApp){
     const clause=errorsOnly?'WHERE status >= 400':'';
     const {results}=await env.partner_evaluation_db.prepare(`SELECT request_id,method,path,status,duration_ms,actor_id,actor_role,created_at FROM system_request_audit_v2 ${clause} ORDER BY created_at DESC LIMIT ?`).bind(limit).all();
     return json({success:true,requests:results||[],filter:{errors_only:errorsOnly,limit}});
+  }
+
+  if(request.method==='GET'&&path==='/api/admin/system/submission-activity'){
+    const limit=Math.min(200,Math.max(1,Number(url.searchParams.get('limit')||50)));
+    const postSubmitOnly=url.searchParams.get('post_submit')!=='0';
+    const exists=await env.partner_evaluation_db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='evaluation_partner_submission_logs_v2'`).first();
+    if(!exists)return json({success:true,activities:[],filter:{post_submit_only:postSubmitOnly,limit}});
+    const clause=postSubmitOnly?`AND l.action IN ('post_submit_profile_edit','post_submit_item_edit','post_submit_file_added','file_deleted','resubmitted')`:'';
+    const {results}=await env.partner_evaluation_db.prepare(`
+      SELECT l.action,l.target_id,l.target_item_id,l.detail_json,l.changed_by,l.created_at,
+             c.company_name,ec.year,ec.half,et.status AS target_status
+      FROM evaluation_partner_submission_logs_v2 l
+      JOIN evaluation_targets_v2 et ON et.id=l.target_id
+      JOIN companies c ON c.id=et.company_id
+      JOIN evaluation_cycles_v2 ec ON ec.id=et.cycle_id
+      WHERE 1=1 ${clause}
+      ORDER BY l.created_at DESC
+      LIMIT ?
+    `).bind(limit).all();
+    return json({success:true,activities:results||[],filter:{post_submit_only:postSubmitOnly,limit}});
   }
 
   return json({success:false,error:'지원하지 않는 시스템 관리 요청입니다.',code:'SYSTEM_ADMIN_ROUTE_NOT_FOUND'},404);
