@@ -8,7 +8,7 @@ import { handleSystemAdmin, recordRequestAudit } from './system-admin.js';
 import { handleEvaluationScoring } from './evaluation-scoring.js';
 
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
-const COMMON_ASSETS='<link rel="stylesheet" href="/ehs-common.css?v=2"><script src="/shared/auth.js?v=1"></script><script src="/shared/api.js?v=1"></script><script src="/ehs-common.js?v=3"></script>';
+const COMMON_ASSETS='<link rel="stylesheet" href="/ehs-common.css?v=2"><script src="/shared/auth.js?v=2"></script><script src="/shared/api.js?v=2"></script><script src="/ehs-common.js?v=4"></script>';
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{const s=JSON.parse(sessionStorage.getItem("ipass.session.v10")||"null");if(!s||!s.idToken)location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
 const SUBMISSION_ASSETS='<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=2"><script src="/evaluation-submit-enhance.js?v=3"></script>';
 const EMBED_STYLE='<style id="ipass-embedded-style">body{background:#f5f7f9!important}.header{display:none!important}.layout{min-height:100vh!important}.side{top:0!important;height:100vh!important}.main{padding-top:20px!important}.shell{padding-top:20px!important}.page-head{margin-top:0!important}</style>';
@@ -23,11 +23,14 @@ function injectHead(html,content,marker){if(html.includes(marker))return html;re
 function injectBody(html,content,marker){if(html.includes(marker))return html;return html.includes('</body>')?html.replace('</body>',content+'</body>'):html+content}
 function stabilizeHome(html){
   const oldBoot='showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch{logout()}})();';
-  const newBoot='showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await (window.EHSApi?.request?window.EHSApi.request("/api/me"):api("/api/me"));await routeAfterLogin(me)}}catch(e){console.error("session restore failed",e);if(e&&e.status===401)logout();else{try{$("publicPortal").classList.add("hidden");$("app").classList.remove("hidden")}catch(_){}}}})();';
+  const newBoot='showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await (window.EHSApi?.request?window.EHSApi.request("/api/me"):api("/api/me"));await routeAfterLogin(me)}}catch(e){console.error("session restore failed",e);if(e&&e.status===401){window.EHSAuth?.logout();return}else{try{$("publicPortal").classList.add("hidden");$("app").classList.remove("hidden")}catch(_){}}}})();';
   if(html.includes(oldBoot))html=html.replace(oldBoot,newBoot);
   const oldRoute='showPage("portalHome");\n  loadPortalHome();\n  showLatestNotice("after_login");';
   const newRoute='showPage("portalHome");\n  loadPortalHome();\n  showLatestNotice("after_login");\n  try{const next=new URLSearchParams(location.search).get("next");if(next&&next.startsWith("/")&&!next.startsWith("//")&&next!=="/"&&next!=="/home"){location.replace(next);return}if(location.pathname==="/"||location.pathname==="/index.html")history.replaceState({},"","/home")}catch(_){}';
   if(html.includes(oldRoute))html=html.replace(oldRoute,newRoute);
+  const oldLogout='function logout(){session=null;currentUser=null;GET_CACHE.clear();GET_INFLIGHT.clear();sessionStorage.removeItem(SESSION_KEY);$("app").classList.add("hidden");$("publicPortal").classList.remove("hidden");$("loginPassword").value=""}';
+  const newLogout='function logout(){session=null;currentUser=null;GET_CACHE.clear();GET_INFLIGHT.clear();sessionStorage.removeItem(SESSION_KEY);if(location.pathname!=="/"&&location.pathname!=="/index.html"){location.replace("/");return}$("app").classList.add("hidden");$("publicPortal").classList.remove("hidden");$("loginPassword").value=""}';
+  if(html.includes(oldLogout))html=html.replace(oldLogout,newLogout);
   return html;
 }
 function stabilizeBusinessAuth(html){
@@ -42,7 +45,7 @@ function stabilizeBusinessAuth(html){
 async function htmlResponse(response,html){const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');headers.set('content-type','text/html;charset=utf-8');headers.set('cache-control','no-store');return new Response(html,{status:response.status,statusText:response.statusText,headers})}
 async function injectShared(response,{home=false,business=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=await response.text();
-  html=stabilizeHome(html);if(business)html=stabilizeBusinessAuth(html);if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,COMMON_ASSETS,'/shared/auth.js?v=1');
+  html=stabilizeHome(html);if(business)html=stabilizeBusinessAuth(html);if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,COMMON_ASSETS,'/shared/auth.js?v=2');
   if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v20');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20')}
   if(submission)html=injectBody(html,SUBMISSION_ASSETS,'evaluation-submit-enhance.js?v=3');if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');return htmlResponse(response,html)
 }
