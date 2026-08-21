@@ -21,73 +21,14 @@ function cors(headers){headers.set('access-control-allow-origin','*');headers.se
 function rewriteRequest(request,path,{clearSearch=false}={}){const u=new URL(request.url);u.pathname=path;if(clearSearch)u.search='';return new Request(u.toString(),{method:request.method,headers:request.headers})}
 function injectHead(html,content,marker){if(html.includes(marker))return html;return html.includes('</head>')?html.replace('</head>',content+'</head>'):content+html}
 function injectBody(html,content,marker){if(html.includes(marker))return html;return html.includes('</body>')?html.replace('</body>',content+'</body>'):html+content}
-function replaceRange(html,startMarker,endMarker,replacement){const start=html.indexOf(startMarker);if(start<0)return html;const end=html.indexOf(endMarker,start);if(end<0)return html;return html.slice(0,start)+replacement+html.slice(end)}
-
-function stabilizeHome(html){
-  const oldBoot='showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch{logout()}})();';
-  const newBoot='showLatestNotice("login");try{if(window.EHSAuth?.readSession()){const me=await window.EHSApi.request("/api/me");await routeAfterLogin(me)}}catch(e){console.error("session restore failed",e);if(e&&e.status===401){window.EHSAuth?.logout();return}else{try{$("publicPortal").classList.add("hidden");$("app").classList.remove("hidden")}catch(_){}}}})();';
-  if(html.includes(oldBoot))html=html.replace(oldBoot,newBoot);
-  const oldRoute='showPage("portalHome");\n  loadPortalHome();\n  showLatestNotice("after_login");';
-  const newRoute='showPage("portalHome");\n  loadPortalHome();\n  showLatestNotice("after_login");\n  try{const next=new URLSearchParams(location.search).get("next");if(next&&next.startsWith("/")&&!next.startsWith("//")&&next!=="/"&&next!=="/home"){location.replace(next);return}if(location.pathname==="/"||location.pathname==="/index.html")history.replaceState({},"","/home")}catch(_){}';
-  if(html.includes(oldRoute))html=html.replace(oldRoute,newRoute);
-  const oldLogout='function logout(){session=null;currentUser=null;GET_CACHE.clear();GET_INFLIGHT.clear();sessionStorage.removeItem(SESSION_KEY);$("app").classList.add("hidden");$("publicPortal").classList.remove("hidden");$("loginPassword").value=""}';
-  const newLogout='function logout(){session=null;currentUser=null;GET_CACHE.clear();GET_INFLIGHT.clear();if(window.EHSAuth){window.EHSAuth.logout();return}sessionStorage.removeItem(SESSION_KEY);location.replace("/")}';
-  if(html.includes(oldLogout))html=html.replace(oldLogout,newLogout);
-  return html;
-}
-
-function replaceLegacyApiFunctions(html,page){
-  const replacement="async function refreshToken(){return window.EHSAuth.token({forceRefresh:true})}\nasync function api(path,opt={}){return window.EHSApi.request(path,opt)}\n";
-  if(page==='/committee.html')return replaceRange(html,'async function refreshToken()','function buildYears()',replacement);
-  if(page==='/evaluation-management.html')return replaceRange(html,'async function refreshToken()','function goHome()',replacement);
-  if(page==='/evaluation-cycle.html')return replaceRange(html,'async function refreshToken()','function renderList()',replacement);
-  if(page==='/evaluation-submit.html')return replaceRange(html,'async function refreshToken()','function modal(',replacement);
-  return html;
-}
-
-function replaceProtectedBoot(html,page){
-  if(page==='/committee.html'){
-    const old="(async()=>{try{session=JSON.parse(sessionStorage.getItem(KEY)||'null');if(!session){location.replace('/index.html');return}buildYears();const me=await api('/api/me');if(me.auth_state!=='approved')throw Object.assign(new Error('로그인 또는 계정 승인이 필요합니다.'),{status:403});currentUser=me.user;$('userLabel').textContent=currentUser.name||currentUser.email||'';await loadYear()}catch(e){$('months').innerHTML=`<div class=\"error\" style=\"grid-column:1/-1\">${esc(e.message)}</div>`;$('detail').innerHTML=`<div class=\"error\">${esc(e.message)}</div>`}})();";
-    const next="(async()=>{try{currentUser=await window.EHSAuth.requireUser();buildYears();$('userLabel').textContent=currentUser.name||currentUser.email||'';await loadYear()}catch(e){if(e?.status===401)return;const msg=window.EHSApi.describe(e);$('months').innerHTML=`<div class=\"error\" style=\"grid-column:1/-1\">${esc(msg)}</div>`;$('detail').innerHTML=`<div class=\"error\">${esc(msg)}</div>`}})();";
-    if(html.includes(old))html=html.replace(old,next);
-    html=html.replace("function goHome(){if(editDirty&&!confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))return;try{if(document.referrer&&new URL(document.referrer).origin===location.origin){history.back();return}}catch{}location.replace('/index.html')}","function goHome(){if(editDirty&&!confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))return;location.href='/home'}");
-  }
-  if(page==='/evaluation-management.html'){
-    const old="async function load(){dirty=false;try{session=JSON.parse(sessionStorage.getItem(KEY)||'null');if(!session){location.href='/';return}const me=await api('/api/me');if(me.auth_state!=='approved'||me.user?.role!=='admin'){alert('관리자만 사용할 수 있습니다.');location.href='/';return}user=me.user;$('userLabel').textContent=user.name||user.email||'';await refreshBundle()}catch(e){$('workspace').innerHTML=`<div class=\"card\"><div class=\"empty\">${esc(e.message)}</div></div>`}}";
-    const next="async function load(){dirty=false;try{user=await window.EHSAuth.requireUser({role:'admin'});$('userLabel').textContent=user.name||user.email||'';await refreshBundle()}catch(e){if(e?.status===401)return;$('workspace').innerHTML=`<div class=\"card\"><div class=\"empty\">${esc(window.EHSApi.describe(e))}</div></div>`}}";
-    if(html.includes(old))html=html.replace(old,next);
-    html=html.replace("function goHome(){if(dirty&&!confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))return;location.href='/'}","function goHome(){if(dirty&&!confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))return;location.href='/home'}");
-  }
-  if(page==='/evaluation-cycle.html'){
-    const old="(async()=>{try{session=JSON.parse(sessionStorage.getItem(KEY)||'null');if(!session){location.href='/';return}const me=await api('/api/me');if(me.auth_state!=='approved'||me.user?.role!=='admin'){alert('관리자만 사용할 수 있습니다.');location.href='/';return}user=me.user;$('userLabel').textContent=user.name||user.email||'';await loadBundle()}catch(e){$('workspace').innerHTML=`<div class=\"empty\">${esc(e.message)}</div>`}})();";
-    const next="(async()=>{try{user=await window.EHSAuth.requireUser({role:'admin'});$('userLabel').textContent=user.name||user.email||'';await loadBundle()}catch(e){if(e?.status===401)return;$('workspace').innerHTML=`<div class=\"empty\">${esc(window.EHSApi.describe(e))}</div>`}})();";
-    if(html.includes(old))html=html.replace(old,next);
-    html=html.replace("$('homeBtn').onclick=()=>{if(!dirty||confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))location.href='/'};","$('homeBtn').onclick=()=>{if(!dirty||confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))location.href='/home'};");
-  }
-  if(page==='/evaluation-submit.html'){
-    const old="(async function boot(){try{targetId=new URLSearchParams(location.search).get('target')||'';if(!targetId)throw new Error('평가 대상 정보가 없습니다.');session=JSON.parse(sessionStorage.getItem(KEY)||'null');if(!session){location.href='/';return}const me=await api('/api/me');if(me.auth_state!=='approved'||me.user?.role!=='partner'){location.href='/';return}user=me.user;$('userLabel').textContent=[user.company_name,user.name].filter(Boolean).join(' · ');await load()}catch(e){$('app').innerHTML=`<div class=\"loading error-text\">${esc(e.message)}</div>`}})();";
-    const next="(async function boot(){try{targetId=new URLSearchParams(location.search).get('target')||'';if(!targetId)throw new Error('평가 대상 정보가 없습니다.');user=await window.EHSAuth.requireUser({role:'partner'});$('userLabel').textContent=[user.company_name,user.name].filter(Boolean).join(' · ');await load()}catch(e){if(e?.status===401)return;$('app').innerHTML=`<div class=\"loading error-text\">${esc(window.EHSApi.describe(e))}</div>`}})();";
-    if(html.includes(old))html=html.replace(old,next);
-    html=html.replace("function goHome(){if(dirty.size&&!confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))return;location.href='/'}","function goHome(){if(dirty.size&&!confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))return;location.href='/home'}");
-  }
-  return html;
-}
-
-function unifyProtectedPageAuth(html,page){
-  if(page==='/ipass.html')return html;
-  html=replaceLegacyApiFunctions(html,page);
-  html=replaceProtectedBoot(html,page);
-  return injectHead(html,'<meta data-ehs-auth-unified="1">','data-ehs-auth-unified="1"');
-}
-
 async function htmlResponse(response,html){const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');headers.set('content-type','text/html;charset=utf-8');headers.set('cache-control','no-store');return new Response(html,{status:response.status,statusText:response.statusText,headers})}
-async function injectShared(response,{home=false,page='',root=false,submission=false,embedded=false}={}){
+async function injectShared(response,{home=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=await response.text();
-  html=stabilizeHome(html);html=injectHead(html,COMMON_ASSETS,'/shared/auth.js?v=2');if(page)html=unifyProtectedPageAuth(html,page);if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
+  html=injectHead(html,COMMON_ASSETS,'/shared/auth.js?v=2');if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
   if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v20');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20')}
   if(submission)html=injectBody(html,SUBMISSION_ASSETS,'evaluation-submit-enhance.js?v=3');if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');return htmlResponse(response,html)
 }
-async function serveAsset(request,env,path,options={}){const response=await env.ASSETS.fetch(rewriteRequest(request,path,{clearSearch:true}));return response.ok?injectShared(response,{...options,page:path}):response}
+async function serveAsset(request,env,path,options={}){const response=await env.ASSETS.fetch(rewriteRequest(request,path,{clearSearch:true}));return response.ok?injectShared(response,options):response}
 function needsEvaluationSchema(path){return path.startsWith('/api/admin/evaluation-management')||path.startsWith('/api/admin/evaluation-runtime')||path.startsWith('/api/admin/evaluation-scoring')||path==='/api/admin/dashboard-bundle'||path==='/api/cycles'||path==='/api/dashboard'||path==='/api/targets'||path==='/api/my/evaluations'||path.startsWith('/api/evaluations/')||path==='/api/annual-ipass'||path.startsWith('/api/admin/annual-ipass/')||path.startsWith('/api/partner/submission')}
 function kstToday(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));return `${map.year}-${map.month}-${map.day}`}
 function submissionState(target,storageAvailable){const today=kstToday(),start=String(target?.start_at||'').slice(0,10),end=String(target?.end_at||'').slice(0,10),active=target?.cycle_status==='active';let reason=null;if(!active)reason='평가회차가 진행중 상태가 아닙니다.';else if(start&&today<start)reason='평가 시작일 전입니다.';else if(end&&today>end)reason='평가기간이 종료되었습니다.';const editable=!reason;return {can_edit:editable,can_submit:editable,can_upload:editable&&storageAvailable,can_delete_file:editable,edit_reason:reason,today_kst:today}}
@@ -111,9 +52,9 @@ async function core(request,env,ctx){
   const runtime=await handleEvaluationRuntime(request,env,ctx,baseWorker);if(runtime){if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(runtime,{root:true});return runtime}
   const response=await baseWorker.fetch(request,env,ctx);
   if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(response,{root:true});
-  if(request.method==='GET'&&path==='/evaluation-submit.html')return injectShared(response,{page:path,submission:true});
-  if(request.method==='GET'&&(path==='/evaluation-management.html'||path==='/evaluation-cycle.html'))return injectShared(response,{page:path,embedded:url.searchParams.get('embedded')==='1'});
-  if(request.method==='GET'&&path==='/committee.html')return injectShared(response,{page:path});
+  if(request.method==='GET'&&path==='/evaluation-submit.html')return injectShared(response,{submission:true});
+  if(request.method==='GET'&&(path==='/evaluation-management.html'||path==='/evaluation-cycle.html'))return injectShared(response,{embedded:url.searchParams.get('embedded')==='1'});
+  if(request.method==='GET'&&path==='/committee.html')return injectShared(response);
   return response;
 }
 

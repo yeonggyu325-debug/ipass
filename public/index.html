@@ -1369,6 +1369,8 @@ main{
 @media(max-width:760px){.committee-partner-row{grid-template-columns:52px minmax(0,1fr) 56px!important}.committee-partner-row .person{grid-column:2}.committee-partner-row .committee-state{grid-column:auto!important}.committee-target-grid{grid-template-columns:1fr}.committee-target-row{grid-template-columns:minmax(0,1fr) 92px;border-right:0}.committee-target-row .committee-person-input{grid-column:1/-1}.committee-create-grid,.committee-meeting-fields.simple{grid-template-columns:1fr}.committee-batch{justify-content:flex-start;flex-wrap:wrap}}
 
 </style>
+<script src="/shared/auth.js?v=2"></script>
+<script src="/shared/api.js?v=2"></script>
 </head>
 <body>
 
@@ -1817,9 +1819,9 @@ async function firebasePost(endpoint,body,locale=false){
   return d
 }
 function firebaseMessage(c){const m={EMAIL_NOT_FOUND:"등록되지 않은 이메일입니다.",INVALID_PASSWORD:"비밀번호가 올바르지 않습니다.",INVALID_LOGIN_CREDENTIALS:"이메일 또는 비밀번호가 올바르지 않습니다.",USER_DISABLED:"사용 중지된 계정입니다.",INVALID_EMAIL:"이메일 형식이 올바르지 않습니다.",TOO_MANY_ATTEMPTS_TRY_LATER:"로그인 시도가 너무 많습니다."};return m[c]||c}
-async function refreshToken(){const body=new URLSearchParams({grant_type:"refresh_token",refresh_token:session.refreshToken});const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body});const d=await r.json();if(!r.ok)throw new Error("로그인 세션이 만료되었습니다.");session.idToken=d.id_token;session.refreshToken=d.refresh_token||session.refreshToken;session.expiresAt=Date.now()+Number(d.expires_in||3600)*1000;sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));return session.idToken}
-async function token(){if(!session)throw new Error("로그인이 필요합니다.");if(Date.now()>session.expiresAt-60000)return refreshToken();return session.idToken}
-async function api(path,options={}){const t=await token();let r;try{r=await fetch(API_BASE+path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${t}`,...(options.body?{"content-type":"application/json"}:{}),...(options.headers||{})}})}catch{throw new Error("i-PaSS API에 연결하지 못했습니다.")}const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{throw new Error("서버 응답을 해석할 수 없습니다.")}if(!r.ok){const message=(r.status===404&&data.error==="API route not found")?"Worker 백엔드가 이전 버전입니다. V16.5.1 전체 프로젝트(src/index.js 포함)를 다시 배포해 주세요.":(data.error||`HTTP ${r.status}`);throw Object.assign(new Error(message),{status:r.status,data})}return data}
+async function refreshToken(){return window.EHSAuth.token({forceRefresh:true})}
+async function token(){return window.EHSAuth.token()}
+async function api(path,options={}){return window.EHSApi.request(path,options)}
 async function publicApi(path){const r=await fetch(API_BASE+path,{headers:{Accept:"application/json"}});const t=await r.text();if(!r.ok)throw new Error(t||`HTTP ${r.status}`);return t?JSON.parse(t):{}}
 const GET_CACHE=new Map(),GET_INFLIGHT=new Map();
 function cachedGet(key,loader,ttl=15000){
@@ -1851,10 +1853,9 @@ $("loginForm").onsubmit=async e=>{
   btn.disabled=true;
   btn.textContent="로그인 중...";
   try{
-    const d=await firebasePost("accounts:signInWithPassword",{email,password:$("loginPassword").value,returnSecureToken:true});
-    session={idToken:d.idToken,refreshToken:d.refreshToken,expiresAt:Date.now()+Number(d.expiresIn||3600)*1000,email:d.email,uid:d.localId};
-    sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));
-    const me=await api("/api/me");
+    await window.EHSAuth.signIn(email,$("loginPassword").value);
+    session=window.EHSAuth.readSession();
+    const me=await window.EHSApi.request("/api/me");
     await routeAfterLogin(me);
   }catch(err){
     msg.textContent=err.message;
@@ -1888,7 +1889,7 @@ $("actionModalCancel").onclick=()=>closeActionModal(false);
 $("actionModalConfirm").onclick=()=>closeActionModal(true);
 $("actionModal").onclick=e=>{if(e.target===$("actionModal"))closeActionModal(false)};
 
-function logout(){session=null;currentUser=null;GET_CACHE.clear();GET_INFLIGHT.clear();sessionStorage.removeItem(SESSION_KEY);$("app").classList.add("hidden");$("publicPortal").classList.remove("hidden");$("loginPassword").value=""}
+function logout(){session=null;currentUser=null;GET_CACHE.clear();GET_INFLIGHT.clear();window.EHSAuth.logout()}
 $("logoutBtn").onclick=logout;
 async function routeAfterLogin(me){
   if(me.auth_state!=="approved"){
@@ -2475,7 +2476,7 @@ document.addEventListener("click",e=>{if(!$("userMenu").contains(e.target))$("us
 (async function boot(){
   const savedId=localStorage.getItem("ipass.savedLoginId")||"";
   if(savedId){$("loginEmail").value=savedId;$("saveLoginId").checked=true;}
-  showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch{logout()}})();
+  showLatestNotice("login");try{if(window.EHSAuth.readSession()){session=window.EHSAuth.readSession();const me=await window.EHSApi.request("/api/me");await routeAfterLogin(me)}}catch(e){if(e?.status===401){window.EHSAuth.clearSession();location.replace("/")}else console.error("session restore failed",e)}})();
 </script>
 </body>
 </html>
