@@ -1,12 +1,12 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "ipass",
-  "main": "src/worker-v18.js",
+  "main": "src/worker-v19.js",
   "compatibility_date": "2026-08-18",
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*", "/", "/index.html", "/ipass", "/ipass/*", "/evaluation-management.html", "/evaluation-cycle.html", "/evaluation-submit.html"]
+    "run_worker_first": ["/api/*", "/", "/index.html", "/home", "/committee", "/committee.html", "/ipass", "/ipass/*", "/evaluation-management.html", "/evaluation-cycle.html", "/evaluation-submit.html"]
   },
   "d1_databases": [
     {
