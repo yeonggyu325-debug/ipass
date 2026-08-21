@@ -51,6 +51,7 @@ const PORTAL_EXTENSION_SCRIPT = `<script>
 })();
 </script>`;
 
+const PORTAL_UI_ASSETS = '<link rel="stylesheet" href="/portal-enhance.css?v=3">';
 const SUBMISSION_UI_ASSETS = '<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=2"><script src="/evaluation-submit-enhance.js?v=2"></script>';
 
 async function injectHtml(response,content,marker){
@@ -60,7 +61,7 @@ async function injectHtml(response,content,marker){
   const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');
   return new Response(next,{status:response.status,statusText:response.statusText,headers});
 }
-async function injectPortalExtensions(response){return injectHtml(response,PORTAL_EXTENSION_SCRIPT,'__partnerSubmissionWrapped')}
+async function injectPortalExtensions(response){return injectHtml(response,PORTAL_UI_ASSETS+PORTAL_EXTENSION_SCRIPT,'portal-enhance.css')}
 async function injectSubmissionExtensions(response){return injectHtml(response,SUBMISSION_UI_ASSETS,'evaluation-submit-enhance.js')}
 
 function needsEvaluationSchema(path){
