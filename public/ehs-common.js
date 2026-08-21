@@ -1,6 +1,7 @@
 (function(){
   const SESSION_KEY='ipass.session.v10';
   const path=location.pathname;
+  const PROTECTED = path==='/home'||path==='/committee'||path==='/committee.html'||path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html';
 
   function readSession(){
     if(window.EHSAuth?.readSession)return window.EHSAuth.readSession();
@@ -14,8 +15,13 @@
   function hasSession(){return !!readSession()}
   function goHome(){if(location.pathname!=='/home')location.href='/home'}
   function goLogin(next=location.pathname+location.search){
-    const safe=String(next||'').startsWith('/')?String(next):'/home';
+    const safe=String(next||'').startsWith('/')&&!String(next).startsWith('//')?String(next):'/home';
     location.replace('/?next='+encodeURIComponent(safe));
+  }
+  function logout(){
+    try{window.EHSAuth?.clearSession()}catch(_){}
+    try{sessionStorage.removeItem(SESSION_KEY)}catch(_){}
+    location.replace('/');
   }
 
   function normalizeButtons(){
@@ -46,6 +52,19 @@
     });
   }
 
+  function wireLogout(){
+    const selectors=['#logoutBtn','[data-ehs-logout]'];
+    document.querySelectorAll(selectors.join(',')).forEach(el=>{
+      if(el.dataset.ehsLogoutBound==='1')return;
+      el.dataset.ehsLogoutBound='1';
+      el.addEventListener('click',function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        logout();
+      },true);
+    });
+  }
+
   function normalizeLegacyLinks(){
     document.querySelectorAll('a[href]').forEach(el=>{
       const href=el.getAttribute('href')||'';
@@ -64,12 +83,16 @@
   function install(){
     normalizeButtons();
     wireBrand();
+    wireLogout();
     normalizeLegacyLinks();
     normalizeCurrentUrl();
   }
 
-  /* Authentication decisions belong to each page during migration, and later to EHSAuth.
-     This common shell must never clear sessions or redirect on its own. */
+  if(PROTECTED&&!hasSession()){
+    goLogin(path+location.search);
+    return;
+  }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
 
@@ -79,5 +102,5 @@
     if(++tries>30)clearInterval(timer);
   },250);
 
-  window.EHSPortal={goHome,goLogin,readSession,hasSession};
+  window.EHSPortal={goHome,goLogin,logout,readSession,hasSession};
 })();
