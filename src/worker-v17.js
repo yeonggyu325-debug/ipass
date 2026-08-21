@@ -29,8 +29,11 @@ const PORTAL_EXTENSION_SCRIPT = `<script>
     var original=window.openEvaluation;
     var wrapped=async function(id){
       try{
-        if(window.currentUser&&window.currentUser.role==='partner'&&typeof window.api==='function'){
-          await window.api('/api/partner/submission/'+encodeURIComponent(id));
+        var isPartner=false,apiFn=null;
+        try{isPartner=typeof currentUser!=='undefined'&&currentUser&&currentUser.role==='partner'}catch(_){}
+        try{apiFn=typeof api==='function'?api:window.api}catch(_){apiFn=window.api}
+        if(isPartner&&typeof apiFn==='function'){
+          await apiFn('/api/partner/submission/'+encodeURIComponent(id));
           location.href='/evaluation-submit.html?target='+encodeURIComponent(id);
           return;
         }
@@ -47,28 +50,17 @@ const PORTAL_EXTENSION_SCRIPT = `<script>
 })();
 </script>`;
 
-async function injectPortalExtensions(response) {
-  const type = response.headers.get('content-type') || '';
-  if (!type.includes('text/html')) return response;
-  const html = await response.text();
-  if (html.includes('__partnerSubmissionWrapped')) {
-    const headers = new Headers(response.headers);
-    headers.delete('content-length');
-    headers.delete('content-encoding');
-    return new Response(html,{status:response.status,statusText:response.statusText,headers});
-  }
-  const next = html.includes('</body>')
-    ? html.replace('</body>', `${PORTAL_EXTENSION_SCRIPT}</body>`)
-    : html + PORTAL_EXTENSION_SCRIPT;
-  const headers = new Headers(response.headers);
-  headers.delete('content-length');
-  headers.delete('content-encoding');
-  return new Response(next, {
-    status: response.status,
-    statusText: response.statusText,
-    headers
-  });
+const SUBMISSION_UI_ASSETS = '<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=2"><script src="/evaluation-submit-enhance.js?v=2"></script>';
+
+async function injectHtml(response,content,marker){
+  const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;
+  const html=await response.text();
+  const next=html.includes(marker)?html:(html.includes('</body>')?html.replace('</body>',`${content}</body>`):html+content);
+  const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');
+  return new Response(next,{status:response.status,statusText:response.statusText,headers});
 }
+async function injectPortalExtensions(response){return injectHtml(response,PORTAL_EXTENSION_SCRIPT,'__partnerSubmissionWrapped')}
+async function injectSubmissionExtensions(response){return injectHtml(response,SUBMISSION_UI_ASSETS,'evaluation-submit-enhance.js')}
 
 export default {
   async fetch(request, env, ctx) {
@@ -84,17 +76,14 @@ export default {
     const runtime = await handleEvaluationRuntime(request, env, ctx, baseWorker);
     if (runtime) {
       const url = new URL(request.url);
-      if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
-        return injectPortalExtensions(runtime);
-      }
+      if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) return injectPortalExtensions(runtime);
       return runtime;
     }
 
     const response = await baseWorker.fetch(request, env, ctx);
     const url = new URL(request.url);
-    if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
-      return injectPortalExtensions(response);
-    }
+    if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) return injectPortalExtensions(response);
+    if (request.method === 'GET' && url.pathname === '/evaluation-submit.html') return injectSubmissionExtensions(response);
     return response;
   }
 };
