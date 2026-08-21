@@ -25,6 +25,45 @@
   }
   function redirectToLogin(next=currentPath()){location.replace(loginUrl(next))}
 
+  function firebaseMessage(code){
+    const messages={
+      EMAIL_NOT_FOUND:'등록되지 않은 이메일입니다.',
+      INVALID_PASSWORD:'비밀번호가 올바르지 않습니다.',
+      INVALID_LOGIN_CREDENTIALS:'이메일 또는 비밀번호가 올바르지 않습니다.',
+      USER_DISABLED:'사용 중지된 계정입니다.',
+      INVALID_EMAIL:'이메일 형식이 올바르지 않습니다.',
+      TOO_MANY_ATTEMPTS_TRY_LATER:'로그인 시도가 너무 많습니다.'
+    };
+    return messages[code]||'로그인에 실패했습니다.';
+  }
+
+  async function signIn(email,password){
+    let response;
+    try{
+      response=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({email:String(email||'').trim(),password:String(password||''),returnSecureToken:true})
+      });
+    }catch(error){
+      throw Object.assign(new Error('인증 서버 연결에 실패했습니다.'),{status:0,code:'AUTH_NETWORK_ERROR',cause:error});
+    }
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok){
+      const code=data?.error?.message||'AUTH_ERROR';
+      throw Object.assign(new Error(firebaseMessage(code)),{status:401,code:'AUTH_SIGN_IN_FAILED',firebase_code:code});
+    }
+    const session={
+      idToken:data.idToken,
+      refreshToken:data.refreshToken,
+      expiresAt:Date.now()+Number(data.expiresIn||3600)*1000,
+      email:data.email,
+      uid:data.localId
+    };
+    writeSession(session);
+    return session;
+  }
+
   async function refresh(){
     if(refreshPromise)return refreshPromise;
     refreshPromise=(async()=>{
@@ -81,5 +120,5 @@
     if(redirect)location.replace('/');
   }
 
-  global.EHSAuth={SESSION_KEY,readSession,writeSession,clearSession,refresh,token,requireUser,logout,loginUrl,redirectToLogin,currentPath};
+  global.EHSAuth={SESSION_KEY,readSession,writeSession,clearSession,signIn,refresh,token,requireUser,logout,loginUrl,redirectToLogin,currentPath};
 })(window);
