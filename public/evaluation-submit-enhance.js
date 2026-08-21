@@ -2,8 +2,8 @@
   function hasWorkspace(){try{return typeof data!=='undefined'&&data&&data.workspace&&data.workspace.target}catch(_){return false}}
   function currentData(){try{return data}catch(_){return null}}
   function currentTarget(){const d=currentData();return d?.workspace?.target||null}
-  function kstDate(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const m=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${m.year}-${m.month}-${m.day}`}
-  function editableNow(t){if(!t||t.cycle_status!=='active')return false;const today=kstDate(),start=String(t.start_at||'').slice(0,10),end=String(t.end_at||'').slice(0,10);return (!start||today>=start)&&(!end||today<=end)}
+  function capabilities(){return currentData()?.capabilities||{}}
+  function editableNow(t){const cap=capabilities();if(typeof cap.can_edit==='boolean')return cap.can_edit;if(!t||t.cycle_status!=='active')return false;return true}
   function pct(n){return Math.max(0,Math.min(100,Number(n||0)))}
   function fmtMB(bytes){return (Number(bytes||0)/1024/1024).toFixed(Number(bytes||0)>=104857600?0:1)}
   function fmtGB(bytes){return (Number(bytes||0)/1024/1024/1024).toFixed(2)}
@@ -20,11 +20,14 @@
     }
     const hero=document.querySelector('.hero');
     if(hero&&!document.getElementById('periodStateBanner')){
-      const open=editableNow(t);const banner=document.createElement('div');banner.id='periodStateBanner';banner.className='period-banner'+(open?'':' closed');
-      banner.innerHTML=open?`<span><strong>평가자료 수정 가능</strong> · 평가기간 내 저장·파일첨부·재제출이 가능합니다.</span><span>${String(t.start_at||'-').slice(0,10)} ~ ${String(t.end_at||'-').slice(0,10)}</span>`:`<span><strong>현재 수정할 수 없는 평가입니다.</strong> 평가기간 또는 평가회차 상태를 확인해 주세요.</span><span>${String(t.start_at||'-').slice(0,10)} ~ ${String(t.end_at||'-').slice(0,10)}</span>`;
+      const open=editableNow(t),banner=document.createElement('div');banner.id='periodStateBanner';banner.className='period-banner'+(open?'':' closed');
+      const reason=cap.edit_reason?` ${cap.edit_reason}`:'';
+      banner.innerHTML=open?`<span><strong>평가자료 수정 가능</strong> · 평가기간 내 저장·파일첨부·재제출이 가능합니다.</span><span>${String(t.start_at||'-').slice(0,10)} ~ ${String(t.end_at||'-').slice(0,10)}</span>`:`<span><strong>현재 수정할 수 없는 평가입니다.</strong>${reason}</span><span>${String(t.start_at||'-').slice(0,10)} ~ ${String(t.end_at||'-').slice(0,10)}</span>`;
       hero.insertAdjacentElement('afterend',banner);
     }
     if(!editableNow(t))document.querySelectorAll('input,textarea,button[data-save-item],label.file-pick,#saveProfileBtn,#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>{if(el.tagName==='LABEL'){el.classList.add('disabled');el.style.pointerEvents='none'}else el.disabled=true});
+    if(cap.can_upload===false)document.querySelectorAll('label.file-pick,input[data-file-input]').forEach(el=>{if(el.tagName==='LABEL'){el.classList.add('disabled');el.style.pointerEvents='none'}else el.disabled=true});
+    if(cap.can_submit===false)document.querySelectorAll('#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>el.disabled=true);
   }
   function recalcSummary(){
     if(!hasWorkspace())return;
@@ -33,15 +36,17 @@
   }
   async function authenticatedDownload(id){
     try{
+      if(window.EHSApi?.download)return await window.EHSApi.download(`/api/partner/submission/files/${encodeURIComponent(id)}`,'증빙자료');
       if(typeof session==='undefined'||!session)throw new Error('로그인 세션이 없습니다.');
       if(typeof refreshToken==='function'&&Date.now()>Number(session.expiresAt||0)-60000)await refreshToken();
       const base=(typeof ORIGIN!=='undefined'?ORIGIN:'');const r=await fetch(base+`/api/partner/submission/files/${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${session.idToken}`}});if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||`HTTP ${r.status}`)}const blob=await r.blob();const cd=r.headers.get('content-disposition')||'';let name='증빙자료';const m=cd.match(/filename\*=UTF-8''([^;]+)/i);if(m)try{name=decodeURIComponent(m[1])}catch(_){}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
-    }catch(e){if(typeof modal==='function')modal('파일 다운로드 실패',String(e.message||e),'<button class="btn" id="downloadFailOk">확인</button>'),setTimeout(()=>{const b=document.getElementById('downloadFailOk');if(b)b.onclick=closeModal},0)}
+    }catch(e){if(typeof modal==='function')modal('파일 다운로드 실패',String(window.EHSApi?.describe?window.EHSApi.describe(e):e.message||e),'<button class="btn" id="downloadFailOk">확인</button>'),setTimeout(()=>{const b=document.getElementById('downloadFailOk');if(b)b.onclick=closeModal},0)}
   }
   async function confirmedDelete(id){
+    if(capabilities().can_delete_file===false)return;
     if(typeof modal!=='function')return;
     modal('첨부파일 삭제','선택한 증빙자료를 삭제할까요?<br><br>삭제 기록은 제출 이력에 남습니다.','<button class="btn" id="cancelEvidenceDelete">취소</button><button class="btn primary" id="confirmEvidenceDelete">삭제</button>');
-    document.getElementById('cancelEvidenceDelete').onclick=closeModal;document.getElementById('confirmEvidenceDelete').onclick=async()=>{const b=document.getElementById('confirmEvidenceDelete');b.disabled=true;b.textContent='삭제 중...';try{await api(`/api/partner/submission/files/${encodeURIComponent(id)}`,{method:'DELETE'});closeModal();toast('증빙자료를 삭제했습니다.');await load(true)}catch(e){b.disabled=false;b.textContent='다시 시도';document.getElementById('modalBody').textContent=e.message||'삭제하지 못했습니다.'}};
+    document.getElementById('cancelEvidenceDelete').onclick=closeModal;document.getElementById('confirmEvidenceDelete').onclick=async()=>{const b=document.getElementById('confirmEvidenceDelete');b.disabled=true;b.textContent='삭제 중...';try{const requester=window.EHSApi?.request||api;await requester(`/api/partner/submission/files/${encodeURIComponent(id)}`,{method:'DELETE'});closeModal();toast('증빙자료를 삭제했습니다.');await load(true)}catch(e){b.disabled=false;b.textContent='다시 시도';document.getElementById('modalBody').textContent=window.EHSApi?.describe?window.EHSApi.describe(e):(e.message||'삭제하지 못했습니다.')}};
   }
   function installActionCapture(){
     document.addEventListener('click',e=>{const dl=e.target.closest?.('[data-download]');if(dl){e.preventDefault();e.stopImmediatePropagation();authenticatedDownload(dl.dataset.download);return}const del=e.target.closest?.('[data-delete-file]');if(del){e.preventDefault();e.stopImmediatePropagation();confirmedDelete(del.dataset.deleteFile)}},true);
@@ -50,7 +55,7 @@
     try{
       if(typeof render==='function'&&!render.__enhanced){const originalRender=render;const wrapped=function(){const r=originalRender.apply(this,arguments);queueMicrotask(enhanceLayout);return r};wrapped.__enhanced=true;render=wrapped}
       if(typeof saveItem==='function'&&!saveItem.__enhanced){const originalSave=saveItem;const wrappedSave=async function(id){await originalSave.apply(this,arguments);recalcSummary();enhanceLayout()};wrappedSave.__enhanced=true;saveItem=wrappedSave}
-      if(typeof saveDirty==='function'&&!saveDirty.__enhanced){const robust=async function(){for(const id of [...dirty]){const desc=document.getElementById('desc-'+id);if(!desc)continue;await api(`/api/partner/submission/${encodeURIComponent(targetId)}/items/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({description:desc.value})});const item=data.workspace.items.find(x=>x.target_item_state_id===id);if(item)item.description=desc.value;dirty.delete(id)}recalcSummary()};robust.__enhanced=true;saveDirty=robust}
+      if(typeof saveDirty==='function'&&!saveDirty.__enhanced){const robust=async function(){for(const id of [...dirty]){const desc=document.getElementById('desc-'+id);if(!desc)continue;const requester=window.EHSApi?.request||api;await requester(`/api/partner/submission/${encodeURIComponent(targetId)}/items/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({description:desc.value})});const item=data.workspace.items.find(x=>x.target_item_state_id===id);if(item)item.description=desc.value;dirty.delete(id)}recalcSummary()};robust.__enhanced=true;saveDirty=robust}
       if(typeof downloadFile==='function')downloadFile=authenticatedDownload;
       if(typeof deleteFile==='function')deleteFile=confirmedDelete;
     }catch(e){console.warn('submission enhancement patch',e)}
