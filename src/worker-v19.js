@@ -10,9 +10,13 @@ function rewriteRequest(request,path){
 function assetRequest(request,path){return rewriteRequest(request,path)}
 function injectHead(html,content,marker){if(html.includes(marker))return html;return html.includes('</head>')?html.replace('</head>',content+'</head>'):content+html}
 function stabilizeHomeBoot(html){
-  const old='showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch{logout()}})();';
-  const replacement='showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch(e){console.error("session restore failed",e);if(e&&e.status===401)logout();else{try{$("publicPortal").classList.add("hidden");$("app").classList.remove("hidden")}catch(_){}}}})();';
-  return html.includes(old)?html.replace(old,replacement):html;
+  const oldBoot='showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch{logout()}})();';
+  const newBoot='showLatestNotice("login");try{const raw=sessionStorage.getItem(SESSION_KEY);if(raw){session=JSON.parse(raw);const me=await api("/api/me");await routeAfterLogin(me)}}catch(e){console.error("session restore failed",e);if(e&&e.status===401)logout();else{try{$("publicPortal").classList.add("hidden");$("app").classList.remove("hidden")}catch(_){}}}})();';
+  if(html.includes(oldBoot))html=html.replace(oldBoot,newBoot);
+  const oldRoute='showPage("portalHome");\n  loadPortalHome();\n  showLatestNotice("after_login");';
+  const newRoute='showPage("portalHome");\n  loadPortalHome();\n  showLatestNotice("after_login");\n  try{const next=new URLSearchParams(location.search).get("next");if(next&&next.startsWith("/")&&!next.startsWith("//")&&next!=="/"&&next!=="/home"){location.replace(next);return}if(location.pathname==="/"||location.pathname==="/index.html")history.replaceState({},"","/home")}catch(_){}';
+  if(html.includes(oldRoute))html=html.replace(oldRoute,newRoute);
+  return html;
 }
 async function responseFromHtml(response,html){
   const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');headers.set('content-type','text/html;charset=utf-8');headers.set('cache-control','no-store');
@@ -20,11 +24,11 @@ async function responseFromHtml(response,html){
 }
 async function serveAssetHtml(request,env,path,{home=false}={}){
   const response=await env.ASSETS.fetch(assetRequest(request,path));if(!response.ok)return response;
-  let html=await response.text();if(home){html=stabilizeHomeBoot(html);html=injectHead(html,HOME_BOOT,'ehs-home-boot')}html=injectHead(html,COMMON_ASSETS,'/shared/auth.js?v=1');return responseFromHtml(response,html)
+  let html=stabilizeHomeBoot(await response.text());if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,COMMON_ASSETS,'/shared/auth.js?v=1');return responseFromHtml(response,html)
 }
 async function injectCommon(response,{home=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;
-  let html=await response.text();if(home){html=stabilizeHomeBoot(html);html=injectHead(html,HOME_BOOT,'ehs-home-boot')}html=injectHead(html,COMMON_ASSETS,'/shared/auth.js?v=1');return responseFromHtml(response,html)
+  let html=stabilizeHomeBoot(await response.text());if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,COMMON_ASSETS,'/shared/auth.js?v=1');return responseFromHtml(response,html)
 }
 function isBusinessPage(path){return path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/committee'||path==='/committee.html'||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html'}
 
