@@ -1,0 +1,52 @@
+:root{
+  --ehs-blue:#2878b5;
+  --ehs-blue-hover:#226b9f;
+  --ehs-ink:#20313d;
+  --ehs-text:#52636f;
+  --ehs-muted:#87949d;
+  --ehs-line:#dfe6ea;
+  --ehs-page:#f3f6f8;
+  --ehs-card:#fff;
+  --ehs-radius:10px;
+  --ehs-radius-lg:14px;
+  --ehs-shadow:0 5px 18px rgba(30,48,62,.05);
+}
+html,body{background:var(--ehs-page)}
+body{color:var(--ehs-ink)}
+.header,.app-header{
+  background:#fff!important;
+  border-bottom:1px solid var(--ehs-line)!important;
+  box-shadow:0 2px 9px rgba(27,47,61,.035)!important;
+  backdrop-filter:none!important;
+}
+.header{height:70px!important}
+.app-header{height:70px!important}
+.header-in,.header-inner,.app-header-inner{
+  width:min(1420px,calc(100% - 48px))!important;
+  max-width:1420px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+.brand,.app-brand{
+  color:var(--ehs-ink)!important;
+  cursor:pointer!important;
+  text-decoration:none!important;
+}
+.brand img,.app-brand img{height:31px!important;width:auto!important}
+.brand span,.app-brand-name{font-weight:800!important}
+.brand small{
+  color:#7f8e98!important;
+  border-left:1px solid var(--ehs-line)!important;
+}
+.ehs-common-home-button{display:none!important}
+button,input,select,textarea{font-family:inherit}
+.btn,.header-btn,.icon-btn,.icon{
+  border-radius:8px!important;
+}
+.card,.panel,.board,.detail,.annual-card,.ipass-score-shell{
+  border-color:var(--ehs-line)!important;
+}
+@media(max-width:760px){
+  .header-in,.header-inner,.app-header-inner{width:calc(100% - 24px)!important}
+  .brand small{display:none!important}
+}
