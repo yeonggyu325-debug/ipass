@@ -14,5 +14,11 @@
       "database_name": "partner-evaluation-db",
       "database_id": "ff99104d-d3b5-4af5-b48e-0a2fbc53564c"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "EVIDENCE_FILES",
+      "bucket_name": "ipass-evidence-files"
+    }
   ]
 }
