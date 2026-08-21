@@ -12,6 +12,28 @@ function cors(headers){
   headers.set('access-control-allow-headers','authorization,content-type,x-request-id');
   headers.set('access-control-allow-methods','GET,POST,PATCH,PUT,DELETE,OPTIONS');
 }
+function kstToday(){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+function submissionState(target,storageAvailable){
+  const today=kstToday(),start=String(target?.start_at||'').slice(0,10),end=String(target?.end_at||'').slice(0,10),active=target?.cycle_status==='active';
+  let reason=null;
+  if(!active)reason='평가회차가 진행중 상태가 아닙니다.';
+  else if(start&&today<start)reason='평가 시작일 전입니다.';
+  else if(end&&today>end)reason='평가기간이 종료되었습니다.';
+  const editable=!reason;
+  return {can_edit:editable,can_submit:editable,can_upload:editable&&storageAvailable,can_delete_file:editable,edit_reason:reason,today_kst:today};
+}
+async function augmentSubmission(response,path,env){
+  if(!response.ok||!/^\/api\/partner\/submission\/[^/]+$/.test(path))return response;
+  const type=response.headers.get('content-type')||'';if(!type.includes('application/json'))return response;
+  const data=await response.clone().json().catch(()=>null);if(!data?.success||!data.workspace?.target)return response;
+  data.capabilities={...(data.capabilities||{}),...submissionState(data.workspace.target,!!env.EVIDENCE_FILES)};
+  const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');
+  return new Response(JSON.stringify(data),{status:response.status,statusText:response.statusText,headers});
+}
 async function attach(response,id,path){
   const headers=new Headers(response.headers);
   headers.set('x-request-id',id);
@@ -43,7 +65,8 @@ export default {
     const traced=new Request(request,{headers:nextHeaders});
     try{
       const systemResponse=await handleSystemAdmin(traced,env,ctx,app);
-      const raw=systemResponse||await app.fetch(traced,env,ctx);
+      let raw=systemResponse||await app.fetch(traced,env,ctx);
+      if(request.method==='GET')raw=await augmentSubmission(raw,url.pathname,env);
       const response=await attach(raw,id,url.pathname);
       if(shouldAudit(request.method,url.pathname,response.status)){
         const task=recordRequestAudit(env,{requestId:id,method:request.method,path:url.pathname,status:response.status,durationMs:Date.now()-started});
