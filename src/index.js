@@ -431,7 +431,9 @@ export default {
           env.partner_evaluation_db.prepare(`
             SELECT
               cm.id, cm.meeting_month, cm.meeting_date, cm.title, cm.note,
-              cpa.attendance_status, cpa.attendee_position, cpa.attendee_name
+              cpa.attendance_status,
+              CASE WHEN cpa.attendance_status = 'present' THEN cpa.attendee_position ELSE NULL END AS attendee_position,
+              CASE WHEN cpa.attendance_status = 'present' THEN cpa.attendee_name ELSE NULL END AS attendee_name
             FROM committee_partner_attendance cpa
             JOIN committee_meetings cm ON cm.id = cpa.meeting_id
             WHERE cpa.company_id = ? AND cm.year = ? AND cm.status = 'finalized'
@@ -1399,19 +1401,51 @@ function normalizeCommitteeStatus(value) {
   return ["pending", "present", "absent"].includes(s) ? s : null;
 }
 
+function parseCommitteeAttendeeList(positionValue, nameValue, label) {
+  const parse = value => {
+    const text = String(value ?? "").trim();
+    if (!text) return [];
+    if (text.startsWith("[")) {
+      try {
+        const arr = JSON.parse(text);
+        if (Array.isArray(arr)) return arr.map(v => String(v ?? "").trim());
+      } catch {}
+    }
+    return [text];
+  };
+  const positions = parse(positionValue);
+  const names = parse(nameValue);
+  const count = Math.max(positions.length, names.length);
+  const attendees = [];
+  for (let i = 0; i < count; i++) {
+    const position = positions[i] || "";
+    const name = names[i] || "";
+    if (!position && !name) continue;
+    if (!position || !name) throw new Error(`참석 ${label}의 직급과 성명을 모두 입력하세요.`);
+    attendees.push({ position, name });
+  }
+  return attendees;
+}
+
 function normalizeCommitteeRows(rows, key, label) {
   const out = [];
   const seen = new Set();
   for (const raw of rows || []) {
     const id = String(raw?.[key] || "").trim();
     const status = normalizeCommitteeStatus(raw?.attendance_status);
-    const position = String(raw?.attendee_position || "").trim() || null;
-    const name = String(raw?.attendee_name || "").trim() || null;
     if (!id || !status) throw new Error(`${label} 참석정보가 올바르지 않습니다.`);
-    if (status === "present" && (!position || !name)) throw new Error(`참석 ${label}는 직급과 성명을 모두 입력하세요.`);
     if (seen.has(id)) throw new Error(`같은 ${label}를 중복 선택할 수 없습니다.`);
     seen.add(id);
-    out.push({ [key]: id, attendance_status: status, attendee_position: position, attendee_name: name });
+
+    let attendeePosition = null;
+    let attendeeName = null;
+    if (status === "present") {
+      const attendees = parseCommitteeAttendeeList(raw?.attendee_position, raw?.attendee_name, label);
+      if (!attendees.length) throw new Error(`참석 ${label}의 직급과 성명을 모두 입력하세요.`);
+      attendeePosition = attendees.length === 1 ? attendees[0].position : JSON.stringify(attendees.map(v => v.position));
+      attendeeName = attendees.length === 1 ? attendees[0].name : JSON.stringify(attendees.map(v => v.name));
+    }
+    out.push({ [key]: id, attendance_status: status, attendee_position: attendeePosition, attendee_name: attendeeName });
   }
   return out;
 }
@@ -1441,14 +1475,18 @@ async function committeeMeetingDetail(env, meetingId) {
   const [meetingResult, partnerResult, departmentResult] = await env.partner_evaluation_db.batch([
     env.partner_evaluation_db.prepare(`SELECT * FROM committee_meetings WHERE id = ? LIMIT 1`).bind(meetingId),
     env.partner_evaluation_db.prepare(`
-      SELECT cpa.company_id, c.company_name, cpa.attendance_status, cpa.attendee_position, cpa.attendee_name
+      SELECT cpa.company_id, c.company_name, cpa.attendance_status,
+        CASE WHEN cpa.attendance_status = 'present' THEN cpa.attendee_position ELSE NULL END AS attendee_position,
+        CASE WHEN cpa.attendance_status = 'present' THEN cpa.attendee_name ELSE NULL END AS attendee_name
       FROM committee_partner_attendance cpa
       JOIN companies c ON c.id = cpa.company_id
       WHERE cpa.meeting_id = ?
       ORDER BY c.company_name COLLATE NOCASE
     `).bind(meetingId),
     env.partner_evaluation_db.prepare(`
-      SELECT cda.department_id, cd.department_name, cd.sort_order, cda.attendance_status, cda.attendee_position, cda.attendee_name
+      SELECT cda.department_id, cd.department_name, cd.sort_order, cda.attendance_status,
+        CASE WHEN cda.attendance_status = 'present' THEN cda.attendee_position ELSE NULL END AS attendee_position,
+        CASE WHEN cda.attendance_status = 'present' THEN cda.attendee_name ELSE NULL END AS attendee_name
       FROM committee_department_attendance cda
       JOIN committee_departments cd ON cd.id = cda.department_id
       WHERE cda.meeting_id = ?
