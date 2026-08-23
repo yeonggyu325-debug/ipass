@@ -338,7 +338,7 @@ export default {
       if (request.method === "GET" && path === "/api/committee") {
         const year = parseAnnualYear(url.searchParams.get("year"));
         if (user.role === "admin") {
-          const [meetingResult, companyResult, departmentResult] = await env.partner_evaluation_db.batch([
+          const [meetingResult, companyResult, departmentResult, annualScoreResult] = await env.partner_evaluation_db.batch([
             env.partner_evaluation_db.prepare(`
               SELECT
                 cm.id, cm.year, cm.meeting_month, cm.meeting_date, cm.title, cm.note, cm.status,
@@ -381,7 +381,29 @@ export default {
               FROM committee_departments
               WHERE is_active = 1
               ORDER BY sort_order, department_name
-            `)
+            `),
+            env.partner_evaluation_db.prepare(`
+              SELECT
+                c.id AS company_id, c.company_name,
+                COALESCE(s.finalized_meeting_count, 0) AS finalized_meeting_count,
+                COALESCE(s.present_count, 0) AS present_count,
+                COALESCE(s.absence_count, 0) AS absence_count,
+                MAX(0, 10 - COALESCE(s.absence_count, 0) * 3) AS committee_score
+              FROM companies c
+              LEFT JOIN (
+                SELECT
+                  cpa.company_id,
+                  COUNT(*) AS finalized_meeting_count,
+                  SUM(CASE WHEN cpa.attendance_status = 'present' THEN 1 ELSE 0 END) AS present_count,
+                  SUM(CASE WHEN cpa.attendance_status = 'absent' THEN 1 ELSE 0 END) AS absence_count
+                FROM committee_partner_attendance cpa
+                JOIN committee_meetings cm ON cm.id = cpa.meeting_id
+                WHERE cm.year = ? AND cm.status = 'finalized'
+                GROUP BY cpa.company_id
+              ) s ON s.company_id = c.id
+              WHERE c.status = 'active'
+              ORDER BY c.company_name COLLATE NOCASE
+            `).bind(year)
           ]);
           return json({
             success: true,
@@ -390,7 +412,9 @@ export default {
             options: {
               companies: companyResult?.results || [],
               departments: departmentResult?.results || []
-            }
+            },
+            annual_scores: annualScoreResult?.results || [],
+            scoring_rule: { max_score: 10, deduction_per_absence: 3, finalized_only: true }
           });
         }
         if (!user.company_id) return json({ success: false, error: "회사 연결정보가 없습니다." }, 400);
