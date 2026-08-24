@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   const path=location.pathname;
-  const PROTECTED=path==='/home'||path==='/committee'||path==='/committee.html'||path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html';
+  const PROTECTED=path==='/home'||path==='/committee'||path==='/committee.html'||path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html'||path==='/evaluation-scoring.html';
   const STANDALONE=PROTECTED&&path!=='/home'&&new URLSearchParams(location.search).get('embedded')!=='1';
 
   function readSession(){return window.EHSAuth?.readSession?.()||null}
@@ -83,7 +83,7 @@
 
   function commonHeaderHtml(){
     const committeeActive=path==='/committee'||path==='/committee.html';
-    const ipassActive=path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html';
+    const ipassActive=path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html'||path==='/evaluation-scoring.html';
     return `<header class="ehs-global-header" id="ehsGlobalHeader"><div class="ehs-global-inner">
       <a class="ehs-global-brand" href="/home" aria-label="EHS 포털 홈"><img src="/hniruja-logo.png" alt="Hniruja"><span>협력사 EHS 포털</span><em>EHS</em></a>
       <button class="ehs-global-mobile" id="ehsGlobalMobile" type="button" aria-label="메뉴 열기"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>

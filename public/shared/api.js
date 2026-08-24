@@ -1,6 +1,9 @@
 (function(global){
   'use strict';
   const ORIGIN=location.hostname==='ipass.i-pass-eval.workers.dev'?'':'https://ipass.i-pass-eval.workers.dev';
+  const API_ORIGIN=new URL(ORIGIN||location.origin,location.origin).origin;
+
+  function isTrustedApiUrl(url){try{return new URL(url,location.href).origin===API_ORIGIN}catch{return false}}
 
   function makeError(message,status,code,requestId,data){
     const error=new Error(message||`HTTP ${status||0}`);
@@ -42,7 +45,7 @@
     const isForm=typeof FormData!=='undefined'&&body instanceof FormData;
     if(body&&!isForm&&!headers.has('content-type'))headers.set('content-type','application/json');
 
-    if(global.EHSAuth){
+    if(global.EHSAuth&&isTrustedApiUrl(url)){
       const session=global.EHSAuth.readSession();
       if(session){
         try{headers.set('Authorization','Bearer '+await global.EHSAuth.token())}
@@ -76,22 +79,27 @@
     return data;
   }
 
-  async function download(path,filename){
+  async function authorizedBlob(path,retry=true){
+    const url=/^https?:\/\//.test(path)?path:ORIGIN+path;
     const headers=new Headers();
-    if(global.EHSAuth?.readSession()){
+    if(global.EHSAuth?.readSession()&&isTrustedApiUrl(url)){
       try{headers.set('Authorization','Bearer '+await global.EHSAuth.token())}
       catch(error){authFailed(error);throw error}
     }
     let response;
-    try{response=await fetch(ORIGIN+path,{headers})}
-    catch{throw makeError('파일 다운로드 서버에 연결할 수 없습니다.',0,'NETWORK_ERROR')}
-    if(response.status===401&&global.EHSAuth?.readSession()){
-      try{await global.EHSAuth.refresh();return download(path,filename)}catch(error){authFailed(error);throw error}
+    try{response=await fetch(url,{headers})}
+    catch{throw makeError('파일 서버에 연결할 수 없습니다.',0,'NETWORK_ERROR')}
+    if(response.status===401&&retry&&global.EHSAuth?.readSession()){
+      try{await global.EHSAuth.refresh();return authorizedBlob(path,false)}catch(error){authFailed(error);throw error}
     }
     if(!response.ok){
       const data=await parse(response);const error=makeError(data.error||'파일을 다운로드할 수 없습니다.',response.status,data.code,response.headers.get('x-request-id'),data);authFailed(error);throw error;
     }
-    const blob=await response.blob();
+    return response.blob();
+  }
+
+  async function download(path,filename){
+    const blob=await authorizedBlob(path);
     const objectUrl=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=objectUrl;a.download=filename||'download';document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(objectUrl),30000);
@@ -107,5 +115,5 @@
     return`${error.message||'요청 처리 중 오류가 발생했습니다.'}${suffix}`;
   }
 
-  global.EHSApi={ORIGIN,request,download,describe,makeError};
+  global.EHSApi={ORIGIN,request,blob:authorizedBlob,download,describe,makeError};
 })(window);

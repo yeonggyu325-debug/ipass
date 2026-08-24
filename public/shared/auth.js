@@ -20,7 +20,8 @@
   function clearSession(){sessionStorage.removeItem(SESSION_KEY)}
   function currentPath(){return location.pathname+location.search+location.hash}
   function loginUrl(next=currentPath()){
-    const safe=String(next||'').startsWith('/')?String(next):'/home';
+    const value=String(next||'');
+    const safe=value.startsWith('/')&&!value.startsWith('//')?value:'/home';
     return '/?next='+encodeURIComponent(safe);
   }
   function redirectToLogin(next=currentPath()){location.replace(loginUrl(next))}

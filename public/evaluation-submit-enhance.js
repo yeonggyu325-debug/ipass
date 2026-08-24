@@ -17,6 +17,7 @@
   function inferredMime(name,current){const kind=fileKind(name);if(kind==='image')return fileExt(name)==='png'?'image/png':'image/jpeg';if(kind==='pdf')return'application/pdf';return current||'application/octet-stream'}
   function clearPreviewObjectUrl(){previewRequest++;if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl=null}document.getElementById('modal')?.classList.remove('preview-open')}
   async function authenticatedBlob(id,retry=true){
+    if(window.EHSApi?.blob)return window.EHSApi.blob(`/api/partner/submission/files/${encodeURIComponent(id)}`);
     const headers=new Headers();
     if(window.EHSAuth?.readSession())headers.set('Authorization','Bearer '+await window.EHSAuth.token());
     let response;try{response=await fetch((window.EHSApi?.ORIGIN||'')+`/api/partner/submission/files/${encodeURIComponent(id)}`,{headers})}catch(_){throw new Error('파일 미리보기 서버에 연결할 수 없습니다.')}

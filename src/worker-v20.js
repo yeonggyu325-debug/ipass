@@ -9,9 +9,9 @@ import { handleEvaluationScoring } from './evaluation-scoring.js';
 
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
 const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=3">';
-const COMMON_AUTH='<script src="/shared/auth.js?v=2"></script>';
-const COMMON_API='<script src="/shared/api.js?v=2"></script>';
-const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=6"></script>';
+const COMMON_AUTH='<script src="/shared/auth.js?v=3"></script>';
+const COMMON_API='<script src="/shared/api.js?v=3"></script>';
+const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=7"></script>';
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{if(!window.EHSAuth||!window.EHSAuth.readSession())window.EHSAuth?window.EHSAuth.redirectToLogin("/home"):location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
 const SUBMISSION_ASSETS='<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=3"><script src="/evaluation-submit-enhance.js?v=5"></script>';
 const EMBED_STYLE='<style id="ipass-embedded-style">body{background:#f5f7f9!important}.header{display:none!important}.layout{min-height:100vh!important}.side{top:0!important;height:100vh!important}.main{padding-top:20px!important}.shell{padding-top:20px!important}.page-head{margin-top:0!important}</style>';
@@ -28,9 +28,9 @@ async function htmlResponse(response,html){const headers=new Headers(response.he
 async function injectShared(response,{home=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=await response.text();
   html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=3');
-  html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=2');
-  html=injectHead(html,COMMON_API,'/shared/api.js?v=2');
-  html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=6');
+  html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=3');
+  html=injectHead(html,COMMON_API,'/shared/api.js?v=3');
+  html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=7');
   if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
   if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v20');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20')}
   if(submission)html=injectBody(html,SUBMISSION_ASSETS,'evaluation-submit-enhance.js?v=5');if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');return htmlResponse(response,html)
@@ -47,6 +47,8 @@ async function core(request,env,ctx){
   const url=new URL(request.url),path=url.pathname;
   if(request.method==='GET'&&IPASS_PATHS.has(path))return serveAsset(request,env,'/ipass.html');
   if(request.method==='GET'&&path==='/evaluation-scoring.html')return serveAsset(request,env,'/evaluation-scoring.html');
+  if(request.method==='GET'&&path==='/evaluation-submit.html')return serveAsset(request,env,'/evaluation-submit.html',{submission:true});
+  if(request.method==='GET'&&path==='/evaluation-cycle.html')return serveAsset(request,env,'/evaluation-cycle.html',{embedded:url.searchParams.get('embedded')==='1'});
   if(request.method==='GET'&&path==='/committee.html'){const next=new URL(request.url);next.pathname='/committee';return Response.redirect(next.toString(),302)}
   if(request.method==='GET'&&path==='/committee')return serveAsset(request,env,'/committee.html');
   if(request.method==='GET'&&path==='/home'){
@@ -61,8 +63,7 @@ async function core(request,env,ctx){
   const runtime=await handleEvaluationRuntime(request,env,ctx,baseWorker);if(runtime){if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(runtime,{root:true});return runtime}
   const response=await baseWorker.fetch(request,env,ctx);
   if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(response,{root:true});
-  if(request.method==='GET'&&path==='/evaluation-submit.html')return injectShared(response,{submission:true});
-  if(request.method==='GET'&&(path==='/evaluation-management.html'||path==='/evaluation-cycle.html'))return injectShared(response,{embedded:url.searchParams.get('embedded')==='1'});
+  if(request.method==='GET'&&path==='/evaluation-management.html')return injectShared(response,{embedded:url.searchParams.get('embedded')==='1'});
   if(request.method==='GET'&&path==='/committee.html')return injectShared(response);
   return response;
 }
