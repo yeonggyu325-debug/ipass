@@ -28,21 +28,29 @@
     document.getElementById('closeEvidencePreview')?.addEventListener('click',()=>{clearPreviewObjectUrl();closeModal()});
     document.getElementById('downloadEvidencePreview')?.addEventListener('click',()=>authenticatedDownload(id));
   }
+  async function previewTicket(id){return apiClient().request(`/api/partner/submission/files/${encodeURIComponent(id)}/preview-ticket`,{method:'POST',body:'{}'})}
   async function previewFile(id,name,size,contentType){
     if(typeof modal!=='function')return;
     clearPreviewObjectUrl();
     const requestId=previewRequest;
     const kind=fileKind(name),label=fileKindLabel(kind),safeName=escapeHtml(name),sizeText=typeof fmtBytes==='function'?fmtBytes(size):`${Math.round(Number(size||0)/1024)} KB`;
-    if(kind!=='image'&&kind!=='pdf'){
+    if(kind==='file'){
       modal('증빙자료 미리보기',`<div class="evidence-preview-fallback"><div class="evidence-preview-icon">${escapeHtml(label.slice(0,3).toUpperCase())}</div><strong>${safeName}</strong><span>${escapeHtml(label)} · ${escapeHtml(sizeText)}</span><p>${escapeHtml(label)} 파일은 브라우저에서 원본 화면을 직접 표시할 수 없습니다.<br>파일을 다운로드하여 확인해 주세요.</p></div>`,`<button class="btn" id="closeEvidencePreview">닫기</button><button class="btn primary" id="downloadEvidencePreview">다운로드</button>`);
       document.getElementById('modal')?.classList.add('preview-open');bindPreviewActions(id);return;
     }
     modal('증빙자료 미리보기',`<div class="evidence-preview-loading">${safeName} 파일을 불러오는 중...</div>`,`<button class="btn" id="closeEvidencePreview">닫기</button><button class="btn primary" id="downloadEvidencePreview">다운로드</button>`);
     document.getElementById('modal')?.classList.add('preview-open');bindPreviewActions(id);
     try{
-      const source=await authenticatedBlob(id);if(requestId!==previewRequest)return;const blob=source.type===inferredMime(name,source.type)?source:new Blob([source],{type:inferredMime(name,source.type)});previewObjectUrl=URL.createObjectURL(blob);
       const body=document.getElementById('modalBody');if(!body)return clearPreviewObjectUrl();
-      body.innerHTML=kind==='image'?`<div class="evidence-preview-stage image"><img src="${previewObjectUrl}" alt="${safeName}"></div>`:`<div class="evidence-preview-stage"><iframe src="${previewObjectUrl}" title="${safeName}"></iframe></div>`;
+      if(kind==='image'||kind==='pdf'){
+        const source=await authenticatedBlob(id);if(requestId!==previewRequest)return;const blob=source.type===inferredMime(name,source.type)?source:new Blob([source],{type:inferredMime(name,source.type)});previewObjectUrl=URL.createObjectURL(blob);
+        body.innerHTML=kind==='image'?`<div class="evidence-preview-stage image"><img src="${previewObjectUrl}" alt="${safeName}"></div>`:`<div class="evidence-preview-stage"><iframe src="${previewObjectUrl}" title="${safeName}"></iframe></div>`;
+      }else{
+        const ticket=await previewTicket(id);if(requestId!==previewRequest)return;
+        const noticeStyle='padding:9px 12px;margin-bottom:10px;border:1px solid #dce7ee;border-radius:8px;background:#f5f9fc;color:#637886;font-size:10px;line-height:1.55';
+        const notice=kind==='hwp'?`<div style="${noticeStyle}">한글 파일은 Google 공식 미리보기 지원 형식이 아니므로 문서에 따라 표시되지 않을 수 있습니다. 표시되지 않으면 다운로드해 확인해 주세요.</div>`:`<div style="${noticeStyle}">Google 문서 뷰어로 표시합니다. 원본과 글꼴·레이아웃이 일부 다를 수 있습니다.</div>`;
+        body.innerHTML=`${notice}<div class="evidence-preview-stage web"><iframe src="${escapeHtml(ticket.viewer_url)}" title="${safeName}" referrerpolicy="no-referrer"></iframe></div>`;
+      }
     }catch(e){const body=document.getElementById('modalBody');if(body)body.innerHTML=`<div class="evidence-preview-error">${escapeHtml(e.message||'파일을 미리 볼 수 없습니다.')}</div>`}
   }
   function enhanceLayout(){

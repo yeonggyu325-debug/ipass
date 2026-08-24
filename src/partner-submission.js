@@ -6,6 +6,19 @@ function canEdit(target){const today=kstToday();return target.cycle_status==='ac
 function safeFileName(v){return String(v||'file').replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_').replace(/\s+/g,' ').trim().slice(0,180)||'file'}
 const ALLOWED_EXT=new Set(['pdf','jpg','jpeg','png','xls','xlsx','hwp','hwpx','ppt','pptx','doc','docx']);
 const MAX_FILE_BYTES=25*1024*1024;
+const PREVIEW_TICKET_MINUTES=5;
+
+function previewMime(file){
+  const ext=(String(file?.file_name||'').split('.').pop()||'').toLowerCase();
+  const mime={
+    pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',
+    xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    hwp:'application/x-hwp',hwpx:'application/vnd.hancom.hwpx'
+  };
+  return mime[ext]||file?.content_type||'application/octet-stream';
+}
 
 async function ensureSchema(env){
   await env.partner_evaluation_db.batch([
@@ -31,7 +44,15 @@ async function ensureSchema(env){
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       deleted_at TEXT
     )`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_files_v2_item ON evaluation_evidence_files_v2(target_item_id,deleted_at)`)
+    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_files_v2_item ON evaluation_evidence_files_v2(target_item_id,deleted_at)`),
+    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_evidence_preview_tickets_v2 (
+      id TEXT PRIMARY KEY,
+      file_id TEXT NOT NULL,
+      issued_by TEXT,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_preview_tickets_v2_expiry ON evaluation_evidence_preview_tickets_v2(expires_at)`)
   ]);
 }
 async function account(request,env,ctx,baseWorker){const u=new URL(request.url);u.pathname='/api/me';u.search='';const r=await baseWorker.fetch(new Request(u.toString(),{method:'GET',headers:request.headers}),env,ctx);const d=await r.clone().json().catch(()=>null);if(!r.ok||!d?.success)return {ok:false,response:r};if(d.auth_state!=='approved')return {ok:false,response:json({success:false,error:'승인된 계정이 필요합니다.'},403)};return {ok:true,user:d.user}}
@@ -73,6 +94,26 @@ async function fileAccess(request,env,ctx,baseWorker,fileId,write=false){const a
 
 export async function handlePartnerSubmission(request,env,ctx,baseWorker){
   const url=new URL(request.url),path=url.pathname;if(!path.startsWith('/api/partner/submission'))return null;if(request.method==='OPTIONS')return json({success:true});await ensureSchema(env);
+  const publicPreview=path.match(/^\/api\/partner\/submission\/preview\/([^/]+)$/);
+  if(publicPreview&&request.method==='GET'){
+    if(!env.EVIDENCE_FILES)return json({success:false,error:'증빙자료 저장소가 아직 연결되지 않았습니다.'},503);
+    const ticket=await env.partner_evaluation_db.prepare(`SELECT f.* FROM evaluation_evidence_preview_tickets_v2 p JOIN evaluation_evidence_files_v2 f ON f.id=p.file_id WHERE p.id=? AND p.expires_at>CURRENT_TIMESTAMP AND f.deleted_at IS NULL LIMIT 1`).bind(decodeURIComponent(publicPreview[1])).first();
+    if(!ticket)return json({success:false,error:'미리보기 링크가 만료되었거나 유효하지 않습니다.'},410);
+    const obj=await env.EVIDENCE_FILES.get(ticket.object_key);if(!obj)return json({success:false,error:'저장된 파일을 찾을 수 없습니다.'},404);
+    const h=new Headers();obj.writeHttpMetadata(h);h.set('content-type',previewMime(ticket));h.set('content-disposition',`inline; filename*=UTF-8''${encodeURIComponent(ticket.file_name)}`);h.set('cache-control','private, no-store, max-age=0');h.set('x-content-type-options','nosniff');return new Response(obj.body,{headers:h});
+  }
+  const previewTicket=path.match(/^\/api\/partner\/submission\/files\/([^/]+)\/preview-ticket$/);
+  if(previewTicket&&request.method==='POST'){
+    const fa=await fileAccess(request,env,ctx,baseWorker,decodeURIComponent(previewTicket[1]),false);if(!fa.ok)return fa.response;
+    const id=crypto.randomUUID();
+    await env.partner_evaluation_db.batch([
+      env.partner_evaluation_db.prepare(`DELETE FROM evaluation_evidence_preview_tickets_v2 WHERE expires_at<=CURRENT_TIMESTAMP`),
+      env.partner_evaluation_db.prepare(`INSERT INTO evaluation_evidence_preview_tickets_v2 (id,file_id,issued_by,expires_at) VALUES (?,?,?,datetime('now',?))`).bind(id,fa.file.id,fa.user.id,`+${PREVIEW_TICKET_MINUTES} minutes`)
+    ]);
+    const sourceUrl=`${url.origin}/api/partner/submission/preview/${encodeURIComponent(id)}`;
+    const viewerUrl=`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(sourceUrl)}`;
+    return json({success:true,source_url:sourceUrl,viewer_url:viewerUrl,expires_in_seconds:PREVIEW_TICKET_MINUTES*60});
+  }
   const fileMatch=path.match(/^\/api\/partner\/submission\/files\/([^/]+)$/);if(fileMatch){const fa=await fileAccess(request,env,ctx,baseWorker,decodeURIComponent(fileMatch[1]),request.method==='DELETE');if(!fa.ok)return fa.response;if(request.method==='GET'){if(!env.EVIDENCE_FILES)return json({success:false,error:'증빙자료 저장소가 아직 연결되지 않았습니다.'},503);const obj=await env.EVIDENCE_FILES.get(fa.file.object_key);if(!obj)return json({success:false,error:'저장된 파일을 찾을 수 없습니다.'},404);const h=new Headers();obj.writeHttpMetadata(h);h.set('content-disposition',`attachment; filename*=UTF-8''${encodeURIComponent(fa.file.file_name)}`);return new Response(obj.body,{headers:h})}if(request.method==='DELETE'){if(!env.EVIDENCE_FILES)return json({success:false,error:'증빙자료 저장소가 아직 연결되지 않았습니다.'},503);await env.EVIDENCE_FILES.delete(fa.file.object_key);await env.partner_evaluation_db.prepare(`UPDATE evaluation_evidence_files_v2 SET deleted_at=CURRENT_TIMESTAMP WHERE id=?`).bind(fa.file.id).run();await log(env,fa.file.target_id,fa.file.target_item_id,'file_deleted',{file_id:fa.file.id,file_name:fa.file.file_name},fa.user.id);return json({success:true})}return json({success:false,error:'지원하지 않는 요청입니다.'},405)}
 
   const root=path.match(/^\/api\/partner\/submission\/([^/]+)$/);if(root){const access=await ensureAccess(request,env,ctx,baseWorker,decodeURIComponent(root[1]),false);if(!access.ok)return access.response;if(request.method==='GET'){const w=await workspace(env,access.target);return json({success:true,workspace:w,capabilities:{evidence_upload:!!env.EVIDENCE_FILES,max_file_size_mb:25,allowed_extensions:[...ALLOWED_EXT]}})}return json({success:false,error:'지원하지 않는 요청입니다.'},405)}
