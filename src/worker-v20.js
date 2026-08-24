@@ -8,12 +8,12 @@ import { handleSystemAdmin, recordRequestAudit } from './system-admin.js';
 import { handleEvaluationScoring } from './evaluation-scoring.js';
 
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
-const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=3">';
+const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=4">';
 const COMMON_AUTH='<script src="/shared/auth.js?v=3"></script>';
 const COMMON_API='<script src="/shared/api.js?v=3"></script>';
-const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=7"></script>';
+const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=8"></script>';
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{if(!window.EHSAuth||!window.EHSAuth.readSession())window.EHSAuth?window.EHSAuth.redirectToLogin("/home"):location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
-const SUBMISSION_ASSETS='<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=3"><link rel="stylesheet" href="/evaluation-submit-redesign.css?v=1"><script src="/evaluation-submit-enhance.js?v=7"></script>';
+const SUBMISSION_ASSETS='<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=3"><link rel="stylesheet" href="/evaluation-submit-redesign.css?v=1"><link rel="stylesheet" href="/evaluation-submit-progress.css?v=1"><script src="/evaluation-submit-enhance.js?v=8"></script>';
 const EMBED_STYLE='<style id="ipass-embedded-style">body{background:#f5f7f9!important}.header{display:none!important}.layout{min-height:100vh!important}.side{top:0!important;height:100vh!important}.main{padding-top:20px!important}.shell{padding-top:20px!important}.page-head{margin-top:0!important}</style>';
 const ROOT_ROUTE_SCRIPT=`<script id="ipass-route-v20">(function(){var tries=0,t=setInterval(function(){try{if(typeof window.openPortalService==='function'&&!window.openPortalService.__ipassRouted){var original=window.openPortalService;var wrapped=function(service){if(service==='ipass'){location.href='/ipass';return}return original.apply(this,arguments)};wrapped.__ipassRouted=true;window.openPortalService=wrapped}}catch(_){}if(++tries>40)clearInterval(t)},200);document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var text=(b.textContent||'').trim();if(text==='i-PaSS 관리'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass'}else if(text==='평가표 관리'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass/templates'}else if(text==='평가회차 운영'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass/cycles'}else if(text.indexOf('안전보건협의체')>=0){e.preventDefault();e.stopImmediatePropagation();location.href='/committee'}},true)})();</script>`;
 const IPASS_GRADE_SCRIPT=`<script id="ipass-grade-v21">(function(){window.getAnnualGrade=function(score,complete,settings){if(complete===false||score==null)return{label:'산정 중',cls:'pending'};var s=settings||{},n=Number(score),excellent=Number(s.excellent_min==null?90:s.excellent_min),qualified=Number(s.qualified_min==null?70:s.qualified_min);if(n>=excellent)return{label:'안전관리 우수협력사',cls:'excellent'};if(n>=qualified)return{label:'적격 협력사',cls:'qualified'};return{label:'역량 강화 협력사',cls:'strengthen'}}})();</script>`;
@@ -28,13 +28,13 @@ function injectBody(html,content,marker){if(html.includes(marker))return html;re
 async function htmlResponse(response,html){const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');headers.set('content-type','text/html;charset=utf-8');headers.set('cache-control','no-store');return new Response(html,{status:response.status,statusText:response.statusText,headers})}
 async function injectShared(response,{home=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=await response.text();
-  html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=3');
+  html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=4');
   html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=3');
   html=injectHead(html,COMMON_API,'/shared/api.js?v=3');
-  html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=7');
+  html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=8');
   if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
   if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v20');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20');html=injectBody(html,IPASS_GRADE_SCRIPT,'ipass-grade-v21')}
-  if(submission)html=injectBody(html,SUBMISSION_ASSETS,'evaluation-submit-enhance.js?v=7');if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');return htmlResponse(response,html)
+  if(submission)html=injectBody(html,SUBMISSION_ASSETS,'evaluation-submit-enhance.js?v=8');if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');return htmlResponse(response,html)
 }
 async function serveAsset(request,env,path,options={}){const response=await env.ASSETS.fetch(rewriteRequest(request,path,{clearSearch:true}));return response.ok?injectShared(response,options):response}
 function needsEvaluationSchema(path){return path.startsWith('/api/admin/evaluation-management')||path.startsWith('/api/admin/evaluation-runtime')||path.startsWith('/api/admin/evaluation-scoring')||path==='/api/admin/dashboard-bundle'||path==='/api/cycles'||path==='/api/dashboard'||path==='/api/targets'||path==='/api/my/evaluations'||path.startsWith('/api/evaluations/')||path==='/api/annual-ipass'||path.startsWith('/api/admin/annual-ipass/')||path.startsWith('/api/partner/submission')}

@@ -81,6 +81,45 @@
     if(path==='/index.html'&&hasSession())history.replaceState({},'', '/home');
   }
 
+  function skeletonKind(el){
+    const id=String(el.id||el.parentElement?.id||'').toLowerCase();
+    if(path==='/evaluation-submit.html'||path==='/evaluation-scoring.html'||path==='/evaluation-management.html'||path==='/evaluation-cycle.html')return'page';
+    if(id.includes('month'))return'cards';
+    if(id.includes('table')||id.includes('list')||id.includes('notice')||id.includes('annual'))return'rows';
+    return el.closest('.content,.workspace,#content,#workspace,#app')?'page':'rows';
+  }
+
+  function skeletonMarkup(kind,label){
+    const block='<span class="ehs-skeleton-block"></span>',sr=`<span class="ehs-skeleton-sr">${String(label||'화면 준비 중').replace(/[<>&"]/g,'')}</span>`;
+    if(kind==='page')return `${sr}<div class="ehs-skeleton-cards">${Array.from({length:4},()=>`<div class="ehs-skeleton-card">${block}${block}</div>`).join('')}</div><div class="ehs-skeleton-layout"><div class="ehs-skeleton-side">${block.repeat(6)}</div><div class="ehs-skeleton-content">${Array.from({length:3},()=>`<div class="ehs-skeleton-panel">${block.repeat(4)}</div>`).join('')}</div></div>`;
+    if(kind==='cards')return `${sr}<div class="ehs-skeleton-cards">${Array.from({length:4},()=>`<div class="ehs-skeleton-card">${block}${block}</div>`).join('')}</div>`;
+    return `${sr}<div class="ehs-skeleton-rows">${Array.from({length:5},()=>`<div class="ehs-skeleton-row">${block.repeat(3)}</div>`).join('')}</div>`;
+  }
+
+  function hydrateSkeletons(root=document){
+    const nodes=[];
+    if(root?.nodeType===1&&root.matches?.('.loading'))nodes.push(root);
+    root?.querySelectorAll?.('.loading').forEach(el=>nodes.push(el));
+    for(const el of nodes){
+      if(el.classList.contains('error')||el.querySelector('.ehs-skeleton-block'))continue;
+      const label=(el.textContent||'').trim()||el.getAttribute('aria-label')||'화면 준비 중';
+      el.classList.add('ehs-skeleton-loading');el.dataset.ehsSkeletonActive='1';el.setAttribute('aria-busy','true');el.setAttribute('role','status');
+      el.innerHTML=skeletonMarkup(skeletonKind(el),label);
+    }
+  }
+
+  function clearSkeletonState(el){
+    if(el?.dataset?.ehsSkeletonActive!=='1')return;
+    el.classList.remove('loading','ehs-skeleton-loading');delete el.dataset.ehsSkeletonActive;el.removeAttribute('aria-busy');el.removeAttribute('role');
+  }
+
+  function installSkeletons(){
+    hydrateSkeletons(document);
+    if(document.documentElement.dataset.ehsSkeletonObserver==='1')return;
+    document.documentElement.dataset.ehsSkeletonObserver='1';
+    new MutationObserver(records=>{for(const record of records){const target=record.target?.nodeType===1?record.target:null;if(target?.dataset?.ehsSkeletonActive==='1'&&!target.querySelector('.ehs-skeleton-block'))clearSkeletonState(target);for(const node of record.addedNodes)if(node.nodeType===1)hydrateSkeletons(node)}}).observe(document.body,{childList:true,subtree:true});
+  }
+
   function commonHeaderHtml(){
     const committeeActive=path==='/committee'||path==='/committee.html';
     const ipassActive=path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html'||path==='/evaluation-scoring.html';
@@ -125,6 +164,7 @@
 
   function install(){
     installCommonHeader();
+    installSkeletons();
     normalizeButtons();
     wireBrand();
     wireLogout();

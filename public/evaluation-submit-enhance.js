@@ -39,7 +39,7 @@
       modal('증빙자료 미리보기',`<div class="evidence-preview-fallback"><div class="evidence-preview-icon">${escapeHtml(label.slice(0,3).toUpperCase())}</div><strong>${safeName}</strong><span>${escapeHtml(label)} · ${escapeHtml(sizeText)}</span><p>${escapeHtml(label)} 파일은 브라우저에서 원본 화면을 직접 표시할 수 없습니다.<br>파일을 다운로드하여 확인해 주세요.</p></div>`,`<button class="btn" id="closeEvidencePreview">닫기</button><button class="btn primary" id="downloadEvidencePreview">다운로드</button>`);
       document.getElementById('modal')?.classList.add('preview-open');bindPreviewActions(id);return;
     }
-    modal('증빙자료 미리보기',`<div class="evidence-preview-loading">${safeName} 파일을 불러오는 중...</div>`,`<button class="btn" id="closeEvidencePreview">닫기</button><button class="btn primary" id="downloadEvidencePreview">다운로드</button>`);
+    modal('증빙자료 미리보기',`<div class="evidence-preview-skeleton" role="status" aria-label="${safeName} 미리보기 준비 중"><div class="evidence-preview-skeleton-side"></div><div class="evidence-preview-skeleton-page"></div></div>`,`<button class="btn" id="closeEvidencePreview">닫기</button><button class="btn primary" id="downloadEvidencePreview">다운로드</button>`);
     document.getElementById('modal')?.classList.add('preview-open');bindPreviewActions(id);
     try{
       const body=document.getElementById('modalBody');if(!body)return clearPreviewObjectUrl();
@@ -146,18 +146,38 @@
       updateStorageUsage(Number(result.file?.file_size||file.size||0));recalcSummary();render();toast('파일을 첨부했습니다.');
     }catch(e){modal('파일 첨부 실패',escapeHtml(window.EHSApi?.describe?window.EHSApi.describe(e):e.message),'<button class="btn" id="modalOk">확인</button>');setTimeout(()=>{const b=document.getElementById('modalOk');if(b)b.onclick=closeModal},0)}finally{input.value=''}
   }
+  function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+  function startSubmitProgress(itemCount,resubmit){
+    const modalEl=document.getElementById('modal');let value=12,stage=1,stopped=false,timer=null,stageTimer=null;
+    const body=`<div class="submit-progress-wrap" role="status" aria-live="polite"><div class="submit-progress-heading"><div><strong>${resubmit?'변경사항을 다시 제출하고 있습니다.':'평가자료를 제출하고 있습니다.'}</strong><span>화면을 닫지 않아도 완료되면 자동으로 반영됩니다.</span></div><div class="submit-progress-count" id="submitProgressCount">1 / 3</div></div><div class="submit-progress-track" role="progressbar" aria-label="제출 처리 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="12"><span class="submit-progress-bar" id="submitProgressBar"></span></div><div class="submit-progress-meta"><strong id="submitProgressLabel">입력자료 정리</strong><span id="submitProgressPercent">12%</span></div><div class="submit-progress-steps"><div class="submit-progress-step active" data-submit-stage="1">입력자료 정리</div><div class="submit-progress-step" data-submit-stage="2">저장 및 제출</div><div class="submit-progress-step" data-submit-stage="3">결과 반영</div></div><div class="submit-progress-detail" id="submitProgressDetail">${itemCount?`변경된 ${itemCount}개 항목을 하나의 제출자료로 정리하고 있습니다.`:'제출할 평가자료를 확인하고 있습니다.'}</div></div>`;
+    modal('평가자료 제출 처리',body,'');modalEl?.classList.remove('preview-open');modalEl?.classList.add('submit-progress-open');
+    const paint=(next,nextStage,label,detail)=>{
+      if(stopped)return;value=Math.max(value,Math.min(100,next));stage=nextStage;
+      const bar=document.getElementById('submitProgressBar'),track=bar?.parentElement,percent=document.getElementById('submitProgressPercent'),count=document.getElementById('submitProgressCount'),title=document.getElementById('submitProgressLabel'),copy=document.getElementById('submitProgressDetail');
+      if(bar)bar.style.width=value+'%';if(track)track.setAttribute('aria-valuenow',String(Math.round(value)));if(percent)percent.textContent=Math.round(value)+'%';if(count)count.textContent=stage+' / 3';if(title)title.textContent=label;if(copy)copy.textContent=detail;
+      document.querySelectorAll('[data-submit-stage]').forEach(el=>{const n=Number(el.dataset.submitStage);el.classList.toggle('done',n<stage||stage===3&&n===3&&value===100);el.classList.toggle('active',n===stage&&value<100)});
+    };
+    paint(12,1,'입력자료 정리',itemCount?`변경된 ${itemCount}개 항목을 하나의 제출자료로 정리하고 있습니다.`:'제출할 평가자료를 확인하고 있습니다.');
+    stageTimer=setTimeout(()=>paint(34,2,'저장 및 제출','서버에서 평가자료를 안전하게 저장하고 제출 상태를 반영하고 있습니다.'),280);
+    timer=setInterval(()=>{if(stage<2||value>=91)return;paint(value+(value<70?4:value<86?2:1),2,'저장 및 제출','서버에서 평가자료를 안전하게 저장하고 제출 상태를 반영하고 있습니다.')},480);
+    const stop=()=>{if(stopped)return;stopped=true;clearTimeout(stageTimer);clearInterval(timer)};
+    return {
+      complete:async()=>{clearTimeout(stageTimer);clearInterval(timer);stopped=false;paint(100,3,'결과 반영 완료','평가자료가 정상적으로 제출되었습니다.');stop();await wait(520);modalEl?.classList.remove('submit-progress-open')},
+      fail:error=>{stop();modalEl?.classList.remove('submit-progress-open');document.getElementById('modalTitle').textContent='평가자료 제출 실패';document.getElementById('modalBody').innerHTML=`<div class="evidence-preview-error">${escapeHtml(window.EHSApi?.describe?window.EHSApi.describe(error):error?.message||'제출하지 못했습니다.')}</div>`;document.getElementById('modalActions').innerHTML='<button class="btn" id="submitFailClose">닫기</button><button class="btn primary" id="submitFailRetry">다시 시도</button>';document.getElementById('submitFailClose').onclick=closeModal;document.getElementById('submitFailRetry').onclick=()=>{closeModal();submitFast()}}
+    };
+  }
   function submitFast(){
     syncDirtyModel();recalcSummary();
     const summary=data.workspace.summary,resubmit=!!data.workspace.target.submitted_at;
     modal(resubmit?'변경사항 재제출':'평가자료 제출',`현재 작성률은 <b>${summary.progress}%</b>이며 미작성 항목은 <b>${summary.blank}개</b>입니다.<br><br>자료가 없는 항목은 그대로 제출할 수 있으며 평가 시 감점될 수 있습니다. 제출하시겠습니까?`,`<button class="btn" id="cancelSubmit">취소</button><button class="btn primary" id="confirmSubmit">${resubmit?'재제출':'제출완료'}</button>`);
     document.getElementById('cancelSubmit').onclick=closeModal;
     document.getElementById('confirmSubmit').onclick=async()=>{
-      const button=document.getElementById('confirmSubmit');button.disabled=true;button.textContent='제출 중...';
+      const button=document.getElementById('confirmSubmit');button.disabled=true;button.textContent='제출 준비...';const items=syncDirtyModel(),progress=startSubmitProgress(items.length,resubmit);
       try{
-        const items=syncDirtyModel(),result=await apiClient().request(`/api/partner/submission/${encodeURIComponent(targetId)}/submit`,{method:'POST',body:JSON.stringify({items})});
+        const result=await apiClient().request(`/api/partner/submission/${encodeURIComponent(targetId)}/submit`,{method:'POST',body:JSON.stringify({items})});
         dirty.clear();data.workspace.summary=result.summary||data.workspace.summary;data.workspace.target.status=result.status||'submitted';data.workspace.target.submitted_at=result.submitted_at||data.workspace.target.submitted_at||new Date().toISOString();
-        closeModal();render();toast('평가자료를 제출했습니다.');
-      }catch(e){button.disabled=false;button.textContent='다시 시도';document.getElementById('modalBody').textContent=window.EHSApi?.describe?window.EHSApi.describe(e):(e.message||'제출하지 못했습니다.')}
+        render();await progress.complete();closeModal();toast('평가자료를 제출했습니다.');
+      }catch(e){progress.fail(e)}
     };
   }
   async function confirmedDelete(id){
@@ -167,7 +187,7 @@
     document.getElementById('cancelEvidenceDelete').onclick=closeModal;document.getElementById('confirmEvidenceDelete').onclick=async()=>{const b=document.getElementById('confirmEvidenceDelete');b.disabled=true;b.textContent='삭제 중...';try{syncDirtyModel();let removed=null,owner=null;for(const item of data.workspace.items||[]){const file=(item.files||[]).find(x=>x.id===id);if(file){removed=file;owner=item;break}}await apiClient().request(`/api/partner/submission/files/${encodeURIComponent(id)}`,{method:'DELETE'});if(owner)owner.files=owner.files.filter(x=>x.id!==id);if(removed)updateStorageUsage(-Number(removed.file_size||0));recalcSummary();closeModal();render();toast('증빙자료를 삭제했습니다.')}catch(e){b.disabled=false;b.textContent='다시 시도';document.getElementById('modalBody').textContent=window.EHSApi?.describe?window.EHSApi.describe(e):(e.message||'삭제하지 못했습니다.')}};
   }
   function installActionCapture(){
-    document.addEventListener('click',e=>{const pv=e.target.closest?.('[data-preview-file]');if(pv){e.preventDefault();e.stopImmediatePropagation();previewFile(pv.dataset.previewFile,pv.dataset.fileName,Number(pv.dataset.fileSize||0),pv.dataset.contentType||'');return}const dl=e.target.closest?.('[data-download]');if(dl){e.preventDefault();e.stopImmediatePropagation();authenticatedDownload(dl.dataset.download);return}const del=e.target.closest?.('[data-delete-file]');if(del){e.preventDefault();e.stopImmediatePropagation();confirmedDelete(del.dataset.deleteFile)}},true);
+    document.addEventListener('click',e=>{const modalEl=document.getElementById('modal');if(e.target===modalEl&&modalEl.classList.contains('submit-progress-open')){e.preventDefault();e.stopImmediatePropagation();return}const pv=e.target.closest?.('[data-preview-file]');if(pv){e.preventDefault();e.stopImmediatePropagation();previewFile(pv.dataset.previewFile,pv.dataset.fileName,Number(pv.dataset.fileSize||0),pv.dataset.contentType||'');return}const dl=e.target.closest?.('[data-download]');if(dl){e.preventDefault();e.stopImmediatePropagation();authenticatedDownload(dl.dataset.download);return}const del=e.target.closest?.('[data-delete-file]');if(del){e.preventDefault();e.stopImmediatePropagation();confirmedDelete(del.dataset.deleteFile)}},true);
     const modalEl=document.getElementById('modal');if(modalEl)new MutationObserver(()=>{if(modalEl.classList.contains('hidden'))clearPreviewObjectUrl()}).observe(modalEl,{attributes:true,attributeFilter:['class']});
   }
   function patchFunctions(){
