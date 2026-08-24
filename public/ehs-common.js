@@ -91,9 +91,9 @@
 
   function skeletonMarkup(kind,label){
     const block='<span class="ehs-skeleton-block"></span>',sr=`<span class="ehs-skeleton-sr">${String(label||'화면 준비 중').replace(/[<>&"]/g,'')}</span>`;
-    if(kind==='page')return `${sr}<div class="ehs-skeleton-cards">${Array.from({length:4},()=>`<div class="ehs-skeleton-card">${block}${block}</div>`).join('')}</div><div class="ehs-skeleton-layout"><div class="ehs-skeleton-side">${block.repeat(6)}</div><div class="ehs-skeleton-content">${Array.from({length:3},()=>`<div class="ehs-skeleton-panel">${block.repeat(4)}</div>`).join('')}</div></div>`;
-    if(kind==='cards')return `${sr}<div class="ehs-skeleton-cards">${Array.from({length:4},()=>`<div class="ehs-skeleton-card">${block}${block}</div>`).join('')}</div>`;
-    return `${sr}<div class="ehs-skeleton-rows">${Array.from({length:5},()=>`<div class="ehs-skeleton-row">${block.repeat(3)}</div>`).join('')}</div>`;
+    if(kind==='page')return `${sr}<div class="ehs-skeleton-cards">${Array.from({length:3},()=>`<div class="ehs-skeleton-card">${block}</div>`).join('')}</div><div class="ehs-skeleton-panel">${block.repeat(5)}</div>`;
+    if(kind==='cards')return `${sr}<div class="ehs-skeleton-cards">${Array.from({length:3},()=>`<div class="ehs-skeleton-card">${block}</div>`).join('')}</div>`;
+    return `${sr}<div class="ehs-skeleton-rows">${Array.from({length:4},()=>`<div class="ehs-skeleton-row">${block}${block}</div>`).join('')}</div>`;
   }
 
   function hydrateSkeletons(root=document){
@@ -117,7 +117,9 @@
     hydrateSkeletons(document);
     if(document.documentElement.dataset.ehsSkeletonObserver==='1')return;
     document.documentElement.dataset.ehsSkeletonObserver='1';
-    new MutationObserver(records=>{for(const record of records){const target=record.target?.nodeType===1?record.target:null;if(target?.dataset?.ehsSkeletonActive==='1'&&!target.querySelector('.ehs-skeleton-block'))clearSkeletonState(target);for(const node of record.addedNodes)if(node.nodeType===1)hydrateSkeletons(node)}}).observe(document.body,{childList:true,subtree:true});
+    const pending=new Set();let frame=0;
+    const flush=()=>{frame=0;for(const node of pending)hydrateSkeletons(node);pending.clear()};
+    new MutationObserver(records=>{for(const record of records){const target=record.target?.nodeType===1?record.target:null;if(target?.dataset?.ehsSkeletonActive==='1'&&!target.querySelector('.ehs-skeleton-block'))clearSkeletonState(target);for(const node of record.addedNodes)if(node.nodeType===1)pending.add(node)}if(pending.size&&!frame)frame=requestAnimationFrame(flush)}).observe(document.body,{childList:true,subtree:true});
   }
 
   function commonHeaderHtml(){
@@ -138,16 +140,25 @@
     </div></header>`;
   }
 
-  function populateCommonHeader(){
-    if(!STANDALONE||!window.EHSAuth?.requireUser)return;
-    window.EHSAuth.requireUser().then(user=>{
+  function applyCommonHeaderUser(user){
+    if(!user)return;
       const name=[user.position,user.name].filter(Boolean).join(' ')||user.email||'사용자';
       const company=user.company_name||(user.role==='admin'?'이루자':'협력사');
       const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
       set('ehsGlobalName',name);set('ehsGlobalMenuName',name);set('ehsGlobalCompany',company);set('ehsGlobalRole',user.role==='admin'?'관리자 계정':'협력사 계정');set('ehsGlobalAvatar',name.trim().slice(0,1).toUpperCase());
       const unread=Number(user.unread_notification_count||0),badge=document.getElementById('ehsGlobalUnread');if(badge){badge.textContent=String(unread);badge.classList.toggle('show',unread>0)}
       document.querySelectorAll('.ehs-admin-only').forEach(el=>el.classList.toggle('hidden',user.role!=='admin'));
-    }).catch(()=>{});
+  }
+
+  function populateCommonHeader(){
+    if(!STANDALONE)return;
+    if(document.documentElement.dataset.ehsUserListener!=='1'){
+      document.documentElement.dataset.ehsUserListener='1';
+      document.addEventListener('ehs:user-ready',event=>applyCommonHeaderUser(event.detail));
+    }
+    if(window.__EHS_PAGE_USER){applyCommonHeaderUser(window.__EHS_PAGE_USER);return}
+    if(path==='/evaluation-submit.html'||!window.EHSAuth?.requireUser)return;
+    window.EHSAuth.requireUser().then(applyCommonHeaderUser).catch(()=>{});
   }
 
   function installCommonHeader(){

@@ -76,26 +76,11 @@ async function reserve(env,targetId,fileSize){
 }
 async function release(env,id){if(!id)return;await env.partner_evaluation_db.prepare(`DELETE FROM evaluation_upload_reservations_v2 WHERE id=?`).bind(id).run().catch(()=>{});globalUsageCache=null}
 
-async function augmentWorkspaceResponse(response,env,targetId){
-  if(!response?.ok)return response;
-  const type=response.headers.get('content-type')||'';if(!type.includes('application/json'))return response;
-  const data=await response.clone().json().catch(()=>null);if(!data?.success)return response;
-  const usage=await storageUsage(env,targetId);
-  data.capabilities={...(data.capabilities||{}),storage_limits:{global_gb:8.5,company_cycle_mb:500},storage_usage:usage};
-  const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');
-  return new Response(JSON.stringify(data),{status:response.status,statusText:response.statusText,headers});
-}
-
 export async function handlePartnerSubmissionWithQuota(request,env,ctx,baseWorker){
   const url=new URL(request.url),path=url.pathname;if(!path.startsWith('/api/partner/submission'))return null;
+  const upload=/^\/api\/partner\/submission\/[^/]+\/items\/[^/]+\/files$/.test(path)&&request.method==='POST';
+  if(!upload)return handlePartnerSubmission(request,env,ctx,baseWorker);
   try{await ensureQuotaSchema(env)}catch(e){console.error('quota schema init failed',e);return json({success:false,error:'증빙자료 저장공간을 준비하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',code:'STORAGE_INIT_FAILED'},503)}
-
-  const root=path.match(/^\/api\/partner\/submission\/([^/]+)$/);
-  if(root&&request.method==='GET'){
-    const targetId=decodeURIComponent(root[1]);
-    const response=await handlePartnerSubmission(request,env,ctx,baseWorker);
-    try{return await augmentWorkspaceResponse(response,env,targetId)}catch(e){console.error('quota usage read failed',e);return response}
-  }
 
   // Multipart data is parsed once by the core handler. It invokes these hooks
   // after validating the file, avoiding a second read of uploads up to 25 MB.
