@@ -8,10 +8,10 @@ import { handleSystemAdmin, recordRequestAudit } from './system-admin.js';
 import { handleEvaluationScoring } from './evaluation-scoring.js';
 
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
-const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=2">';
+const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=3">';
 const COMMON_AUTH='<script src="/shared/auth.js?v=2"></script>';
 const COMMON_API='<script src="/shared/api.js?v=2"></script>';
-const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=5"></script>';
+const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=6"></script>';
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{if(!window.EHSAuth||!window.EHSAuth.readSession())window.EHSAuth?window.EHSAuth.redirectToLogin("/home"):location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
 const SUBMISSION_ASSETS='<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=2"><script src="/evaluation-submit-enhance.js?v=3"></script>';
 const EMBED_STYLE='<style id="ipass-embedded-style">body{background:#f5f7f9!important}.header{display:none!important}.layout{min-height:100vh!important}.side{top:0!important;height:100vh!important}.main{padding-top:20px!important}.shell{padding-top:20px!important}.page-head{margin-top:0!important}</style>';
@@ -27,10 +27,10 @@ function injectBody(html,content,marker){if(html.includes(marker))return html;re
 async function htmlResponse(response,html){const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');headers.set('content-type','text/html;charset=utf-8');headers.set('cache-control','no-store');return new Response(html,{status:response.status,statusText:response.statusText,headers})}
 async function injectShared(response,{home=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=await response.text();
-  html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=2');
+  html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=3');
   html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=2');
   html=injectHead(html,COMMON_API,'/shared/api.js?v=2');
-  html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=5');
+  html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=6');
   if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
   if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v20');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20')}
   if(submission)html=injectBody(html,SUBMISSION_ASSETS,'evaluation-submit-enhance.js?v=3');if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');return htmlResponse(response,html)
