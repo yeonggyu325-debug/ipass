@@ -5,7 +5,7 @@ function round1(v){return Math.round(Number(v||0)*10)/10}
 
 async function ensureColumn(env,table,column,definition){
   const {results}=await env.partner_evaluation_db.prepare(`PRAGMA table_info(${table})`).all();
-  if(!(results||[]).some(x=>x.name===column))await env.partner_evaluation_db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+  if(!(results||[]).some(x=>x.name===column))try{await env.partner_evaluation_db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run()}catch(e){if(!String(e?.message||e).toLowerCase().includes('duplicate column'))throw e}
 }
 async function ensureSchema(env){
   await env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_scoring_logs_v2 (
@@ -22,6 +22,8 @@ async function ensureSchema(env){
   await ensureColumn(env,'evaluation_targets_v2','raw_score','REAL');
   await ensureColumn(env,'evaluation_targets_v2','finalized_by','TEXT');
   await ensureColumn(env,'evaluation_targets_v2','published_by','TEXT');
+  await ensureColumn(env,'evaluation_target_items_v2','needs_rescore','INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn(env,'evaluation_target_items_v2','partner_changed_at','TEXT');
 }
 async function admin(request,env,ctx,innerApp){
   const url=new URL(request.url);url.pathname='/api/me';url.search='';
@@ -38,7 +40,7 @@ async function target(env,id){
   return env.partner_evaluation_db.prepare(`SELECT et.*,c.company_name,c.industry_name,ec.year,ec.half,ec.cycle_name,ec.status AS cycle_status,ec.start_at,ec.end_at FROM evaluation_targets_v2 et JOIN companies c ON c.id=et.company_id JOIN evaluation_cycles_v2 ec ON ec.id=et.cycle_id WHERE et.id=? AND et.is_selected=1 LIMIT 1`).bind(id).first();
 }
 async function items(env,targetId){
-  const {results}=await env.partner_evaluation_db.prepare(`SELECT id,target_id,template_item_id,item_code,item_name,item_type,max_score,category_name,parent_category_name,applicable,na_source,manual_na_reason,description,earned_score,evaluation_comment,evaluated_at,updated_at FROM evaluation_target_items_v2 WHERE target_id=? ORDER BY sort_order,item_code,item_name`).bind(targetId).all();
+  const {results}=await env.partner_evaluation_db.prepare(`SELECT id,target_id,template_item_id,item_code,item_name,item_type,max_score,category_name,parent_category_name,applicable,na_source,manual_na_reason,description,earned_score,evaluation_comment,evaluated_at,needs_rescore,partner_changed_at,updated_at FROM evaluation_target_items_v2 WHERE target_id=? ORDER BY sort_order,item_code,item_name`).bind(targetId).all();
   return results||[];
 }
 function scoreSummary(rows){
@@ -51,7 +53,8 @@ function scoreSummary(rows){
   const bonusEarned=bonus.reduce((s,x)=>s+Number(x.earned_score||0),0);
   const raw=round1(Math.min(100,Math.max(0,normalizedBase+bonusEarned)));
   const unevaluated=applicable.filter(x=>x.earned_score===null||x.earned_score===undefined).length;
-  return {raw_score:raw,base_max:round1(baseMax),base_earned:round1(baseEarned),normalized_base:round1(normalizedBase),bonus_earned:round1(bonusEarned),applicable_count:applicable.length,na_count:rows.length-applicable.length,unevaluated_count:unevaluated,complete:unevaluated===0};
+  const needsRescore=applicable.filter(x=>Number(x.needs_rescore)===1).length;
+  return {raw_score:raw,base_max:round1(baseMax),base_earned:round1(baseEarned),normalized_base:round1(normalizedBase),bonus_earned:round1(bonusEarned),applicable_count:applicable.length,na_count:rows.length-applicable.length,unevaluated_count:unevaluated,needs_rescore_count:needsRescore,complete:unevaluated===0&&needsRescore===0};
 }
 async function bundle(env,targetId){
   const t=await target(env,targetId);if(!t)return null;
@@ -87,12 +90,13 @@ export async function handleEvaluationScoring(request,env,ctx,innerApp){
     const body=await request.json(),score=num(body.earned_score),max=Number(row.max_score||0);
     if(score===null||score<0||score>max)return json({success:false,error:`점수는 0점 이상 ${max}점 이하로 입력하세요.`,code:'INVALID_SCORE'},400);
     const comment=clean(body.evaluation_comment,3000)||null;
-    const before={earned_score:row.earned_score,evaluation_comment:row.evaluation_comment};
+    const before={earned_score:row.earned_score,evaluation_comment:row.evaluation_comment,needs_rescore:Number(row.needs_rescore)===1};
     await env.partner_evaluation_db.batch([
-      env.partner_evaluation_db.prepare(`UPDATE evaluation_target_items_v2 SET earned_score=?,evaluation_comment=?,evaluated_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(score,comment,itemId),
+      env.partner_evaluation_db.prepare(`UPDATE evaluation_target_items_v2 SET earned_score=?,evaluation_comment=?,needs_rescore=0,evaluated_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(score,comment,itemId),
       env.partner_evaluation_db.prepare(`UPDATE evaluation_targets_v2 SET status=CASE WHEN status='submitted' THEN 'evaluating' ELSE status END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(targetId)
     ]);
-    await log(env,targetId,itemId,t.status==='completed'||t.status==='published'?'score_changed_after_completion':'item_scored',before,{earned_score:score,evaluation_comment:comment},auth.user.id);
+    const action=Number(row.needs_rescore)===1?'item_rechecked':(t.status==='completed'||t.status==='published'?'score_changed_after_completion':'item_scored');
+    await log(env,targetId,itemId,action,before,{earned_score:score,evaluation_comment:comment,needs_rescore:false},auth.user.id);
     const data=await bundle(env,targetId);await env.partner_evaluation_db.prepare(`UPDATE evaluation_targets_v2 SET raw_score=? WHERE id=?`).bind(data.summary.raw_score,targetId).run();
     return json({success:true,workspace:data});
   }
@@ -100,8 +104,9 @@ export async function handleEvaluationScoring(request,env,ctx,innerApp){
   const complete=path.match(/^\/api\/admin\/evaluation-scoring\/([^/]+)\/complete$/);
   if(complete&&request.method==='POST'){
     const targetId=decodeURIComponent(complete[1]),data=await bundle(env,targetId);if(!data)return json({success:false,error:'평가대상을 찾을 수 없습니다.',code:'TARGET_NOT_FOUND'},404);
-    if(!['submitted','evaluating','completed','published'].includes(data.target.status))return json({success:false,error:'제출된 평가자료만 평가완료 처리할 수 있습니다.',code:'TARGET_NOT_SUBMITTED'},409);
-    if(!data.summary.complete)return json({success:false,error:`미채점 항목 ${data.summary.unevaluated_count}개가 남아 있습니다.`,code:'UNEVALUATED_ITEMS',summary:data.summary},409);
+    if(!['submitted','evaluating','completed'].includes(data.target.status))return json({success:false,error:'제출된 평가자료만 평가완료 처리할 수 있습니다.',code:'TARGET_NOT_SUBMITTED'},409);
+    if(data.summary.unevaluated_count>0)return json({success:false,error:`미채점 항목 ${data.summary.unevaluated_count}개가 남아 있습니다.`,code:'UNEVALUATED_ITEMS',summary:data.summary},409);
+    if(data.summary.needs_rescore_count>0)return json({success:false,error:`재확인이 필요한 항목 ${data.summary.needs_rescore_count}개가 남아 있습니다.`,code:'RESCORE_REQUIRED',summary:data.summary},409);
     await env.partner_evaluation_db.prepare(`UPDATE evaluation_targets_v2 SET status='completed',raw_score=?,finalized_at=CURRENT_TIMESTAMP,finalized_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(data.summary.raw_score,auth.user.id,targetId).run();
     await log(env,targetId,null,'evaluation_completed',{status:data.target.status},{status:'completed',raw_score:data.summary.raw_score},auth.user.id);
     return json({success:true,workspace:await bundle(env,targetId)});
