@@ -11,6 +11,7 @@ const FIREBASE_LOOKUP_CACHE_MAX = 300;
 const APPROVED_ACCOUNT_CACHE = new Map();
 const APPROVED_ACCOUNT_TTL_MS = 30 * 1000;
 const APPROVED_ACCOUNT_CACHE_MAX = 500;
+let committeeTargetPreferenceSchemaReady = null;
 
 export default {
   async fetch(request, env, ctx) {
@@ -335,6 +336,9 @@ export default {
       }
 
       // ===== Safety & Health Committee =====
+      if (path === "/api/committee" || path.startsWith("/api/admin/committee")) {
+        await ensureCommitteeTargetPreferenceSchema(env);
+      }
       if (request.method === "GET" && path === "/api/committee") {
         const year = parseAnnualYear(url.searchParams.get("year"));
         if (user.role === "admin") {
@@ -537,15 +541,62 @@ export default {
         const title = `${year}년 ${month}월 안전보건협의체`;
         const note = String(body.note || "").trim() || null;
         try {
-          await env.partner_evaluation_db.prepare(`
-            INSERT INTO committee_meetings (id, year, meeting_month, meeting_date, title, note, status, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)
-          `).bind(id, year, month, meetingDate, title, note, user.id).run();
+          const [companyResult, departmentResult] = await env.partner_evaluation_db.batch([
+            env.partner_evaluation_db.prepare(`
+              SELECT c.id
+              FROM companies c
+              LEFT JOIN committee_target_preferences p ON p.entity_type = 'partner' AND p.entity_id = c.id
+              WHERE c.status = 'active' AND COALESCE(p.is_target, 1) = 1
+              ORDER BY c.company_name COLLATE NOCASE
+            `),
+            env.partner_evaluation_db.prepare(`
+              SELECT d.id
+              FROM committee_departments d
+              LEFT JOIN committee_target_preferences p ON p.entity_type = 'department' AND p.entity_id = d.id
+              WHERE d.is_active = 1 AND COALESCE(p.is_target, 1) = 1
+              ORDER BY d.sort_order, d.department_name
+            `)
+          ]);
+          const statements = [env.partner_evaluation_db.prepare(`
+              INSERT INTO committee_meetings (id, year, meeting_month, meeting_date, title, note, status, created_by)
+              VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)
+            `).bind(id, year, month, meetingDate, title, note, user.id)];
+          for (const company of companyResult?.results || []) statements.push(env.partner_evaluation_db.prepare(`
+            INSERT INTO committee_partner_attendance
+              (id, meeting_id, company_id, attendance_status, attendee_position, attendee_name, note, updated_by, updated_at)
+            VALUES (?, ?, ?, 'pending', NULL, NULL, NULL, ?, CURRENT_TIMESTAMP)
+          `).bind(crypto.randomUUID(), id, company.id, user.id));
+          for (const department of departmentResult?.results || []) statements.push(env.partner_evaluation_db.prepare(`
+            INSERT INTO committee_department_attendance
+              (id, meeting_id, department_id, attendance_status, attendee_position, attendee_name, note, updated_by, updated_at)
+            VALUES (?, ?, ?, 'pending', NULL, NULL, NULL, ?, CURRENT_TIMESTAMP)
+          `).bind(crypto.randomUUID(), id, department.id, user.id));
+          await env.partner_evaluation_db.batch(statements);
         } catch (e) {
           if (String(e?.message || "").toLowerCase().includes("unique")) return json({ success: false, error: `${year}년 ${month}월 협의체는 이미 등록되어 있습니다. 월별 1개만 생성할 수 있습니다.` }, 409);
           throw e;
         }
-        return json({ success: true, meeting: { id, year, meeting_month: month, meeting_date: meetingDate, title, note, status: "draft", partners: [], departments: [] } }, 201);
+        const meeting = await committeeMeetingDetail(env, id);
+        return json({ success: true, meeting }, 201);
+      }
+
+      const previousCommitteeMatch = path.match(/^\/api\/admin\/committee\/([^/]+)\/previous-attendees$/);
+      if (user.role === "admin" && previousCommitteeMatch && request.method === "GET") {
+        const meetingId = decodeURIComponent(previousCommitteeMatch[1]);
+        const current = await env.partner_evaluation_db.prepare(`
+          SELECT id, year, meeting_month FROM committee_meetings WHERE id = ? LIMIT 1
+        `).bind(meetingId).first();
+        if (!current) return json({ success: false, error: "협의체 회차를 찾을 수 없습니다." }, 404);
+        const previous = await env.partner_evaluation_db.prepare(`
+          SELECT id, year, meeting_month, meeting_date, title
+          FROM committee_meetings
+          WHERE year < ? OR (year = ? AND meeting_month < ?)
+          ORDER BY year DESC, meeting_month DESC
+          LIMIT 1
+        `).bind(current.year, current.year, current.meeting_month).first();
+        if (!previous) return json({ success: true, previous_meeting: null, partners: [], departments: [] });
+        const detail = await committeeMeetingDetail(env, previous.id);
+        return json({ success: true, previous_meeting: previous, partners: detail?.partners || [], departments: detail?.departments || [] });
       }
 
       const committeeAdminMatch = path.match(/^\/api\/admin\/committee\/([^/]+)$/);
@@ -569,7 +620,7 @@ export default {
         if (!beforeMeeting) return json({ success: false, error: "협의체 회차를 찾을 수 없습니다." }, 404);
 
         if (beforeMeeting.status === "finalized" && body.reopen !== true) {
-          return json({ success: false, error: "확정된 협의체 회차입니다. 재오픈 후에만 수정할 수 있습니다.", locked: true }, 409);
+          return json({ success: false, error: "완료된 협의체 회차입니다. 수정 기능으로 다시 저장하세요.", locked: true }, 409);
         }
         if (body.expected_updated_at && String(body.expected_updated_at) !== String(beforeMeeting.updated_at)) {
           return json({ success: false, error: "다른 관리자가 먼저 저장했습니다. 새로고침 후 다시 시도하세요.", conflict: true }, 409);
@@ -583,16 +634,19 @@ export default {
 
         const partners = normalizeCommitteeRows(Array.isArray(body.partners) ? body.partners : [], "company_id", "협력사");
         const departments = normalizeCommitteeRows(Array.isArray(body.departments) ? body.departments : [], "department_id", "부서");
+        const partnerPreferenceChanges = normalizeCommitteePreferenceChanges(body.preference_changes?.partners);
+        const departmentPreferenceChanges = normalizeCommitteePreferenceChanges(body.preference_changes?.departments);
         const activeCompanies = new Map((activeCompanyResult?.results || []).map(r => [r.id, r]));
         const activeDepartments = new Map((activeDepartmentResult?.results || []).map(r => [r.id, r]));
         for (const row of partners) if (!activeCompanies.has(row.company_id)) return json({ success: false, error: "등록되지 않았거나 비활성화된 협력사가 포함되어 있습니다." }, 400);
         for (const row of departments) if (!activeDepartments.has(row.department_id)) return json({ success: false, error: "등록되지 않았거나 비활성화된 부서가 포함되어 있습니다." }, 400);
+        for (const row of partnerPreferenceChanges) if (!activeCompanies.has(row.entity_id)) return json({ success: false, error: "대상 설정에 비활성 협력사가 포함되어 있습니다." }, 400);
+        for (const row of departmentPreferenceChanges) if (!activeDepartments.has(row.entity_id)) return json({ success: false, error: "대상 설정에 비활성 부서가 포함되어 있습니다." }, 400);
 
         const requestedStatus = body.finalize === true ? "finalized" : (body.status === "draft" ? "draft" : beforeMeeting.status);
         if (requestedStatus === "finalized") {
-          if (!partners.length) return json({ success: false, error: "이 달 협의체 대상 협력사를 1개 이상 선택하세요." }, 400);
-          if (partners.some(r => r.attendance_status === "pending")) return json({ success: false, error: "선택한 모든 협력사의 참석 또는 불참을 지정한 뒤 확정하세요." }, 400);
-          if (departments.some(r => r.attendance_status === "pending")) return json({ success: false, error: "선택한 사내 부서의 참석 또는 불참을 지정한 뒤 확정하세요." }, 400);
+          if (partners.some(r => r.attendance_status === "pending")) return json({ success: false, error: "선택한 모든 협력사의 참석 또는 불참을 지정한 뒤 완료하세요." }, 400);
+          if (departments.some(r => r.attendance_status === "pending")) return json({ success: false, error: "선택한 이루자 유관부서의 참석 또는 불참을 지정한 뒤 완료하세요." }, 400);
         }
 
         const title = `${year}년 ${month}월 안전보건협의체`;
@@ -602,6 +656,17 @@ export default {
         const nextPartnerIds = new Set(partners.map(r => r.company_id));
         const nextDepartmentIds = new Set(departments.map(r => r.department_id));
         const statements = [];
+
+        for (const row of partnerPreferenceChanges) statements.push(env.partner_evaluation_db.prepare(`
+          INSERT INTO committee_target_preferences (entity_type, entity_id, is_target, updated_by, updated_at)
+          VALUES ('partner', ?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(entity_type, entity_id) DO UPDATE SET is_target = excluded.is_target, updated_by = excluded.updated_by, updated_at = CURRENT_TIMESTAMP
+        `).bind(row.entity_id, row.is_target ? 1 : 0, user.id));
+        for (const row of departmentPreferenceChanges) statements.push(env.partner_evaluation_db.prepare(`
+          INSERT INTO committee_target_preferences (entity_type, entity_id, is_target, updated_by, updated_at)
+          VALUES ('department', ?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(entity_type, entity_id) DO UPDATE SET is_target = excluded.is_target, updated_by = excluded.updated_by, updated_at = CURRENT_TIMESTAMP
+        `).bind(row.entity_id, row.is_target ? 1 : 0, user.id));
 
         statements.push(env.partner_evaluation_db.prepare(`
           UPDATE committee_meetings
@@ -716,7 +781,7 @@ export default {
         const before = meetingResult?.results?.[0];
         if (!before) return json({ success: false, error: "협의체 회차를 찾을 수 없습니다." }, 404);
         if (before.status === "finalized" && !url.searchParams.has("force")) {
-          return json({ success: false, error: "확정된 협의체 회차는 삭제할 수 없습니다. 필요하면 재오픈 후 삭제하세요.", locked: true }, 409);
+          return json({ success: false, error: "완료된 협의체 회차는 바로 삭제할 수 없습니다.", locked: true }, 409);
         }
         await env.partner_evaluation_db.prepare(`DELETE FROM committee_meetings WHERE id = ?`).bind(meetingId).run();
         const pairs = (partnerResult?.results || []).map(r => ({ companyId: r.company_id, year: Number(before.year) }));
@@ -1497,6 +1562,43 @@ function parseCommitteeAttendeeList(positionValue, nameValue, label) {
     attendees.push({ position, name });
   }
   return attendees;
+}
+
+async function ensureCommitteeTargetPreferenceSchema(env) {
+  if (committeeTargetPreferenceSchemaReady) return committeeTargetPreferenceSchemaReady;
+  committeeTargetPreferenceSchemaReady = env.partner_evaluation_db.batch([
+    env.partner_evaluation_db.prepare(`
+      CREATE TABLE IF NOT EXISTS committee_target_preferences (
+        entity_type TEXT NOT NULL CHECK(entity_type IN ('partner','department')),
+        entity_id TEXT NOT NULL,
+        is_target INTEGER NOT NULL DEFAULT 1 CHECK(is_target IN (0,1)),
+        updated_by TEXT,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(entity_type, entity_id)
+      )
+    `),
+    env.partner_evaluation_db.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_committee_target_preferences_active
+      ON committee_target_preferences(entity_type, is_target)
+    `)
+  ]).catch(error => {
+    committeeTargetPreferenceSchemaReady = null;
+    throw error;
+  });
+  return committeeTargetPreferenceSchemaReady;
+}
+
+function normalizeCommitteePreferenceChanges(rows) {
+  if (!Array.isArray(rows)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const raw of rows) {
+    const entityId = String(raw?.entity_id || "").trim();
+    if (!entityId || seen.has(entityId)) continue;
+    seen.add(entityId);
+    out.push({ entity_id: entityId, is_target: raw?.is_target === true || raw?.is_target === 1 });
+  }
+  return out;
 }
 
 function normalizeCommitteeRows(rows, key, label) {

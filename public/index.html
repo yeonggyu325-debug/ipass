@@ -1901,7 +1901,7 @@ async function routeAfterLogin(me){
   currentUser=me.user;
   $("publicPortal").classList.add("hidden");
   $("app").classList.remove("hidden");
-  const displayName=currentUser.name||currentUser.email||"사용자";
+  const displayName=[currentUser.position,currentUser.name].filter(Boolean).join(" ")||currentUser.email||"사용자";
   const company=currentUser.company_name||"협력사";
   $("userLabel").textContent=displayName;
   $("userCompanyLabel").textContent=company;
