@@ -46,6 +46,7 @@ function shouldAudit(method,path,status){if(!isApi(path))return false;if(method!
 async function core(request,env,ctx){
   const url=new URL(request.url),path=url.pathname;
   if(request.method==='GET'&&IPASS_PATHS.has(path))return serveAsset(request,env,'/ipass.html');
+  if(request.method==='GET'&&path==='/evaluation-scoring.html')return serveAsset(request,env,'/evaluation-scoring.html');
   if(request.method==='GET'&&path==='/committee.html'){const next=new URL(request.url);next.pathname='/committee';return Response.redirect(next.toString(),302)}
   if(request.method==='GET'&&path==='/committee')return serveAsset(request,env,'/committee.html');
   if(request.method==='GET'&&path==='/home'){
