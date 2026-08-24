@@ -72,6 +72,47 @@ export async function ensureEvaluationManagementSchema(env){
       detail_json TEXT,
       changed_by TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_template_settings_v2 (
+      template_id TEXT PRIMARY KEY,
+      concept_text TEXT,
+      excellent_min REAL NOT NULL DEFAULT 90,
+      qualified_min REAL NOT NULL DEFAULT 70,
+      first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1,
+      exemption_threshold REAL NOT NULL DEFAULT 90,
+      normal_first_half_weight REAL NOT NULL DEFAULT 40,
+      normal_second_half_weight REAL NOT NULL DEFAULT 40,
+      exempt_second_half_weight REAL NOT NULL DEFAULT 80,
+      committee_weight REAL NOT NULL DEFAULT 10,
+      industrial_accident_weight REAL NOT NULL DEFAULT 10,
+      score_cap REAL NOT NULL DEFAULT 100,
+      bonus_cap REAL NOT NULL DEFAULT 5,
+      manual_publish INTEGER NOT NULL DEFAULT 1,
+      allow_partner_edits INTEGER NOT NULL DEFAULT 1,
+      preserve_score_on_edit INTEGER NOT NULL DEFAULT 1,
+      updated_by TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_cycle_settings_v2 (
+      cycle_id TEXT PRIMARY KEY,
+      source_template_id TEXT,
+      concept_text TEXT,
+      excellent_min REAL NOT NULL DEFAULT 90,
+      qualified_min REAL NOT NULL DEFAULT 70,
+      first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1,
+      exemption_threshold REAL NOT NULL DEFAULT 90,
+      normal_first_half_weight REAL NOT NULL DEFAULT 40,
+      normal_second_half_weight REAL NOT NULL DEFAULT 40,
+      exempt_second_half_weight REAL NOT NULL DEFAULT 80,
+      committee_weight REAL NOT NULL DEFAULT 10,
+      industrial_accident_weight REAL NOT NULL DEFAULT 10,
+      score_cap REAL NOT NULL DEFAULT 100,
+      bonus_cap REAL NOT NULL DEFAULT 5,
+      manual_publish INTEGER NOT NULL DEFAULT 1,
+      allow_partner_edits INTEGER NOT NULL DEFAULT 1,
+      preserve_score_on_edit INTEGER NOT NULL DEFAULT 1,
+      updated_by TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`)
   ]);
   schemaReady=true;

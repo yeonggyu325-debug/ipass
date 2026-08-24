@@ -1,4 +1,5 @@
 const DEFAULT_POLICY={excellence_threshold:90,first_half_exempt_enabled:1,normal_first_half_weight:40,normal_second_half_weight:40,exempt_second_half_weight:80,committee_weight:10,industrial_accident_weight:10};
+const DEFAULT_TEMPLATE_SETTINGS={concept_text:'',excellent_min:90,qualified_min:70,first_half_exempt_enabled:1,exemption_threshold:90,normal_first_half_weight:40,normal_second_half_weight:40,exempt_second_half_weight:80,committee_weight:10,industrial_accident_weight:10,score_cap:100,bonus_cap:5,manual_publish:1,allow_partner_edits:1,preserve_score_on_edit:1};
 
 const DEFAULT_ITEMS=[
   {code:'B1',category:'가점',type:'bonus',name:'안전보건경영시스템 구축 및 운영',score:3,guide:'아래 항목 중 1개만 인정(각 3점, 중복 인정 불가): ISO45001 인증서, KOSHA-MS 인증서, 위험성평가 인정서(100인 미만).',submission:'인증서 또는 인정서 증빙자료를 제출하세요.'},
@@ -42,7 +43,9 @@ async function ensureSchema(env){
     env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_na_rules_v2_item ON evaluation_na_rules_v2(item_id,sort_order)`),
     env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS ipass_policy_settings_v2 (id INTEGER PRIMARY KEY CHECK(id=1), excellence_threshold REAL NOT NULL DEFAULT 90, first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1, normal_first_half_weight REAL NOT NULL DEFAULT 40, normal_second_half_weight REAL NOT NULL DEFAULT 40, exempt_second_half_weight REAL NOT NULL DEFAULT 80, committee_weight REAL NOT NULL DEFAULT 10, industrial_accident_weight REAL NOT NULL DEFAULT 10, updated_by TEXT, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
     env.partner_evaluation_db.prepare(`INSERT OR IGNORE INTO ipass_policy_settings_v2 (id,excellence_threshold,first_half_exempt_enabled,normal_first_half_weight,normal_second_half_weight,exempt_second_half_weight,committee_weight,industrial_accident_weight) VALUES (1,90,1,40,40,80,10,10)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_template_logs_v2 (id TEXT PRIMARY KEY, template_id TEXT, action TEXT NOT NULL, detail_json TEXT, changed_by TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
+    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_template_logs_v2 (id TEXT PRIMARY KEY, template_id TEXT, action TEXT NOT NULL, detail_json TEXT, changed_by TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
+    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_template_settings_v2 (template_id TEXT PRIMARY KEY,concept_text TEXT,excellent_min REAL NOT NULL DEFAULT 90,qualified_min REAL NOT NULL DEFAULT 70,first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1,exemption_threshold REAL NOT NULL DEFAULT 90,normal_first_half_weight REAL NOT NULL DEFAULT 40,normal_second_half_weight REAL NOT NULL DEFAULT 40,exempt_second_half_weight REAL NOT NULL DEFAULT 80,committee_weight REAL NOT NULL DEFAULT 10,industrial_accident_weight REAL NOT NULL DEFAULT 10,score_cap REAL NOT NULL DEFAULT 100,bonus_cap REAL NOT NULL DEFAULT 5,manual_publish INTEGER NOT NULL DEFAULT 1,allow_partner_edits INTEGER NOT NULL DEFAULT 1,preserve_score_on_edit INTEGER NOT NULL DEFAULT 1,updated_by TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
+    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_cycle_settings_v2 (cycle_id TEXT PRIMARY KEY,source_template_id TEXT,concept_text TEXT,excellent_min REAL NOT NULL DEFAULT 90,qualified_min REAL NOT NULL DEFAULT 70,first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1,exemption_threshold REAL NOT NULL DEFAULT 90,normal_first_half_weight REAL NOT NULL DEFAULT 40,normal_second_half_weight REAL NOT NULL DEFAULT 40,exempt_second_half_weight REAL NOT NULL DEFAULT 80,committee_weight REAL NOT NULL DEFAULT 10,industrial_accident_weight REAL NOT NULL DEFAULT 10,score_cap REAL NOT NULL DEFAULT 100,bonus_cap REAL NOT NULL DEFAULT 5,manual_publish INTEGER NOT NULL DEFAULT 1,allow_partner_edits INTEGER NOT NULL DEFAULT 1,preserve_score_on_edit INTEGER NOT NULL DEFAULT 1,updated_by TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
   ]);
 }
 
@@ -60,6 +63,26 @@ async function templateList(env){
   return results||[];
 }
 
+async function templateSettings(env,templateId){
+  await env.partner_evaluation_db.prepare(`INSERT OR IGNORE INTO evaluation_template_settings_v2 (template_id) VALUES (?)`).bind(templateId).run();
+  return await env.partner_evaluation_db.prepare(`SELECT * FROM evaluation_template_settings_v2 WHERE template_id=? LIMIT 1`).bind(templateId).first()||{template_id:templateId,...DEFAULT_TEMPLATE_SETTINGS};
+}
+function normalizeSettings(body,current={}){
+  const source={...DEFAULT_TEMPLATE_SETTINGS,...current,...(body||{})};
+  const excellent=Math.max(0,Math.min(100,num(source.excellent_min,90))),qualified=Math.max(0,Math.min(100,num(source.qualified_min,70)));
+  const first=Math.max(0,Math.min(100,num(source.normal_first_half_weight,40))),second=Math.max(0,Math.min(100,num(source.normal_second_half_weight,40))),committee=Math.max(0,Math.min(100,num(source.committee_weight,10))),accident=Math.max(0,Math.min(100,num(source.industrial_accident_weight,10))),exemptSecond=Math.max(0,Math.min(100,num(source.exempt_second_half_weight,80)));
+  if(qualified>=excellent)return {error:'적격 협력사 최저점은 안전관리 우수 협력사 최저점보다 낮아야 합니다.'};
+  if(Math.round((first+second+committee+accident)*100)/100!==100)return {error:'일반 평가 점수 반영 합계는 100점이어야 합니다.'};
+  if(Math.round((exemptSecond+committee+accident)*100)/100!==100)return {error:'면제 평가 점수 반영 합계는 100점이어야 합니다.'};
+  return {settings:{concept_text:cleanText(source.concept_text,1000)||null,excellent_min:excellent,qualified_min:qualified,first_half_exempt_enabled:source.first_half_exempt_enabled===false||source.first_half_exempt_enabled===0?0:1,exemption_threshold:Math.max(0,Math.min(100,num(source.exemption_threshold,excellent))),normal_first_half_weight:first,normal_second_half_weight:second,exempt_second_half_weight:exemptSecond,committee_weight:committee,industrial_accident_weight:accident,score_cap:Math.max(0,Math.min(100,num(source.score_cap,100))),bonus_cap:Math.max(0,Math.min(100,num(source.bonus_cap,5))),manual_publish:source.manual_publish===false||source.manual_publish===0?0:1,allow_partner_edits:source.allow_partner_edits===false||source.allow_partner_edits===0?0:1,preserve_score_on_edit:source.preserve_score_on_edit===false||source.preserve_score_on_edit===0?0:1}};
+}
+async function saveTemplateSettings(env,templateId,body,userId){
+  const template=await env.partner_evaluation_db.prepare(`SELECT id FROM evaluation_templates_v2 WHERE id=? LIMIT 1`).bind(templateId).first();if(!template)return {error:'평가표를 찾을 수 없습니다.',status:404};
+  const current=await templateSettings(env,templateId),normalized=normalizeSettings(body,current);if(normalized.error)return {error:normalized.error,status:400};const s=normalized.settings;
+  await env.partner_evaluation_db.prepare(`UPDATE evaluation_template_settings_v2 SET concept_text=?,excellent_min=?,qualified_min=?,first_half_exempt_enabled=?,exemption_threshold=?,normal_first_half_weight=?,normal_second_half_weight=?,exempt_second_half_weight=?,committee_weight=?,industrial_accident_weight=?,score_cap=?,bonus_cap=?,manual_publish=?,allow_partner_edits=?,preserve_score_on_edit=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE template_id=?`).bind(s.concept_text,s.excellent_min,s.qualified_min,s.first_half_exempt_enabled,s.exemption_threshold,s.normal_first_half_weight,s.normal_second_half_weight,s.exempt_second_half_weight,s.committee_weight,s.industrial_accident_weight,s.score_cap,s.bonus_cap,s.manual_publish,s.allow_partner_edits,s.preserve_score_on_edit,userId,templateId).run();
+  await log(env,templateId,'settings_saved',s,userId);return {settings:await templateSettings(env,templateId)};
+}
+
 async function loadTemplate(env,id){
   const t=await env.partner_evaluation_db.prepare(`SELECT * FROM evaluation_templates_v2 WHERE id=? LIMIT 1`).bind(id).first();
   if(!t)return null;
@@ -69,7 +92,7 @@ async function loadTemplate(env,id){
     env.partner_evaluation_db.prepare(`SELECT r.* FROM evaluation_na_rules_v2 r JOIN evaluation_items_v2 i ON i.id=r.item_id WHERE i.template_id=? ORDER BY r.sort_order`).bind(id)
   ]);
   const rulesBy=new Map();for(const r of rRes?.results||[]){if(!rulesBy.has(r.item_id))rulesBy.set(r.item_id,[]);rulesBy.get(r.item_id).push(r)}
-  return {...t,categories:cRes?.results||[],items:(iRes?.results||[]).map(x=>({...x,na_rules:rulesBy.get(x.id)||[]}))};
+  return {...t,settings:await templateSettings(env,id),categories:cRes?.results||[],items:(iRes?.results||[]).map(x=>({...x,na_rules:rulesBy.get(x.id)||[]}))};
 }
 
 function validateTemplate(t){
@@ -91,7 +114,6 @@ async function log(env,templateId,action,detail,userId){await env.partner_evalua
 
 async function saveContent(env,templateId,payload,userId){
   const current=await loadTemplate(env,templateId);if(!current)return {error:'평가표를 찾을 수 없습니다.',status:404};
-  if(current.status!=='draft')return {error:'작성중 평가표만 수정할 수 있습니다.',status:409};
   const categories=Array.isArray(payload.categories)?payload.categories:[];const items=Array.isArray(payload.items)?payload.items:[];
   const catMap=new Map();for(const c of categories)catMap.set(String(c.id||crypto.randomUUID()),crypto.randomUUID());
   const stmts=[
@@ -121,6 +143,7 @@ async function copyTemplate(env,sourceId,year,half,name,userId){
   const source=await loadTemplate(env,sourceId);if(!source)return {error:'복사할 평가표를 찾을 수 없습니다.',status:404};
   const v=await env.partner_evaluation_db.prepare(`SELECT COALESCE(MAX(version),0)+1 AS v FROM evaluation_templates_v2 WHERE year=? AND half=?`).bind(year,half).first();
   const id=crypto.randomUUID();await env.partner_evaluation_db.prepare(`INSERT INTO evaluation_templates_v2 (id,year,half,version,name,status,source_template_id,created_by) VALUES (?,?,?,?,?,'draft',?,?)`).bind(id,year,half,Number(v?.v||1),name||`${year}년 ${halfLabel(half)} 평가표`,sourceId,userId).run();
+  const copied=normalizeSettings(source.settings||{},DEFAULT_TEMPLATE_SETTINGS).settings;await env.partner_evaluation_db.prepare(`INSERT OR REPLACE INTO evaluation_template_settings_v2 (template_id,concept_text,excellent_min,qualified_min,first_half_exempt_enabled,exemption_threshold,normal_first_half_weight,normal_second_half_weight,exempt_second_half_weight,committee_weight,industrial_accident_weight,score_cap,bonus_cap,manual_publish,allow_partner_edits,preserve_score_on_edit,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id,copied.concept_text,copied.excellent_min,copied.qualified_min,copied.first_half_exempt_enabled,copied.exemption_threshold,copied.normal_first_half_weight,copied.normal_second_half_weight,copied.exempt_second_half_weight,copied.committee_weight,copied.industrial_accident_weight,copied.score_cap,copied.bonus_cap,copied.manual_publish,copied.allow_partner_edits,copied.preserve_score_on_edit,userId).run();
   const categories=source.categories.map(c=>({id:c.id,category_name:c.category_name,parent_id:c.parent_id,sort_order:c.sort_order}));
   const items=source.items.map(i=>({id:i.id,category_id:i.category_id,item_code:i.item_code,item_name:i.item_name,item_type:i.item_type,max_score:i.max_score,judgment_guide:i.judgment_guide,submission_guide:i.submission_guide,sort_order:i.sort_order,na_rules:(i.na_rules||[]).map(r=>({rule_type:r.rule_type,industry_name:r.industry_name,min_worker_count:r.min_worker_count}))}));
   await saveContent(env,id,{categories,items},userId);await log(env,id,'copied',{source_template_id:sourceId},userId);return {id};
@@ -150,7 +173,7 @@ export async function handleEvaluationManagement(request,env,ctx,baseWorker){
   if(request.method==='POST'&&path==='/api/admin/evaluation-management/templates'){
     const b=await request.json();const year=Math.max(2020,Math.min(2100,Math.round(num(b.year,new Date().getFullYear()))));const half=b.half==='first'?'first':'second';const source=cleanText(b.source_template_id,100);
     if(source){const r=await copyTemplate(env,source,year,half,cleanText(b.name,200),user.id);if(r.error)return j({success:false,error:r.error},r.status);return j({success:true,id:r.id},201)}
-    const v=await env.partner_evaluation_db.prepare(`SELECT COALESCE(MAX(version),0)+1 AS v FROM evaluation_templates_v2 WHERE year=? AND half=?`).bind(year,half).first();const id=crypto.randomUUID();await env.partner_evaluation_db.prepare(`INSERT INTO evaluation_templates_v2 (id,year,half,version,name,status,created_by) VALUES (?,?,?,?,?,'draft',?)`).bind(id,year,half,Number(v?.v||1),cleanText(b.name,200)||`${year}년 ${halfLabel(half)} 평가표`,user.id).run();await log(env,id,'created',{year,half},user.id);return j({success:true,id},201);
+    const v=await env.partner_evaluation_db.prepare(`SELECT COALESCE(MAX(version),0)+1 AS v FROM evaluation_templates_v2 WHERE year=? AND half=?`).bind(year,half).first();const id=crypto.randomUUID();await env.partner_evaluation_db.prepare(`INSERT INTO evaluation_templates_v2 (id,year,half,version,name,status,created_by) VALUES (?,?,?,?,?,'draft',?)`).bind(id,year,half,Number(v?.v||1),cleanText(b.name,200)||`${year}년 ${halfLabel(half)} 평가표`,user.id).run();await templateSettings(env,id);await log(env,id,'created',{year,half},user.id);return j({success:true,id},201);
   }
 
   const contentMatch=path.match(/^\/api\/admin\/evaluation-management\/templates\/([^/]+)\/content$/);
@@ -158,16 +181,18 @@ export async function handleEvaluationManagement(request,env,ctx,baseWorker){
     const r=await saveContent(env,decodeURIComponent(contentMatch[1]),await request.json(),user.id);if(r.error)return j({success:false,error:r.error},r.status);const t=await loadTemplate(env,decodeURIComponent(contentMatch[1]));return j({success:true,template:t,validation:validateTemplate(t)});
   }
 
+  const settingsMatch=path.match(/^\/api\/admin\/evaluation-management\/templates\/([^/]+)\/settings$/);
+  if(settingsMatch&&request.method==='PATCH'){
+    const r=await saveTemplateSettings(env,decodeURIComponent(settingsMatch[1]),await request.json(),user.id);if(r.error)return j({success:false,error:r.error},r.status);return j({success:true,settings:r.settings});
+  }
+
   const templateMatch=path.match(/^\/api\/admin\/evaluation-management\/templates\/([^/]+)$/);
   if(templateMatch&&request.method==='PATCH'){
     const id=decodeURIComponent(templateMatch[1]);const before=await loadTemplate(env,id);if(!before)return j({success:false,error:'평가표를 찾을 수 없습니다.'},404);const b=await request.json();
-    if(before.status==='locked')return j({success:false,error:'잠긴 평가표는 수정할 수 없습니다.'},409);
-    let status=before.status;if(b.status&&['draft','active','locked'].includes(b.status))status=b.status;
-    if(status==='active'&&before.status!=='active'){const v=validateTemplate(before);if(!v.valid)return j({success:false,error:'배점 또는 필수항목을 확인하세요.',validation:v},409)}
-    const name=cleanText(b.name,200)||before.name;await env.partner_evaluation_db.prepare(`UPDATE evaluation_templates_v2 SET name=?,status=?,locked_at=CASE WHEN ?='locked' THEN CURRENT_TIMESTAMP ELSE locked_at END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(name,status,status,id).run();await log(env,id,'template_updated',{name,status},user.id);const t=await loadTemplate(env,id);return j({success:true,template:t,validation:validateTemplate(t)});
+    const name=cleanText(b.name,200)||before.name,status=before.status==='locked'?'active':before.status;await env.partner_evaluation_db.prepare(`UPDATE evaluation_templates_v2 SET name=?,status=?,locked_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(name,status,id).run();await log(env,id,'template_updated',{name,status},user.id);const t=await loadTemplate(env,id);return j({success:true,template:t,validation:validateTemplate(t)});
   }
   if(templateMatch&&request.method==='DELETE'){
-    const id=decodeURIComponent(templateMatch[1]);const t=await loadTemplate(env,id);if(!t)return j({success:false,error:'평가표를 찾을 수 없습니다.'},404);if(t.status!=='draft')return j({success:false,error:'작성중 평가표만 삭제할 수 있습니다.'},409);await env.partner_evaluation_db.batch([env.partner_evaluation_db.prepare(`DELETE FROM evaluation_na_rules_v2 WHERE item_id IN (SELECT id FROM evaluation_items_v2 WHERE template_id=?)`).bind(id),env.partner_evaluation_db.prepare(`DELETE FROM evaluation_items_v2 WHERE template_id=?`).bind(id),env.partner_evaluation_db.prepare(`DELETE FROM evaluation_categories_v2 WHERE template_id=?`).bind(id),env.partner_evaluation_db.prepare(`DELETE FROM evaluation_templates_v2 WHERE id=?`).bind(id)]);return j({success:true});
+    const id=decodeURIComponent(templateMatch[1]);const t=await loadTemplate(env,id);if(!t)return j({success:false,error:'평가표를 찾을 수 없습니다.'},404);const used=await env.partner_evaluation_db.prepare(`SELECT COUNT(*) AS cnt FROM evaluation_cycles_v2 WHERE template_id=?`).bind(id).first().catch(()=>({cnt:0}));if(Number(used?.cnt||0)>0)return j({success:false,error:'평가회차에 사용된 평가표는 삭제할 수 없습니다. 항목 수정은 언제든 가능합니다.'},409);await env.partner_evaluation_db.batch([env.partner_evaluation_db.prepare(`DELETE FROM evaluation_na_rules_v2 WHERE item_id IN (SELECT id FROM evaluation_items_v2 WHERE template_id=?)`).bind(id),env.partner_evaluation_db.prepare(`DELETE FROM evaluation_items_v2 WHERE template_id=?`).bind(id),env.partner_evaluation_db.prepare(`DELETE FROM evaluation_categories_v2 WHERE template_id=?`).bind(id),env.partner_evaluation_db.prepare(`DELETE FROM evaluation_template_settings_v2 WHERE template_id=?`).bind(id),env.partner_evaluation_db.prepare(`DELETE FROM evaluation_templates_v2 WHERE id=?`).bind(id)]);return j({success:true});
   }
 
   if(request.method==='PATCH'&&path==='/api/admin/evaluation-management/policy'){

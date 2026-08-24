@@ -54,10 +54,33 @@
       }
     }catch(e){const body=document.getElementById('modalBody');if(body)body.innerHTML=`<div class="evidence-preview-error">${escapeHtml(e.message||'파일을 미리 볼 수 없습니다.')}</div>`}
   }
+  function installSectionNavigation(){
+    const d=currentData(),layout=document.querySelector('.layout'),content=layout?.querySelector('.content');
+    if(!d?.workspace||!layout||!content||document.getElementById('submissionSectionStrip'))return;
+    const groups=new Map();
+    for(const item of d.workspace.items||[]){
+      const name=item.parent_category_name||item.category_name||'기타';
+      if(!groups.has(name))groups.set(name,[]);
+      groups.get(name).push(item);
+    }
+    const profile=content.querySelector('.profile-card');if(profile)profile.id='submission-profile';
+    const strip=document.createElement('nav');strip.id='submissionSectionStrip';strip.className='submission-section-strip';strip.setAttribute('aria-label','제출 항목 바로가기');
+    const links=[{name:'기본정보',id:'submission-profile'}];
+    let index=0;
+    for(const [name,items] of groups){
+      const first=items.find(i=>document.getElementById('item-'+i.target_item_state_id));if(!first)continue;
+      const card=document.getElementById('item-'+first.target_item_state_id),id='submission-section-'+index++;
+      const heading=document.createElement('div');heading.className='section-heading';heading.id=id;heading.innerHTML=`<strong>${escapeHtml(name)}</strong><span>${items.length}개 평가항목</span>`;
+      card.parentNode.insertBefore(heading,card);links.push({name,id});
+    }
+    strip.innerHTML=links.map(x=>`<button class="section-chip" type="button" data-section-target="${escapeHtml(x.id)}">${escapeHtml(x.name)}</button>`).join('');
+    strip.querySelectorAll('[data-section-target]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.sectionTarget)?.scrollIntoView({behavior:'smooth',block:'start'}));
+    layout.parentNode.insertBefore(strip,layout);
+  }
   function enhanceLayout(){
     if(!hasWorkspace())return;
     const d=currentData(),t=d.workspace.target,cap=d.capabilities||{},usage=cap.storage_usage;
-    const layout=document.querySelector('.layout');
+    const layout=document.querySelector('.layout');installSectionNavigation();
     if(layout&&!document.getElementById('storageQuotaCard')&&usage){
       const card=document.createElement('section');card.id='storageQuotaCard';card.className='storage-card';
       const cp=usage.company_cycle||{},gp=usage.global||{};
