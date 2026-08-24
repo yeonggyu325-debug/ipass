@@ -4,13 +4,17 @@ const GLOBAL_LIMIT_BYTES = 9126805504; // 8.5 GiB hard stop
 const TARGET_LIMIT_BYTES = 524288000;   // 500 MiB per company / evaluation cycle
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const RESERVATION_TTL_MINUTES = 30;
+const USAGE_CACHE_MS = 60000;
+let quotaSchemaPromise=null;
+let globalUsageCache=null;
 
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=utf-8','access-control-allow-origin':'*','access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS'}})}
 function mb(bytes){return Math.round((Number(bytes||0)/1024/1024)*10)/10}
 function gb(bytes){return Math.round((Number(bytes||0)/1024/1024/1024)*100)/100}
 
 async function ensureQuotaSchema(env){
-  await env.partner_evaluation_db.batch([
+  if(quotaSchemaPromise)return quotaSchemaPromise;
+  quotaSchemaPromise=(async()=>{await env.partner_evaluation_db.batch([
     env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_evidence_files_v2 (
       id TEXT PRIMARY KEY,
       target_id TEXT NOT NULL,
@@ -30,19 +34,19 @@ async function ensureQuotaSchema(env){
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
     env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_upload_reservations_v2_target ON evaluation_upload_reservations_v2(target_id,created_at)`),
+    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_files_v2_target_quota ON evaluation_evidence_files_v2(target_id,deleted_at)`),
     env.partner_evaluation_db.prepare(`DROP TRIGGER IF EXISTS trg_evidence_upload_quota_v2`)
   ]);
-  await env.partner_evaluation_db.prepare(`DELETE FROM evaluation_upload_reservations_v2 WHERE created_at < datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`).run();
+  await env.partner_evaluation_db.prepare(`DELETE FROM evaluation_upload_reservations_v2 WHERE created_at < datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`).run()})();
+  try{await quotaSchemaPromise}catch(error){quotaSchemaPromise=null;throw error}
 }
 
-async function storageUsage(env,targetId){
-  const [globalRow,targetRow,resGlobal,resTarget]=await env.partner_evaluation_db.batch([
-    env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_evidence_files_v2 WHERE deleted_at IS NULL`),
-    env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_evidence_files_v2 WHERE target_id=? AND deleted_at IS NULL`).bind(targetId),
-    env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_upload_reservations_v2 WHERE created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`),
-    env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_upload_reservations_v2 WHERE target_id=? AND created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`).bind(targetId)
-  ]);
-  const globalCommitted=Number(globalRow?.results?.[0]?.used||0),targetCommitted=Number(targetRow?.results?.[0]?.used||0),globalReserved=Number(resGlobal?.results?.[0]?.used||0),targetReserved=Number(resTarget?.results?.[0]?.used||0);
+async function storageUsage(env,targetId,{exact=false}={}){
+  const useCache=!exact&&globalUsageCache&&Date.now()-globalUsageCache.at<USAGE_CACHE_MS,statements=[env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_evidence_files_v2 WHERE target_id=? AND deleted_at IS NULL`).bind(targetId),env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_upload_reservations_v2 WHERE target_id=? AND created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`).bind(targetId)];
+  if(!useCache)statements.push(env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_evidence_files_v2 WHERE deleted_at IS NULL`),env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_upload_reservations_v2 WHERE created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`));
+  const rows=await env.partner_evaluation_db.batch(statements),targetCommitted=Number(rows[0]?.results?.[0]?.used||0),targetReserved=Number(rows[1]?.results?.[0]?.used||0);
+  if(!useCache)globalUsageCache={at:Date.now(),committed:Number(rows[2]?.results?.[0]?.used||0),reserved:Number(rows[3]?.results?.[0]?.used||0)};
+  const globalCommitted=Number(globalUsageCache?.committed||0),globalReserved=Number(globalUsageCache?.reserved||0);
   const globalUsed=globalCommitted+globalReserved,targetUsed=targetCommitted+targetReserved;
   return {
     global:{used_bytes:globalUsed,committed_bytes:globalCommitted,reserved_bytes:globalReserved,limit_bytes:GLOBAL_LIMIT_BYTES,used_gb:gb(globalUsed),limit_gb:8.5,remaining_bytes:Math.max(0,GLOBAL_LIMIT_BYTES-globalUsed),percent:Math.min(100,Math.round(globalUsed/GLOBAL_LIMIT_BYTES*1000)/10)},
@@ -66,11 +70,11 @@ async function reserve(env,targetId,fileSize){
     ) <= ?`;
   const result=await env.partner_evaluation_db.prepare(sql).bind(id,targetId,fileSize,fileSize,GLOBAL_LIMIT_BYTES,targetId,targetId,fileSize,TARGET_LIMIT_BYTES).run();
   if(Number(result?.meta?.changes||0)>0)return {ok:true,id};
-  const usage=await storageUsage(env,targetId);
+  const usage=await storageUsage(env,targetId,{exact:true});
   const globalBlocked=usage.global.used_bytes+fileSize>GLOBAL_LIMIT_BYTES;
   return {ok:false,scope:globalBlocked?'global':'company_cycle',usage};
 }
-async function release(env,id){if(!id)return;await env.partner_evaluation_db.prepare(`DELETE FROM evaluation_upload_reservations_v2 WHERE id=?`).bind(id).run().catch(()=>{})}
+async function release(env,id){if(!id)return;await env.partner_evaluation_db.prepare(`DELETE FROM evaluation_upload_reservations_v2 WHERE id=?`).bind(id).run().catch(()=>{});globalUsageCache=null}
 
 async function augmentWorkspaceResponse(response,env,targetId){
   if(!response?.ok)return response;
@@ -93,34 +97,13 @@ export async function handlePartnerSubmissionWithQuota(request,env,ctx,baseWorke
     try{return await augmentWorkspaceResponse(response,env,targetId)}catch(e){console.error('quota usage read failed',e);return response}
   }
 
-  const upload=path.match(/^\/api\/partner\/submission\/([^/]+)\/items\/([^/]+)\/files$/);
-  if(upload&&request.method==='POST'){
-    const targetId=decodeURIComponent(upload[1]);
-    let form=null;try{form=await request.clone().formData()}catch{}
-    const file=form?.get('file');
-    if(!(file instanceof File)||!file.name||file.size<=0||file.size>MAX_FILE_BYTES)return handlePartnerSubmission(request,env,ctx,baseWorker);
-
-    const exists=await env.partner_evaluation_db.prepare(`SELECT id FROM evaluation_targets_v2 WHERE id=? AND is_selected=1 LIMIT 1`).bind(targetId).first();
-    if(!exists)return handlePartnerSubmission(request,env,ctx,baseWorker);
-
-    let reservation;
-    try{reservation=await reserve(env,targetId,file.size)}catch(e){console.error('quota reservation failed',e);return json({success:false,error:'저장공간 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',code:'STORAGE_QUOTA_CHECK_FAILED'},503)}
-    if(!reservation.ok){
-      const usage=reservation.usage||await storageUsage(env,targetId);
-      if(reservation.scope==='global')return json({success:false,error:'전체 증빙자료 저장공간이 8.5GB 한도에 도달하여 신규 파일 업로드가 중지되었습니다.',code:'GLOBAL_STORAGE_LIMIT',storage_usage:usage},507);
-      return json({success:false,error:'이 회사의 해당 평가회차 증빙자료가 500MB 한도에 도달하여 신규 파일 업로드가 중지되었습니다.',code:'COMPANY_CYCLE_STORAGE_LIMIT',storage_usage:usage},507);
-    }
-
-    try{
-      const response=await handlePartnerSubmission(request,env,ctx,baseWorker);
-      await release(env,reservation.id);
-      return response;
-    }catch(e){
-      await release(env,reservation.id);
-      console.error('evidence upload failed',e);
-      return json({success:false,error:'증빙자료 업로드 처리 중 오류가 발생했습니다.',code:'EVIDENCE_UPLOAD_FAILED'},500);
-    }
-  }
-
-  return handlePartnerSubmission(request,env,ctx,baseWorker);
+  // Multipart data is parsed once by the core handler. It invokes these hooks
+  // after validating the file, avoiding a second read of uploads up to 25 MB.
+  const quota={
+    max_file_bytes:MAX_FILE_BYTES,
+    reserve:async(targetId,fileSize)=>reserve(env,targetId,fileSize),
+    release:async reservationId=>release(env,reservationId),
+    usage:async targetId=>storageUsage(env,targetId)
+  };
+  return handlePartnerSubmission(request,env,ctx,baseWorker,quota);
 }

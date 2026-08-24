@@ -1,8 +1,8 @@
-let schemaReady=false;
+let schemaPromise=null;
 
 export async function ensureEvaluationManagementSchema(env){
-  if(schemaReady)return;
-  await env.partner_evaluation_db.batch([
+  if(schemaPromise)return schemaPromise;
+  schemaPromise=env.partner_evaluation_db.batch([
     env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_templates_v2 (
       id TEXT PRIMARY KEY,
       year INTEGER NOT NULL,
@@ -115,5 +115,5 @@ export async function ensureEvaluationManagementSchema(env){
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`)
   ]);
-  schemaReady=true;
+  try{await schemaPromise}catch(error){schemaPromise=null;throw error}
 }

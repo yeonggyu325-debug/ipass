@@ -6,9 +6,11 @@ function clamp(v,min=0,max=100){return Math.max(min,Math.min(max,Number(v||0)))}
 function halfLabel(v){return v==='first'?'상반기':'하반기'}
 function grade(score,settings={}){if(score==null)return null;const n=Number(score),excellent=number(settings.excellent_min,90),qualified=number(settings.qualified_min,70);if(n>=excellent)return '안전관리 우수협력사';if(n>=qualified)return '적격 협력사';return '역량 강화 협력사'}
 function isHtmlPath(path){return path==='/'||path==='/index.html'||path==='/evaluation-management.html'}
+let runtimeSchemaPromise=null;
 
 async function ensureRuntimeSchema(env){
-  await env.partner_evaluation_db.batch([
+  if(runtimeSchemaPromise)return runtimeSchemaPromise;
+  runtimeSchemaPromise=env.partner_evaluation_db.batch([
     env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_cycles_v2 (
       id TEXT PRIMARY KEY,
       year INTEGER NOT NULL,
@@ -82,6 +84,7 @@ async function ensureRuntimeSchema(env){
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`)
   ]);
+  try{await runtimeSchemaPromise}catch(error){runtimeSchemaPromise=null;throw error}
 }
 
 async function accountFromRequest(request,env,ctx,baseWorker){

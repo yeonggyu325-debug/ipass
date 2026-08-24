@@ -1,7 +1,9 @@
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=utf-8'}})}
+let auditSchemaPromise=null;
 
 export async function ensureSystemAuditSchema(env){
-  await env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS system_request_audit_v2 (
+  if(auditSchemaPromise)return auditSchemaPromise;
+  auditSchemaPromise=(async()=>{await env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS system_request_audit_v2 (
     id TEXT PRIMARY KEY,
     request_id TEXT NOT NULL,
     method TEXT NOT NULL,
@@ -12,7 +14,8 @@ export async function ensureSystemAuditSchema(env){
     actor_role TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`).run();
-  await env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_system_request_audit_v2_created ON system_request_audit_v2(created_at DESC)`).run();
+  await env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_system_request_audit_v2_created ON system_request_audit_v2(created_at DESC)`).run()})();
+  try{await auditSchemaPromise}catch(error){auditSchemaPromise=null;throw error}
 }
 
 async function admin(request,env,ctx,innerApp){

@@ -31,9 +31,11 @@ function j(data,status=200){return new Response(JSON.stringify(data),{status,hea
 function cleanText(v,max=4000){return String(v??'').trim().slice(0,max)}
 function num(v,def=0){const n=Number(v);return Number.isFinite(n)?n:def}
 function halfLabel(v){return v==='first'?'상반기':'하반기'}
+let managementSchemaPromise=null,seedDefaultPromise=null;
 
 async function ensureSchema(env){
-  await env.partner_evaluation_db.batch([
+  if(managementSchemaPromise)return managementSchemaPromise;
+  managementSchemaPromise=env.partner_evaluation_db.batch([
     env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_templates_v2 (id TEXT PRIMARY KEY, year INTEGER NOT NULL, half TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', source_template_id TEXT, created_by TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, locked_at TEXT, UNIQUE(year,half,version))`),
     env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_categories_v2 (id TEXT PRIMARY KEY, template_id TEXT NOT NULL, parent_id TEXT, category_name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
     env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_categories_v2_template ON evaluation_categories_v2(template_id,sort_order)`),
@@ -47,6 +49,7 @@ async function ensureSchema(env){
     env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_template_settings_v2 (template_id TEXT PRIMARY KEY,concept_text TEXT,excellent_min REAL NOT NULL DEFAULT 90,qualified_min REAL NOT NULL DEFAULT 70,first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1,exemption_threshold REAL NOT NULL DEFAULT 90,normal_first_half_weight REAL NOT NULL DEFAULT 40,normal_second_half_weight REAL NOT NULL DEFAULT 40,exempt_second_half_weight REAL NOT NULL DEFAULT 80,committee_weight REAL NOT NULL DEFAULT 10,industrial_accident_weight REAL NOT NULL DEFAULT 10,score_cap REAL NOT NULL DEFAULT 100,bonus_cap REAL NOT NULL DEFAULT 5,manual_publish INTEGER NOT NULL DEFAULT 1,allow_partner_edits INTEGER NOT NULL DEFAULT 1,preserve_score_on_edit INTEGER NOT NULL DEFAULT 1,updated_by TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
     env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_cycle_settings_v2 (cycle_id TEXT PRIMARY KEY,source_template_id TEXT,concept_text TEXT,excellent_min REAL NOT NULL DEFAULT 90,qualified_min REAL NOT NULL DEFAULT 70,first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1,exemption_threshold REAL NOT NULL DEFAULT 90,normal_first_half_weight REAL NOT NULL DEFAULT 40,normal_second_half_weight REAL NOT NULL DEFAULT 40,exempt_second_half_weight REAL NOT NULL DEFAULT 80,committee_weight REAL NOT NULL DEFAULT 10,industrial_accident_weight REAL NOT NULL DEFAULT 10,score_cap REAL NOT NULL DEFAULT 100,bonus_cap REAL NOT NULL DEFAULT 5,manual_publish INTEGER NOT NULL DEFAULT 1,allow_partner_edits INTEGER NOT NULL DEFAULT 1,preserve_score_on_edit INTEGER NOT NULL DEFAULT 1,updated_by TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
   ]);
+  try{await managementSchemaPromise}catch(error){managementSchemaPromise=null;throw error}
 }
 
 async function requireAdmin(request,env,ctx,baseWorker){
@@ -130,13 +133,15 @@ async function saveContent(env,templateId,payload,userId){
 }
 
 async function seedDefault(env,userId){
-  const row=await env.partner_evaluation_db.prepare(`SELECT id FROM evaluation_templates_v2 LIMIT 1`).first();if(row)return;
+  if(seedDefaultPromise)return seedDefaultPromise;
+  seedDefaultPromise=(async()=>{const row=await env.partner_evaluation_db.prepare(`SELECT id FROM evaluation_templates_v2 LIMIT 1`).first();if(row)return;
   const templateId=crypto.randomUUID();
   await env.partner_evaluation_db.prepare(`INSERT INTO evaluation_templates_v2 (id,year,half,version,name,status,created_by) VALUES (?,?,?,?,?,'draft',?)`).bind(templateId,2026,'second',1,'2026년 하반기 평가표',userId).run();
   const names=[...new Set(DEFAULT_ITEMS.map(x=>x.category))];const categories=names.map((name,i)=>({id:`seed-cat-${i}`,category_name:name,parent_id:null,sort_order:i}));
   const catBy=new Map(categories.map(c=>[c.category_name,c.id]));
   const items=DEFAULT_ITEMS.map((x,i)=>({id:`seed-item-${i}`,category_id:catBy.get(x.category),item_code:x.code,item_name:x.name,item_type:x.type,max_score:x.score,judgment_guide:x.guide,submission_guide:x.submission,sort_order:i,na_rules:(x.na||[]).map(r=>({rule_type:r.type,min_worker_count:r.min,industry_name:r.industry||null}))}));
-  await saveContent(env,templateId,{categories,items},userId);await log(env,templateId,'seeded',{source:'2026-current-pasted-table'},userId);
+  await saveContent(env,templateId,{categories,items},userId);await log(env,templateId,'seeded',{source:'2026-current-pasted-table'},userId)})();
+  try{await seedDefaultPromise}catch(error){seedDefaultPromise=null;throw error}
 }
 
 async function copyTemplate(env,sourceId,year,half,name,userId){

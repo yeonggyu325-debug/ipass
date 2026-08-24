@@ -107,11 +107,64 @@
     try{await apiClient().download(`/api/partner/submission/files/${encodeURIComponent(id)}`,'증빙자료')}
     catch(e){if(typeof modal==='function')modal('파일 다운로드 실패',String(window.EHSApi?.describe?window.EHSApi.describe(e):e.message||e),'<button class="btn" id="downloadFailOk">확인</button>'),setTimeout(()=>{const b=document.getElementById('downloadFailOk');if(b)b.onclick=closeModal},0)}
   }
+  function syncDirtyModel(){
+    if(!hasWorkspace())return [];
+    const items=[];
+    for(const id of [...dirty]){
+      const field=document.getElementById('desc-'+id),item=data.workspace.items.find(x=>x.target_item_state_id===id);
+      if(!field||!item)continue;
+      item.description=field.value;
+      items.push({id,description:field.value});
+    }
+    return items;
+  }
+  function updateStorageUsage(delta){
+    const usage=currentData()?.capabilities?.storage_usage;if(!usage)return;
+    for(const key of ['company_cycle','global']){
+      const value=usage[key];if(!value)continue;
+      value.used_bytes=Math.max(0,Number(value.used_bytes||0)+delta);
+      value.committed_bytes=Math.max(0,Number(value.committed_bytes||0)+delta);
+      value.remaining_bytes=Math.max(0,Number(value.limit_bytes||0)-value.used_bytes);
+      value.percent=value.limit_bytes?Math.min(100,Math.round(value.used_bytes/value.limit_bytes*1000)/10):0;
+      if(key==='company_cycle')value.used_mb=Math.round(value.used_bytes/1024/1024*10)/10;
+      else value.used_gb=Math.round(value.used_bytes/1024/1024/1024*100)/100;
+    }
+  }
+  async function saveDirtyFast(){
+    const items=syncDirtyModel();if(!items.length)return;
+    for(const item of items){const state=document.getElementById('state-'+item.id);if(state)state.textContent='저장 중...'}
+    await apiClient().request(`/api/partner/submission/${encodeURIComponent(targetId)}/items/bulk`,{method:'PATCH',body:JSON.stringify({items})});
+    for(const item of items){dirty.delete(item.id);const state=document.getElementById('state-'+item.id);if(state){state.textContent='저장됨';state.className='save-state saved'}}
+    recalcSummary();
+  }
+  async function uploadFast(id,input){
+    const file=input.files?.[0];if(!file)return;
+    const form=new FormData();form.append('file',file);syncDirtyModel();toast('파일 업로드 중...');
+    try{
+      const result=await apiClient().request(`/api/partner/submission/${encodeURIComponent(targetId)}/items/${encodeURIComponent(id)}/files`,{method:'POST',body:form});
+      const item=data.workspace.items.find(x=>x.target_item_state_id===id);if(item&&result.file)item.files=[result.file,...(item.files||[])];
+      updateStorageUsage(Number(result.file?.file_size||file.size||0));recalcSummary();render();toast('파일을 첨부했습니다.');
+    }catch(e){modal('파일 첨부 실패',escapeHtml(window.EHSApi?.describe?window.EHSApi.describe(e):e.message),'<button class="btn" id="modalOk">확인</button>');setTimeout(()=>{const b=document.getElementById('modalOk');if(b)b.onclick=closeModal},0)}finally{input.value=''}
+  }
+  function submitFast(){
+    syncDirtyModel();recalcSummary();
+    const summary=data.workspace.summary,resubmit=!!data.workspace.target.submitted_at;
+    modal(resubmit?'변경사항 재제출':'평가자료 제출',`현재 작성률은 <b>${summary.progress}%</b>이며 미작성 항목은 <b>${summary.blank}개</b>입니다.<br><br>자료가 없는 항목은 그대로 제출할 수 있으며 평가 시 감점될 수 있습니다. 제출하시겠습니까?`,`<button class="btn" id="cancelSubmit">취소</button><button class="btn primary" id="confirmSubmit">${resubmit?'재제출':'제출완료'}</button>`);
+    document.getElementById('cancelSubmit').onclick=closeModal;
+    document.getElementById('confirmSubmit').onclick=async()=>{
+      const button=document.getElementById('confirmSubmit');button.disabled=true;button.textContent='제출 중...';
+      try{
+        const items=syncDirtyModel(),result=await apiClient().request(`/api/partner/submission/${encodeURIComponent(targetId)}/submit`,{method:'POST',body:JSON.stringify({items})});
+        dirty.clear();data.workspace.summary=result.summary||data.workspace.summary;data.workspace.target.status=result.status||'submitted';data.workspace.target.submitted_at=result.submitted_at||data.workspace.target.submitted_at||new Date().toISOString();
+        closeModal();render();toast('평가자료를 제출했습니다.');
+      }catch(e){button.disabled=false;button.textContent='다시 시도';document.getElementById('modalBody').textContent=window.EHSApi?.describe?window.EHSApi.describe(e):(e.message||'제출하지 못했습니다.')}
+    };
+  }
   async function confirmedDelete(id){
     if(capabilities().can_delete_file===false)return;
     if(typeof modal!=='function')return;
     modal('첨부파일 삭제','선택한 증빙자료를 삭제할까요?<br><br>삭제 기록은 제출 이력에 남습니다.','<button class="btn" id="cancelEvidenceDelete">취소</button><button class="btn primary" id="confirmEvidenceDelete">삭제</button>');
-    document.getElementById('cancelEvidenceDelete').onclick=closeModal;document.getElementById('confirmEvidenceDelete').onclick=async()=>{const b=document.getElementById('confirmEvidenceDelete');b.disabled=true;b.textContent='삭제 중...';try{await apiClient().request(`/api/partner/submission/files/${encodeURIComponent(id)}`,{method:'DELETE'});closeModal();toast('증빙자료를 삭제했습니다.');await load(true)}catch(e){b.disabled=false;b.textContent='다시 시도';document.getElementById('modalBody').textContent=window.EHSApi?.describe?window.EHSApi.describe(e):(e.message||'삭제하지 못했습니다.')}};
+    document.getElementById('cancelEvidenceDelete').onclick=closeModal;document.getElementById('confirmEvidenceDelete').onclick=async()=>{const b=document.getElementById('confirmEvidenceDelete');b.disabled=true;b.textContent='삭제 중...';try{syncDirtyModel();let removed=null,owner=null;for(const item of data.workspace.items||[]){const file=(item.files||[]).find(x=>x.id===id);if(file){removed=file;owner=item;break}}await apiClient().request(`/api/partner/submission/files/${encodeURIComponent(id)}`,{method:'DELETE'});if(owner)owner.files=owner.files.filter(x=>x.id!==id);if(removed)updateStorageUsage(-Number(removed.file_size||0));recalcSummary();closeModal();render();toast('증빙자료를 삭제했습니다.')}catch(e){b.disabled=false;b.textContent='다시 시도';document.getElementById('modalBody').textContent=window.EHSApi?.describe?window.EHSApi.describe(e):(e.message||'삭제하지 못했습니다.')}};
   }
   function installActionCapture(){
     document.addEventListener('click',e=>{const pv=e.target.closest?.('[data-preview-file]');if(pv){e.preventDefault();e.stopImmediatePropagation();previewFile(pv.dataset.previewFile,pv.dataset.fileName,Number(pv.dataset.fileSize||0),pv.dataset.contentType||'');return}const dl=e.target.closest?.('[data-download]');if(dl){e.preventDefault();e.stopImmediatePropagation();authenticatedDownload(dl.dataset.download);return}const del=e.target.closest?.('[data-delete-file]');if(del){e.preventDefault();e.stopImmediatePropagation();confirmedDelete(del.dataset.deleteFile)}},true);
@@ -121,7 +174,9 @@
     try{
       if(typeof render==='function'&&!render.__enhanced){const originalRender=render;const wrapped=function(){const r=originalRender.apply(this,arguments);queueMicrotask(enhanceLayout);return r};wrapped.__enhanced=true;render=wrapped}
       if(typeof saveItem==='function'&&!saveItem.__enhanced){const originalSave=saveItem;const wrappedSave=async function(id){await originalSave.apply(this,arguments);recalcSummary();enhanceLayout()};wrappedSave.__enhanced=true;saveItem=wrappedSave}
-      if(typeof saveDirty==='function'&&!saveDirty.__enhanced){const robust=async function(){for(const id of [...dirty]){const desc=document.getElementById('desc-'+id);if(!desc)continue;await apiClient().request(`/api/partner/submission/${encodeURIComponent(targetId)}/items/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({description:desc.value})});const item=data.workspace.items.find(x=>x.target_item_state_id===id);if(item)item.description=desc.value;dirty.delete(id)}recalcSummary()};robust.__enhanced=true;saveDirty=robust}
+      if(typeof saveDirty==='function'&&!saveDirty.__enhanced){saveDirtyFast.__enhanced=true;saveDirty=saveDirtyFast}
+      if(typeof uploadFile==='function'&&!uploadFile.__enhanced){uploadFast.__enhanced=true;uploadFile=uploadFast}
+      if(typeof submitEvaluation==='function'&&!submitEvaluation.__enhanced){submitFast.__enhanced=true;submitEvaluation=submitFast}
       if(typeof downloadFile==='function')downloadFile=authenticatedDownload;
       if(typeof deleteFile==='function')deleteFile=confirmedDelete;
     }catch(e){console.warn('submission enhancement patch',e)}
