@@ -31,26 +31,7 @@ function j(data,status=200){return new Response(JSON.stringify(data),{status,hea
 function cleanText(v,max=4000){return String(v??'').trim().slice(0,max)}
 function num(v,def=0){const n=Number(v);return Number.isFinite(n)?n:def}
 function halfLabel(v){return v==='first'?'상반기':'하반기'}
-let managementSchemaPromise=null,seedDefaultPromise=null;
-
-async function ensureSchema(env){
-  if(managementSchemaPromise)return managementSchemaPromise;
-  managementSchemaPromise=env.partner_evaluation_db.batch([
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_templates_v2 (id TEXT PRIMARY KEY, year INTEGER NOT NULL, half TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', source_template_id TEXT, created_by TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, locked_at TEXT, UNIQUE(year,half,version))`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_categories_v2 (id TEXT PRIMARY KEY, template_id TEXT NOT NULL, parent_id TEXT, category_name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_categories_v2_template ON evaluation_categories_v2(template_id,sort_order)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_items_v2 (id TEXT PRIMARY KEY, template_id TEXT NOT NULL, category_id TEXT NOT NULL, item_code TEXT, item_name TEXT NOT NULL, item_type TEXT NOT NULL DEFAULT 'score', max_score REAL NOT NULL DEFAULT 0, judgment_guide TEXT, submission_guide TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_items_v2_template ON evaluation_items_v2(template_id,sort_order)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_na_rules_v2 (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, rule_type TEXT NOT NULL, industry_name TEXT, min_worker_count INTEGER NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0)`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_na_rules_v2_item ON evaluation_na_rules_v2(item_id,sort_order)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS ipass_policy_settings_v2 (id INTEGER PRIMARY KEY CHECK(id=1), excellence_threshold REAL NOT NULL DEFAULT 90, first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1, normal_first_half_weight REAL NOT NULL DEFAULT 40, normal_second_half_weight REAL NOT NULL DEFAULT 40, exempt_second_half_weight REAL NOT NULL DEFAULT 80, committee_weight REAL NOT NULL DEFAULT 10, industrial_accident_weight REAL NOT NULL DEFAULT 10, updated_by TEXT, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
-    env.partner_evaluation_db.prepare(`INSERT OR IGNORE INTO ipass_policy_settings_v2 (id,excellence_threshold,first_half_exempt_enabled,normal_first_half_weight,normal_second_half_weight,exempt_second_half_weight,committee_weight,industrial_accident_weight) VALUES (1,90,1,40,40,80,10,10)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_template_logs_v2 (id TEXT PRIMARY KEY, template_id TEXT, action TEXT NOT NULL, detail_json TEXT, changed_by TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_template_settings_v2 (template_id TEXT PRIMARY KEY,concept_text TEXT,excellent_min REAL NOT NULL DEFAULT 90,qualified_min REAL NOT NULL DEFAULT 70,first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1,exemption_threshold REAL NOT NULL DEFAULT 90,normal_first_half_weight REAL NOT NULL DEFAULT 40,normal_second_half_weight REAL NOT NULL DEFAULT 40,exempt_second_half_weight REAL NOT NULL DEFAULT 80,committee_weight REAL NOT NULL DEFAULT 10,industrial_accident_weight REAL NOT NULL DEFAULT 10,score_cap REAL NOT NULL DEFAULT 100,bonus_cap REAL NOT NULL DEFAULT 5,manual_publish INTEGER NOT NULL DEFAULT 1,allow_partner_edits INTEGER NOT NULL DEFAULT 1,preserve_score_on_edit INTEGER NOT NULL DEFAULT 1,updated_by TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_cycle_settings_v2 (cycle_id TEXT PRIMARY KEY,source_template_id TEXT,concept_text TEXT,excellent_min REAL NOT NULL DEFAULT 90,qualified_min REAL NOT NULL DEFAULT 70,first_half_exempt_enabled INTEGER NOT NULL DEFAULT 1,exemption_threshold REAL NOT NULL DEFAULT 90,normal_first_half_weight REAL NOT NULL DEFAULT 40,normal_second_half_weight REAL NOT NULL DEFAULT 40,exempt_second_half_weight REAL NOT NULL DEFAULT 80,committee_weight REAL NOT NULL DEFAULT 10,industrial_accident_weight REAL NOT NULL DEFAULT 10,score_cap REAL NOT NULL DEFAULT 100,bonus_cap REAL NOT NULL DEFAULT 5,manual_publish INTEGER NOT NULL DEFAULT 1,allow_partner_edits INTEGER NOT NULL DEFAULT 1,preserve_score_on_edit INTEGER NOT NULL DEFAULT 1,updated_by TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
-  ]);
-  try{await managementSchemaPromise}catch(error){managementSchemaPromise=null;throw error}
-}
+let seedDefaultPromise=null;
 
 async function requireAdmin(request,env,ctx,baseWorker){
   const u=new URL(request.url);u.pathname='/api/me';u.search='';
@@ -164,7 +145,7 @@ export async function handleEvaluationManagement(request,env,ctx,baseWorker){
   const url=new URL(request.url);const path=url.pathname;if(!path.startsWith('/api/admin/evaluation-management'))return null;
   if(request.method==='OPTIONS')return j({success:true});
   const auth=await requireAdmin(request,env,ctx,baseWorker);if(!auth.ok)return auth.response;const user=auth.user;
-  await ensureSchema(env);await seedDefault(env,user.id);
+  await seedDefault(env,user.id);
 
   if(request.method==='GET'&&path==='/api/admin/evaluation-management'){
     const templates=await templateList(env);const requested=cleanText(url.searchParams.get('template_id'),100);const selectedId=requested||templates[0]?.id||null;const template=selectedId?await loadTemplate(env,selectedId):null;const policy=await env.partner_evaluation_db.prepare(`SELECT * FROM ipass_policy_settings_v2 WHERE id=1`).first();

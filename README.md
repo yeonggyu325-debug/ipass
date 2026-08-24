@@ -11,3 +11,7 @@
 
 ## 배포
 ZIP을 풀고 이 폴더 안의 public, src, migrations, package.json, wrangler.jsonc 등을 GitHub 저장소 루트에 그대로 덮어씁니다. ZIP 파일 자체를 저장소에 올리는 것이 아닙니다.
+
+D1 변경이 포함된 배포는 `npm run deploy`를 사용합니다. 이 명령은 원격 D1 migration을 먼저 적용하고 Worker를 배포합니다. Cloudflare Git 자동 배포의 deploy command도 `npm run deploy`로 설정합니다.
+
+성능 지표의 필드 구성과 한국 사용자 p50·p95 조회문은 `PERFORMANCE_METRICS.md`에 정리되어 있습니다.

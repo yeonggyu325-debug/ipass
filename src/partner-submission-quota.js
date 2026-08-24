@@ -5,41 +5,10 @@ const TARGET_LIMIT_BYTES = 524288000;   // 500 MiB per company / evaluation cycl
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const RESERVATION_TTL_MINUTES = 30;
 const USAGE_CACHE_MS = 60000;
-let quotaSchemaPromise=null;
 let globalUsageCache=null;
 
-function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=utf-8','access-control-allow-origin':'*','access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS'}})}
 function mb(bytes){return Math.round((Number(bytes||0)/1024/1024)*10)/10}
 function gb(bytes){return Math.round((Number(bytes||0)/1024/1024/1024)*100)/100}
-
-async function ensureQuotaSchema(env){
-  if(quotaSchemaPromise)return quotaSchemaPromise;
-  quotaSchemaPromise=(async()=>{await env.partner_evaluation_db.batch([
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_evidence_files_v2 (
-      id TEXT PRIMARY KEY,
-      target_id TEXT NOT NULL,
-      target_item_id TEXT NOT NULL,
-      object_key TEXT NOT NULL,
-      file_name TEXT NOT NULL,
-      content_type TEXT,
-      file_size INTEGER NOT NULL DEFAULT 0,
-      uploaded_by TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      deleted_at TEXT
-    )`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_upload_reservations_v2 (
-      id TEXT PRIMARY KEY,
-      target_id TEXT NOT NULL,
-      file_size INTEGER NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_upload_reservations_v2_target ON evaluation_upload_reservations_v2(target_id,created_at)`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_files_v2_target_quota ON evaluation_evidence_files_v2(target_id,deleted_at)`),
-    env.partner_evaluation_db.prepare(`DROP TRIGGER IF EXISTS trg_evidence_upload_quota_v2`)
-  ]);
-  await env.partner_evaluation_db.prepare(`DELETE FROM evaluation_upload_reservations_v2 WHERE created_at < datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`).run()})();
-  try{await quotaSchemaPromise}catch(error){quotaSchemaPromise=null;throw error}
-}
 
 async function storageUsage(env,targetId,{exact=false}={}){
   const useCache=!exact&&globalUsageCache&&Date.now()-globalUsageCache.at<USAGE_CACHE_MS,statements=[env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_evidence_files_v2 WHERE target_id=? AND deleted_at IS NULL`).bind(targetId),env.partner_evaluation_db.prepare(`SELECT COALESCE(SUM(file_size),0) AS used FROM evaluation_upload_reservations_v2 WHERE target_id=? AND created_at >= datetime('now','-${RESERVATION_TTL_MINUTES} minutes')`).bind(targetId)];
@@ -80,8 +49,6 @@ export async function handlePartnerSubmissionWithQuota(request,env,ctx,baseWorke
   const url=new URL(request.url),path=url.pathname;if(!path.startsWith('/api/partner/submission'))return null;
   const upload=/^\/api\/partner\/submission\/[^/]+\/items\/[^/]+\/files$/.test(path)&&request.method==='POST';
   if(!upload)return handlePartnerSubmission(request,env,ctx,baseWorker);
-  try{await ensureQuotaSchema(env)}catch(e){console.error('quota schema init failed',e);return json({success:false,error:'증빙자료 저장공간을 준비하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',code:'STORAGE_INIT_FAILED'},503)}
-
   // Multipart data is parsed once by the core handler. It invokes these hooks
   // after validating the file, avoiding a second read of uploads up to 25 MB.
   const quota={

@@ -7,12 +7,6 @@ function safeFileName(v){return String(v||'file').replace(/[\\/:*?"<>|\u0000-\u0
 const ALLOWED_EXT=new Set(['pdf','jpg','jpeg','png','xls','xlsx','hwp','hwpx','ppt','pptx','doc','docx']);
 const MAX_FILE_BYTES=25*1024*1024;
 const PREVIEW_TICKET_MINUTES=5;
-let submissionSchemaPromise=null;
-
-async function ensureColumn(env,table,column,definition){
-  const {results}=await env.partner_evaluation_db.prepare(`PRAGMA table_info(${table})`).all();
-  if(!(results||[]).some(x=>x.name===column))try{await env.partner_evaluation_db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run()}catch(e){if(!String(e?.message||e).toLowerCase().includes('duplicate column'))throw e}
-}
 
 function previewMime(file){
   const ext=(String(file?.file_name||'').split('.').pop()||'').toLowerCase();
@@ -26,57 +20,6 @@ function previewMime(file){
   return mime[ext]||file?.content_type||'application/octet-stream';
 }
 
-async function ensureSchema(env){
-  if(submissionSchemaPromise)return submissionSchemaPromise;
-  submissionSchemaPromise=(async()=>{
-    const ready=await env.partner_evaluation_db.prepare(`SELECT
-    EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='evaluation_partner_submission_logs_v2') AS logs_ready,
-    EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='evaluation_evidence_files_v2') AS files_ready,
-    EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='evaluation_evidence_preview_tickets_v2') AS tickets_ready,
-    EXISTS(SELECT 1 FROM pragma_table_info('evaluation_target_items_v2') WHERE name='needs_rescore') AS rescore_ready,
-    EXISTS(SELECT 1 FROM pragma_table_info('evaluation_target_items_v2') WHERE name='partner_changed_at') AS changed_ready,
-    EXISTS(SELECT 1 FROM pragma_table_info('evaluation_targets_v2') WHERE name='finalized_by') AS finalized_ready`).first().catch(()=>null);
-    if(ready&&Object.values(ready).every(value=>Number(value)===1))return;
-    await env.partner_evaluation_db.batch([
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_partner_submission_logs_v2 (
-      id TEXT PRIMARY KEY,
-      target_id TEXT NOT NULL,
-      target_item_id TEXT,
-      action TEXT NOT NULL,
-      detail_json TEXT,
-      changed_by TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_partner_submission_logs_v2_target ON evaluation_partner_submission_logs_v2(target_id,created_at)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_evidence_files_v2 (
-      id TEXT PRIMARY KEY,
-      target_id TEXT NOT NULL,
-      target_item_id TEXT NOT NULL,
-      object_key TEXT NOT NULL,
-      file_name TEXT NOT NULL,
-      content_type TEXT,
-      file_size INTEGER NOT NULL DEFAULT 0,
-      uploaded_by TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      deleted_at TEXT
-    )`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_files_v2_item ON evaluation_evidence_files_v2(target_item_id,deleted_at)`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_files_v2_target ON evaluation_evidence_files_v2(target_id,deleted_at)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_evidence_preview_tickets_v2 (
-      id TEXT PRIMARY KEY,
-      file_id TEXT NOT NULL,
-      issued_by TEXT,
-      expires_at TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evidence_preview_tickets_v2_expiry ON evaluation_evidence_preview_tickets_v2(expires_at)`)
-  ]);
-  await ensureColumn(env,'evaluation_target_items_v2','needs_rescore','INTEGER NOT NULL DEFAULT 0');
-  await ensureColumn(env,'evaluation_target_items_v2','partner_changed_at','TEXT');
-  await ensureColumn(env,'evaluation_targets_v2','finalized_by','TEXT');
-  })();
-  try{await submissionSchemaPromise}catch(error){submissionSchemaPromise=null;throw error}
-}
 async function account(request,env,ctx,baseWorker){const u=new URL(request.url);u.pathname='/api/me';u.search='';const r=await baseWorker.fetch(new Request(u.toString(),{method:'GET',headers:request.headers}),env,ctx);const d=await r.clone().json().catch(()=>null);if(!r.ok||!d?.success)return {ok:false,response:r};if(d.auth_state!=='approved')return {ok:false,response:json({success:false,error:'승인된 계정이 필요합니다.'},403)};return {ok:true,user:d.user}}
 async function target(env,targetId){return env.partner_evaluation_db.prepare(`SELECT et.id AS target_id,et.company_id,et.status,et.business_number,et.representative_name,et.worker_count,et.submitted_at,et.finalized_at,et.published_at,et.updated_at,c.company_name,c.industry_code,c.industry_name,ec.id AS cycle_id,ec.year,ec.half,ec.cycle_name,ec.start_at,ec.end_at,ec.status AS cycle_status,ec.template_id FROM evaluation_targets_v2 et JOIN companies c ON c.id=et.company_id JOIN evaluation_cycles_v2 ec ON ec.id=et.cycle_id WHERE et.id=? AND et.is_selected=1 LIMIT 1`).bind(targetId).first()}
 async function ensureAccess(request,env,ctx,baseWorker,targetId,write=false){const [a,t]=await Promise.all([account(request,env,ctx,baseWorker),target(env,targetId)]);if(!a.ok)return a;if(!t)return {ok:false,response:json({success:false,error:'평가대상을 찾을 수 없습니다.'},404)};if(a.user.role!=='admin'&&t.company_id!==a.user.company_id)return {ok:false,response:json({success:false,error:'접근 권한이 없습니다.'},403)};if(write&&a.user.role!=='partner')return {ok:false,response:json({success:false,error:'협력사 계정에서만 제출자료를 수정할 수 있습니다.'},403)};if(write&&t.status==='published')return {ok:false,response:json({success:false,error:'결과가 공개된 평가는 수정할 수 없습니다.',editable:false},409)};if(write&&!canEdit(t))return {ok:false,response:json({success:false,error:'현재 평가자료를 수정할 수 있는 기간이 아닙니다.',editable:false},409)};return {ok:true,user:a.user,target:t}}
@@ -175,10 +118,9 @@ async function addFile(request,env,access,itemId,quota=null){
 async function fileAccess(request,env,ctx,baseWorker,fileId,write=false){const a=await account(request,env,ctx,baseWorker);if(!a.ok)return a;const row=await env.partner_evaluation_db.prepare(`SELECT f.*,et.company_id,et.status AS target_status,et.submitted_at,ti.earned_score,ec.status AS cycle_status,ec.start_at,ec.end_at FROM evaluation_evidence_files_v2 f JOIN evaluation_targets_v2 et ON et.id=f.target_id JOIN evaluation_target_items_v2 ti ON ti.id=f.target_item_id JOIN evaluation_cycles_v2 ec ON ec.id=et.cycle_id WHERE f.id=? AND f.deleted_at IS NULL LIMIT 1`).bind(fileId).first();if(!row)return {ok:false,response:json({success:false,error:'첨부파일을 찾을 수 없습니다.'},404)};if(a.user.role!=='admin'&&row.company_id!==a.user.company_id)return {ok:false,response:json({success:false,error:'접근 권한이 없습니다.'},403)};if(write){const pseudo={cycle_status:row.cycle_status,start_at:row.start_at,end_at:row.end_at};if(row.target_status==='published')return {ok:false,response:json({success:false,error:'결과가 공개된 평가는 수정할 수 없습니다.'},409)};if(a.user.role!=='partner'||!canEdit(pseudo))return {ok:false,response:json({success:false,error:'현재 첨부파일을 삭제할 수 없습니다.'},409)}}return {ok:true,user:a.user,file:row}}
 
 export async function handlePartnerSubmission(request,env,ctx,baseWorker,quota=null){
-  const url=new URL(request.url),path=url.pathname;if(!path.startsWith('/api/partner/submission'))return null;if(request.method==='OPTIONS')return json({success:true});const schemaReady=()=>ensureSchema(env);const accessFor=async(id,write=false)=>{const [access]=await Promise.all([ensureAccess(request,env,ctx,baseWorker,id,write),schemaReady()]);return access};
+  const url=new URL(request.url),path=url.pathname;if(!path.startsWith('/api/partner/submission'))return null;if(request.method==='OPTIONS')return json({success:true});const accessFor=(id,write=false)=>ensureAccess(request,env,ctx,baseWorker,id,write);
   const publicPreview=path.match(/^\/api\/partner\/submission\/preview\/([^/]+)$/);
   if(publicPreview&&request.method==='GET'){
-    await schemaReady();
     if(!env.EVIDENCE_FILES)return json({success:false,error:'증빙자료 저장소가 아직 연결되지 않았습니다.'},503);
     const ticket=await env.partner_evaluation_db.prepare(`SELECT f.* FROM evaluation_evidence_preview_tickets_v2 p JOIN evaluation_evidence_files_v2 f ON f.id=p.file_id WHERE p.id=? AND p.expires_at>CURRENT_TIMESTAMP AND f.deleted_at IS NULL LIMIT 1`).bind(decodeURIComponent(publicPreview[1])).first();
     if(!ticket)return json({success:false,error:'미리보기 링크가 만료되었거나 유효하지 않습니다.'},410);
@@ -187,7 +129,6 @@ export async function handlePartnerSubmission(request,env,ctx,baseWorker,quota=n
   }
   const previewTicket=path.match(/^\/api\/partner\/submission\/files\/([^/]+)\/preview-ticket$/);
   if(previewTicket&&request.method==='POST'){
-    await schemaReady();
     const fa=await fileAccess(request,env,ctx,baseWorker,decodeURIComponent(previewTicket[1]),false);if(!fa.ok)return fa.response;
     const id=crypto.randomUUID();
     await env.partner_evaluation_db.batch([
@@ -198,7 +139,7 @@ export async function handlePartnerSubmission(request,env,ctx,baseWorker,quota=n
     const viewerUrl=`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(sourceUrl)}`;
     return json({success:true,source_url:sourceUrl,viewer_url:viewerUrl,expires_in_seconds:PREVIEW_TICKET_MINUTES*60});
   }
-  const fileMatch=path.match(/^\/api\/partner\/submission\/files\/([^/]+)$/);if(fileMatch){await schemaReady();const fa=await fileAccess(request,env,ctx,baseWorker,decodeURIComponent(fileMatch[1]),request.method==='DELETE');if(!fa.ok)return fa.response;if(request.method==='GET'){if(!env.EVIDENCE_FILES)return json({success:false,error:'증빙자료 저장소가 아직 연결되지 않았습니다.'},503);const obj=await env.EVIDENCE_FILES.get(fa.file.object_key);if(!obj)return json({success:false,error:'저장된 파일을 찾을 수 없습니다.'},404);const h=new Headers();obj.writeHttpMetadata(h);h.set('content-disposition',`attachment; filename*=UTF-8''${encodeURIComponent(fa.file.file_name)}`);return new Response(obj.body,{headers:h})}if(request.method==='DELETE'){if(!env.EVIDENCE_FILES)return json({success:false,error:'증빙자료 저장소가 아직 연결되지 않았습니다.'},503);await env.EVIDENCE_FILES.delete(fa.file.object_key);await env.partner_evaluation_db.prepare(`UPDATE evaluation_evidence_files_v2 SET deleted_at=CURRENT_TIMESTAMP WHERE id=?`).bind(fa.file.id).run();if(fa.file.submitted_at)await markPartnerChange(env,fa.file.target_id,fa.file.target_item_id,false);await log(env,fa.file.target_id,fa.file.target_item_id,'file_deleted',{file_id:fa.file.id,file_name:fa.file.file_name,needs_rescore:fa.file.earned_score!==null&&fa.file.earned_score!==undefined},fa.user.id);return json({success:true})}return json({success:false,error:'지원하지 않는 요청입니다.'},405)}
+  const fileMatch=path.match(/^\/api\/partner\/submission\/files\/([^/]+)$/);if(fileMatch){const fa=await fileAccess(request,env,ctx,baseWorker,decodeURIComponent(fileMatch[1]),request.method==='DELETE');if(!fa.ok)return fa.response;if(request.method==='GET'){if(!env.EVIDENCE_FILES)return json({success:false,error:'증빙자료 저장소가 아직 연결되지 않았습니다.'},503);const obj=await env.EVIDENCE_FILES.get(fa.file.object_key);if(!obj)return json({success:false,error:'저장된 파일을 찾을 수 없습니다.'},404);const h=new Headers();obj.writeHttpMetadata(h);h.set('content-disposition',`attachment; filename*=UTF-8''${encodeURIComponent(fa.file.file_name)}`);return new Response(obj.body,{headers:h})}if(request.method==='DELETE'){if(!env.EVIDENCE_FILES)return json({success:false,error:'증빙자료 저장소가 아직 연결되지 않았습니다.'},503);await env.EVIDENCE_FILES.delete(fa.file.object_key);await env.partner_evaluation_db.prepare(`UPDATE evaluation_evidence_files_v2 SET deleted_at=CURRENT_TIMESTAMP WHERE id=?`).bind(fa.file.id).run();if(fa.file.submitted_at)await markPartnerChange(env,fa.file.target_id,fa.file.target_item_id,false);await log(env,fa.file.target_id,fa.file.target_item_id,'file_deleted',{file_id:fa.file.id,file_name:fa.file.file_name,needs_rescore:fa.file.earned_score!==null&&fa.file.earned_score!==undefined},fa.user.id);return json({success:true})}return json({success:false,error:'지원하지 않는 요청입니다.'},405)}
 
   const root=path.match(/^\/api\/partner\/submission\/([^/]+)$/);if(root){const access=await accessFor(decodeURIComponent(root[1]),false);if(!access.ok)return access.response;if(request.method==='GET'){const w=visibleWorkspace(await workspace(env,access.target),access.user);return json({success:true,user:{role:access.user.role||null,name:access.user.name||null,company_name:access.user.company_name||null},workspace:w,capabilities:{evidence_upload:!!env.EVIDENCE_FILES,editable:canEdit(access.target)&&access.target.status!=='published',max_file_size_mb:25,allowed_extensions:[...ALLOWED_EXT]}})}return json({success:false,error:'지원하지 않는 요청입니다.'},405)}
   const profile=path.match(/^\/api\/partner\/submission\/([^/]+)\/profile$/);if(profile&&request.method==='PATCH'){const access=await accessFor(decodeURIComponent(profile[1]),true);if(!access.ok)return access.response;const r=await saveProfile(env,access,await request.json());if(r.error)return json({success:false,error:r.error},r.status);const w=await workspace(env,await target(env,access.target.target_id));return json({success:true,workspace:visibleWorkspace(w,access.user)})}

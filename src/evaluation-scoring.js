@@ -2,32 +2,6 @@ function json(data,status=200){return new Response(JSON.stringify(data),{status,
 function num(v){const n=Number(v);return Number.isFinite(n)?n:null}
 function clean(v,max=3000){return String(v??'').trim().slice(0,max)}
 function round1(v){return Math.round(Number(v||0)*10)/10}
-let scoringSchemaPromise=null;
-
-async function ensureColumn(env,table,column,definition){
-  const {results}=await env.partner_evaluation_db.prepare(`PRAGMA table_info(${table})`).all();
-  if(!(results||[]).some(x=>x.name===column))try{await env.partner_evaluation_db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run()}catch(e){if(!String(e?.message||e).toLowerCase().includes('duplicate column'))throw e}
-}
-async function ensureSchema(env){
-  if(scoringSchemaPromise)return scoringSchemaPromise;
-  scoringSchemaPromise=(async()=>{await env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_scoring_logs_v2 (
-    id TEXT PRIMARY KEY,
-    target_id TEXT NOT NULL,
-    target_item_id TEXT,
-    action TEXT NOT NULL,
-    before_json TEXT,
-    after_json TEXT,
-    changed_by TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`).run();
-  await env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_evaluation_scoring_logs_target ON evaluation_scoring_logs_v2(target_id,created_at DESC)`).run();
-  await ensureColumn(env,'evaluation_targets_v2','raw_score','REAL');
-  await ensureColumn(env,'evaluation_targets_v2','finalized_by','TEXT');
-  await ensureColumn(env,'evaluation_targets_v2','published_by','TEXT');
-  await ensureColumn(env,'evaluation_target_items_v2','needs_rescore','INTEGER NOT NULL DEFAULT 0');
-  await ensureColumn(env,'evaluation_target_items_v2','partner_changed_at','TEXT')})();
-  try{await scoringSchemaPromise}catch(error){scoringSchemaPromise=null;throw error}
-}
 async function admin(request,env,ctx,innerApp){
   const url=new URL(request.url);url.pathname='/api/me';url.search='';
   const response=await innerApp.fetch(new Request(url.toString(),{method:'GET',headers:request.headers}),env,ctx);
@@ -75,8 +49,6 @@ export async function handleEvaluationScoring(request,env,ctx,innerApp){
   const url=new URL(request.url),path=url.pathname;
   if(!path.startsWith('/api/admin/evaluation-scoring/'))return null;
   const auth=await admin(request,env,ctx,innerApp);if(!auth.ok)return auth.response;
-  await ensureSchema(env);
-
   const root=path.match(/^\/api\/admin\/evaluation-scoring\/([^/]+)$/);
   if(root&&request.method==='GET'){
     const data=await bundle(env,decodeURIComponent(root[1]));if(!data)return json({success:false,error:'평가대상을 찾을 수 없습니다.',code:'TARGET_NOT_FOUND'},404);

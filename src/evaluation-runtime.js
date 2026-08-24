@@ -6,86 +6,6 @@ function clamp(v,min=0,max=100){return Math.max(min,Math.min(max,Number(v||0)))}
 function halfLabel(v){return v==='first'?'상반기':'하반기'}
 function grade(score,settings={}){if(score==null)return null;const n=Number(score),excellent=number(settings.excellent_min,90),qualified=number(settings.qualified_min,70);if(n>=excellent)return '안전관리 우수협력사';if(n>=qualified)return '적격 협력사';return '역량 강화 협력사'}
 function isHtmlPath(path){return path==='/'||path==='/index.html'||path==='/evaluation-management.html'}
-let runtimeSchemaPromise=null;
-
-async function ensureRuntimeSchema(env){
-  if(runtimeSchemaPromise)return runtimeSchemaPromise;
-  runtimeSchemaPromise=env.partner_evaluation_db.batch([
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_cycles_v2 (
-      id TEXT PRIMARY KEY,
-      year INTEGER NOT NULL,
-      half TEXT NOT NULL,
-      cycle_name TEXT NOT NULL,
-      start_at TEXT,
-      end_at TEXT,
-      status TEXT NOT NULL DEFAULT 'draft',
-      template_id TEXT NOT NULL,
-      created_by TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      started_at TEXT,
-      closed_at TEXT,
-      UNIQUE(year,half)
-    )`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_cycles_v2_status ON evaluation_cycles_v2(status,year,half)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_targets_v2 (
-      id TEXT PRIMARY KEY,
-      cycle_id TEXT NOT NULL,
-      company_id TEXT NOT NULL,
-      is_selected INTEGER NOT NULL DEFAULT 0,
-      exclusion_reason TEXT,
-      exemption_type TEXT,
-      previous_ipass_score REAL,
-      status TEXT NOT NULL DEFAULT 'not_started',
-      business_number TEXT,
-      representative_name TEXT,
-      worker_count INTEGER,
-      submitted_at TEXT,
-      finalized_at TEXT,
-      published_at TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(cycle_id,company_id)
-    )`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_targets_v2_cycle ON evaluation_targets_v2(cycle_id,is_selected,status)`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_targets_v2_company ON evaluation_targets_v2(company_id,cycle_id)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_target_items_v2 (
-      id TEXT PRIMARY KEY,
-      target_id TEXT NOT NULL,
-      template_item_id TEXT NOT NULL,
-      item_code TEXT,
-      item_name TEXT NOT NULL,
-      item_type TEXT NOT NULL DEFAULT 'score',
-      max_score REAL NOT NULL DEFAULT 0,
-      category_name TEXT,
-      parent_category_name TEXT,
-      guide_text TEXT,
-      judgment_guide TEXT,
-      applicable INTEGER NOT NULL DEFAULT 1,
-      na_source TEXT,
-      manual_na_reason TEXT,
-      description TEXT,
-      earned_score REAL,
-      max_score_snapshot REAL,
-      evaluation_comment TEXT,
-      evaluated_at TEXT,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(target_id,template_item_id)
-    )`),
-    env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_eval_target_items_v2_target ON evaluation_target_items_v2(target_id,sort_order)`),
-    env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS evaluation_cycle_logs_v2 (
-      id TEXT PRIMARY KEY,
-      cycle_id TEXT,
-      action TEXT NOT NULL,
-      detail_json TEXT,
-      changed_by TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )`)
-  ]);
-  try{await runtimeSchemaPromise}catch(error){runtimeSchemaPromise=null;throw error}
-}
 
 async function accountFromRequest(request,env,ctx,baseWorker){
   const u=new URL(request.url);u.pathname='/api/me';u.search='';
@@ -200,7 +120,7 @@ export async function handleEvaluationRuntime(request,env,ctx,baseWorker){
   const url=new URL(request.url),path=url.pathname;
   if(isHtmlPath(path))return injectAsset(request,env,path);
   const watched=path.startsWith('/api/admin/evaluation-runtime')||path==='/api/admin/dashboard-bundle'||path==='/api/cycles'||path==='/api/dashboard'||path==='/api/targets'||path==='/api/my/evaluations'||/^\/api\/evaluations\/[^/]+$/.test(path)||path==='/api/annual-ipass'||/^\/api\/admin\/annual-ipass\/[^/]+\/\d{4}$/.test(path);
-  if(!watched)return null;if(request.method==='OPTIONS')return json({success:true});await ensureRuntimeSchema(env);
+  if(!watched)return null;if(request.method==='OPTIONS')return json({success:true});
 
   if(path.startsWith('/api/admin/evaluation-runtime')){
     const auth=await adminFromRequest(request,env,ctx,baseWorker);if(!auth.ok)return auth.response;const user=auth.user;

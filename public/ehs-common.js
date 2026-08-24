@@ -173,7 +173,42 @@
     populateCommonHeader();
   }
 
+  function installPerformanceTelemetry(){
+    if(document.documentElement.dataset.ehsPerformanceTelemetry==='1'||!window.performance)return;
+    document.documentElement.dataset.ehsPerformanceTelemetry='1';
+    let latestLcp=0,apiReady=0,sent=false;
+    try{new PerformanceObserver(list=>{for(const entry of list.getEntries())latestLcp=Math.max(latestLcp,Number(entry.startTime||0))}).observe({type:'largest-contentful-paint',buffered:true})}catch(_){}
+    document.addEventListener('ehs:user-ready',()=>{apiReady=Math.round(performance.now())},{once:true});
+    const metricPage=()=>{
+      if(path==='/index.html')return'/';
+      return path;
+    };
+    const send=()=>{
+      if(sent)return;sent=true;
+      const nav=performance.getEntriesByType('navigation')[0];
+      const fcp=performance.getEntriesByName('first-contentful-paint')[0];
+      const payload={
+        page:metricPage(),
+        navigation:nav?.type||'navigate',
+        page_load:Math.round(nav?.loadEventEnd||performance.now()),
+        ttfb:Math.round(nav?.responseStart||0),
+        dom_ready:Math.round(nav?.domContentLoadedEventEnd||0),
+        fcp:Math.round(fcp?.startTime||0),
+        lcp:Math.round(latestLcp||0),
+        api_ready:apiReady,
+        resource_count:performance.getEntriesByType('resource').length
+      };
+      const body=JSON.stringify(payload);
+      try{if(navigator.sendBeacon&&navigator.sendBeacon('/api/performance/rum',new Blob([body],{type:'application/json'})))return}catch(_){}
+      fetch('/api/performance/rum',{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true,credentials:'same-origin'}).catch(()=>{});
+    };
+    const afterLoad=()=>setTimeout(send,2000);
+    if(document.readyState==='complete')afterLoad();else window.addEventListener('load',afterLoad,{once:true});
+    window.addEventListener('pagehide',send,{once:true});
+  }
+
   function install(){
+    installPerformanceTelemetry();
     installCommonHeader();
     installSkeletons();
     normalizeButtons();

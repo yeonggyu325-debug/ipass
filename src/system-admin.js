@@ -1,22 +1,4 @@
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=utf-8'}})}
-let auditSchemaPromise=null;
-
-export async function ensureSystemAuditSchema(env){
-  if(auditSchemaPromise)return auditSchemaPromise;
-  auditSchemaPromise=(async()=>{await env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS system_request_audit_v2 (
-    id TEXT PRIMARY KEY,
-    request_id TEXT NOT NULL,
-    method TEXT NOT NULL,
-    path TEXT NOT NULL,
-    status INTEGER NOT NULL,
-    duration_ms INTEGER,
-    actor_id TEXT,
-    actor_role TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`).run();
-  await env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_system_request_audit_v2_created ON system_request_audit_v2(created_at DESC)`).run()})();
-  try{await auditSchemaPromise}catch(error){auditSchemaPromise=null;throw error}
-}
 
 async function admin(request,env,ctx,innerApp){
   const url=new URL(request.url);url.pathname='/api/me';url.search='';
@@ -29,7 +11,6 @@ async function admin(request,env,ctx,innerApp){
 
 export async function recordRequestAudit(env,{requestId,method,path,status,durationMs,actorId=null,actorRole=null}){
   try{
-    await ensureSystemAuditSchema(env);
     await env.partner_evaluation_db.prepare(`INSERT INTO system_request_audit_v2 (id,request_id,method,path,status,duration_ms,actor_id,actor_role) VALUES (?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),requestId,method,path,status,durationMs,actorId,actorRole).run();
   }catch(error){console.error('request audit write failed',error)}
 }
@@ -38,8 +19,6 @@ export async function handleSystemAdmin(request,env,ctx,innerApp){
   const url=new URL(request.url),path=url.pathname;
   if(!path.startsWith('/api/admin/system/'))return null;
   const auth=await admin(request,env,ctx,innerApp);if(!auth.ok)return auth.response;
-  await ensureSystemAuditSchema(env);
-
   if(request.method==='GET'&&path==='/api/admin/system/diagnostics'){
     const checks={d1:false,r2:!!env.EVIDENCE_FILES,assets:!!env.ASSETS};
     let dbError=null;
