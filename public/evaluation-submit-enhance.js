@@ -1,4 +1,5 @@
 (function(){
+  let previewObjectUrl=null,previewRequest=0;
   function apiClient(){if(!window.EHSApi?.request)throw new Error('공통 API 인증 모듈이 초기화되지 않았습니다.');return window.EHSApi}
   function hasWorkspace(){try{return typeof data!=='undefined'&&data&&data.workspace&&data.workspace.target}catch(_){return false}}
   function currentData(){try{return data}catch(_){return null}}
@@ -9,6 +10,41 @@
   function fmtMB(bytes){return (Number(bytes||0)/1024/1024).toFixed(Number(bytes||0)>=104857600?0:1)}
   function fmtGB(bytes){return (Number(bytes||0)/1024/1024/1024).toFixed(2)}
   function meterClass(v){return v>=95?'danger':v>=80?'warn':''}
+  function escapeHtml(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+  function fileExt(name){const part=String(name||'').split('.').pop();return part&&part!==name?part.toLowerCase():''}
+  function fileKind(name){const ext=fileExt(name);if(['jpg','jpeg','png'].includes(ext))return'image';if(ext==='pdf')return'pdf';if(['xls','xlsx'].includes(ext))return'excel';if(['hwp','hwpx'].includes(ext))return'hwp';if(['ppt','pptx'].includes(ext))return'powerpoint';if(['doc','docx'].includes(ext))return'word';return'file'}
+  function fileKindLabel(kind){return{image:'이미지',pdf:'PDF',excel:'Excel',hwp:'한글',powerpoint:'PowerPoint',word:'Word',file:'파일'}[kind]||'파일'}
+  function inferredMime(name,current){const kind=fileKind(name);if(kind==='image')return fileExt(name)==='png'?'image/png':'image/jpeg';if(kind==='pdf')return'application/pdf';return current||'application/octet-stream'}
+  function clearPreviewObjectUrl(){previewRequest++;if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl=null}document.getElementById('modal')?.classList.remove('preview-open')}
+  async function authenticatedBlob(id,retry=true){
+    const headers=new Headers();
+    if(window.EHSAuth?.readSession())headers.set('Authorization','Bearer '+await window.EHSAuth.token());
+    let response;try{response=await fetch((window.EHSApi?.ORIGIN||'')+`/api/partner/submission/files/${encodeURIComponent(id)}`,{headers})}catch(_){throw new Error('파일 미리보기 서버에 연결할 수 없습니다.')}
+    if(response.status===401&&retry&&window.EHSAuth?.readSession()){await window.EHSAuth.refresh();return authenticatedBlob(id,false)}
+    if(!response.ok){const d=await response.json().catch(()=>({}));throw new Error(d.error||'파일을 불러올 수 없습니다.')}
+    return response.blob();
+  }
+  function bindPreviewActions(id){
+    document.getElementById('closeEvidencePreview')?.addEventListener('click',()=>{clearPreviewObjectUrl();closeModal()});
+    document.getElementById('downloadEvidencePreview')?.addEventListener('click',()=>authenticatedDownload(id));
+  }
+  async function previewFile(id,name,size,contentType){
+    if(typeof modal!=='function')return;
+    clearPreviewObjectUrl();
+    const requestId=previewRequest;
+    const kind=fileKind(name),label=fileKindLabel(kind),safeName=escapeHtml(name),sizeText=typeof fmtBytes==='function'?fmtBytes(size):`${Math.round(Number(size||0)/1024)} KB`;
+    if(kind!=='image'&&kind!=='pdf'){
+      modal('증빙자료 미리보기',`<div class="evidence-preview-fallback"><div class="evidence-preview-icon">${escapeHtml(label.slice(0,3).toUpperCase())}</div><strong>${safeName}</strong><span>${escapeHtml(label)} · ${escapeHtml(sizeText)}</span><p>${escapeHtml(label)} 파일은 브라우저에서 원본 화면을 직접 표시할 수 없습니다.<br>파일을 다운로드하여 확인해 주세요.</p></div>`,`<button class="btn" id="closeEvidencePreview">닫기</button><button class="btn primary" id="downloadEvidencePreview">다운로드</button>`);
+      document.getElementById('modal')?.classList.add('preview-open');bindPreviewActions(id);return;
+    }
+    modal('증빙자료 미리보기',`<div class="evidence-preview-loading">${safeName} 파일을 불러오는 중...</div>`,`<button class="btn" id="closeEvidencePreview">닫기</button><button class="btn primary" id="downloadEvidencePreview">다운로드</button>`);
+    document.getElementById('modal')?.classList.add('preview-open');bindPreviewActions(id);
+    try{
+      const source=await authenticatedBlob(id);if(requestId!==previewRequest)return;const blob=source.type===inferredMime(name,source.type)?source:new Blob([source],{type:inferredMime(name,source.type)});previewObjectUrl=URL.createObjectURL(blob);
+      const body=document.getElementById('modalBody');if(!body)return clearPreviewObjectUrl();
+      body.innerHTML=kind==='image'?`<div class="evidence-preview-stage image"><img src="${previewObjectUrl}" alt="${safeName}"></div>`:`<div class="evidence-preview-stage"><iframe src="${previewObjectUrl}" title="${safeName}"></iframe></div>`;
+    }catch(e){const body=document.getElementById('modalBody');if(body)body.innerHTML=`<div class="evidence-preview-error">${escapeHtml(e.message||'파일을 미리 볼 수 없습니다.')}</div>`}
+  }
   function enhanceLayout(){
     if(!hasWorkspace())return;
     const d=currentData(),t=d.workspace.target,cap=d.capabilities||{},usage=cap.storage_usage;
@@ -46,7 +82,8 @@
     document.getElementById('cancelEvidenceDelete').onclick=closeModal;document.getElementById('confirmEvidenceDelete').onclick=async()=>{const b=document.getElementById('confirmEvidenceDelete');b.disabled=true;b.textContent='삭제 중...';try{await apiClient().request(`/api/partner/submission/files/${encodeURIComponent(id)}`,{method:'DELETE'});closeModal();toast('증빙자료를 삭제했습니다.');await load(true)}catch(e){b.disabled=false;b.textContent='다시 시도';document.getElementById('modalBody').textContent=window.EHSApi?.describe?window.EHSApi.describe(e):(e.message||'삭제하지 못했습니다.')}};
   }
   function installActionCapture(){
-    document.addEventListener('click',e=>{const dl=e.target.closest?.('[data-download]');if(dl){e.preventDefault();e.stopImmediatePropagation();authenticatedDownload(dl.dataset.download);return}const del=e.target.closest?.('[data-delete-file]');if(del){e.preventDefault();e.stopImmediatePropagation();confirmedDelete(del.dataset.deleteFile)}},true);
+    document.addEventListener('click',e=>{const pv=e.target.closest?.('[data-preview-file]');if(pv){e.preventDefault();e.stopImmediatePropagation();previewFile(pv.dataset.previewFile,pv.dataset.fileName,Number(pv.dataset.fileSize||0),pv.dataset.contentType||'');return}const dl=e.target.closest?.('[data-download]');if(dl){e.preventDefault();e.stopImmediatePropagation();authenticatedDownload(dl.dataset.download);return}const del=e.target.closest?.('[data-delete-file]');if(del){e.preventDefault();e.stopImmediatePropagation();confirmedDelete(del.dataset.deleteFile)}},true);
+    const modalEl=document.getElementById('modal');if(modalEl)new MutationObserver(()=>{if(modalEl.classList.contains('hidden'))clearPreviewObjectUrl()}).observe(modalEl,{attributes:true,attributeFilter:['class']});
   }
   function patchFunctions(){
     try{
