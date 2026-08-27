@@ -8,10 +8,13 @@ const assets = [
   ['node_modules/pdfjs-dist/build/pdf.min.mjs', 'pdf.min.mjs'],
   ['node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'pdf.worker.min.mjs'],
   ['node_modules/@aiden0z/pptx-renderer/dist/aiden0z-pptx-renderer.browser.es.js', 'pptx-renderer.es.js'],
+  ['node_modules/@rhwp/core/rhwp.js', 'rhwp.js'],
+  ['node_modules/@rhwp/core/rhwp_bg.wasm', 'rhwp_bg.wasm'],
   ['node_modules/jszip/dist/jszip.min.js', 'jszip.min.js'],
   ['node_modules/docx-preview/dist/docx-preview.min.js', 'docx-preview.min.js'],
   ['node_modules/pdfjs-dist/LICENSE', 'LICENSE-pdfjs.txt'],
   ['node_modules/@aiden0z/pptx-renderer/LICENSE', 'LICENSE-pptx-renderer.txt'],
+  ['node_modules/@rhwp/core/LICENSE', 'LICENSE-rhwp.txt'],
   ['node_modules/docx-preview/LICENSE', 'LICENSE-docx-preview.txt'],
   ['node_modules/jszip/LICENSE.markdown', 'LICENSE-jszip.md']
 ];

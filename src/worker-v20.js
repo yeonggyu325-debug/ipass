@@ -13,7 +13,7 @@ const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=5">';
 const COMMON_AUTH='<script src="/shared/auth.js?v=3"></script>';
 const COMMON_API='<script src="/shared/api.js?v=3"></script>';
 const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=10"></script>';
-const COMMON_PREVIEW='<script src="/attachment-preview.js?v=1"></script>';
+const COMMON_PREVIEW='<script src="/attachment-preview.js?v=2"></script>';
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{if(!window.EHSAuth||!window.EHSAuth.readSession())window.EHSAuth?window.EHSAuth.redirectToLogin("/home"):location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
 const SUBMISSION_ASSETS='<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=3"><link rel="stylesheet" href="/evaluation-submit-redesign.css?v=1"><link rel="stylesheet" href="/evaluation-submit-progress.css?v=2"><script src="/evaluation-submit-enhance.js?v=10"></script>';
 const EMBED_STYLE='<style id="ipass-embedded-style">body{background:#f5f7f9!important}.header{display:none!important}.layout{min-height:100vh!important}.side{top:0!important;height:100vh!important}.main{padding-top:20px!important}.shell{padding-top:20px!important}.page-head{margin-top:0!important}</style>';
@@ -34,7 +34,7 @@ async function injectShared(response,{home=false,root=false,submission=false,emb
   html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=3');
   html=injectHead(html,COMMON_API,'/shared/api.js?v=3');
   html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=10');
-  html=injectHead(html,COMMON_PREVIEW,'/attachment-preview.js?v=1');
+  html=injectHead(html,COMMON_PREVIEW,'/attachment-preview.js?v=2');
   if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
   if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v21');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20');html=injectBody(html,IPASS_GRADE_SCRIPT,'ipass-grade-v21')}
   if(submission)html=injectBody(html,SUBMISSION_ASSETS,'evaluation-submit-enhance.js?v=10');if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');return htmlResponse(response,html)

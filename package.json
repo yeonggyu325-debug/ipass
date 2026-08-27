@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@aiden0z/pptx-renderer": "1.2.4",
+    "@rhwp/core": "0.8.4",
     "docx-preview": "0.4.0",
     "jszip": "3.10.1",
     "pdfjs-dist": "5.4.624"

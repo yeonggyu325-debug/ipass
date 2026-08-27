@@ -5,6 +5,8 @@
     pdf: '/vendor/attachment-preview/pdf.min.mjs',
     pdfWorker: '/vendor/attachment-preview/pdf.worker.min.mjs',
     pptx: '/vendor/attachment-preview/pptx-renderer.es.js',
+    rhwp: '/vendor/attachment-preview/rhwp.js',
+    rhwpWasm: '/vendor/attachment-preview/rhwp_bg.wasm',
     jszip: '/vendor/attachment-preview/jszip.min.js',
     docx: '/vendor/attachment-preview/docx-preview.min.js',
     xlsx: 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'
@@ -25,6 +27,8 @@
     pdfDocument: null,
     pdfRenderTask: null,
     pptxViewer: null,
+    pptxObserver: null,
+    hwpDocument: null,
     objectUrls: new Set(),
     scripts: new Map(),
     modules: new Map(),
@@ -78,8 +82,8 @@
       .ap-overlay{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:16px;background:rgba(18,29,39,.66)}
       .ap-overlay.ap-hidden{display:none}.ap-modal{width:min(1120px,98vw);height:min(880px,95vh);display:flex;flex-direction:column;overflow:hidden;border-radius:15px;background:#fff;box-shadow:0 25px 70px rgba(12,24,34,.32);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
       .ap-head{min-height:64px;padding:11px 14px 11px 17px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid #e3e8eb;background:#fff}.ap-title{display:flex;align-items:center;gap:11px;min-width:0}.ap-icon{width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:10px;background:#edf5fd;color:#2773ad;font-size:10px;font-weight:850}.ap-title-copy{min-width:0}.ap-title-copy strong{display:block;max-width:660px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#24313a;font-size:14px}.ap-title-copy span{display:block;margin-top:4px;color:#89949c;font-size:9.5px}.ap-head-actions,.ap-toolbar{display:flex;align-items:center;gap:7px}.ap-button{height:34px;padding:0 11px;border:1px solid #dce2e6;border-radius:8px;background:#fff;color:#667681;font-size:10px;font-weight:760;cursor:pointer}.ap-button:hover{background:#f5f8fa}.ap-button:disabled{opacity:.42;cursor:default}.ap-close{width:34px;padding:0;font-size:18px}.ap-toolbar{min-height:44px;padding:6px 14px;border-bottom:1px solid #e5eaed;background:#f7f9fa;overflow-x:auto}.ap-toolbar:empty{display:none}.ap-spacer{flex:1}.ap-counter{min-width:72px;text-align:center;color:#596a75;font-size:10px;font-weight:760}.ap-body{position:relative;flex:1;min-height:0;overflow:auto;background:#edf1f4;padding:16px}.ap-center{min-height:100%;display:grid;place-items:center;padding:40px 20px;text-align:center;color:#77858f;font-size:12px;line-height:1.7}.ap-center strong{display:block;margin-bottom:7px;color:#455560;font-size:14px}.ap-center .ap-large-icon{width:64px;height:64px;margin:0 auto 14px;display:grid;place-items:center;border-radius:16px;background:#fff;color:#40789e;font-size:13px;font-weight:850;box-shadow:0 6px 18px rgba(34,55,70,.08)}.ap-link{display:inline-flex;height:35px;align-items:center;margin-top:14px;padding:0 12px;border-radius:8px;background:#2878d4;color:#fff;text-decoration:none;font-size:10px;font-weight:780}
-      .ap-pdf-stage{min-height:100%;display:grid;place-items:start center}.ap-pdf-canvas{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 5px 22px rgba(30,49,63,.17)}.ap-image{display:block;max-width:100%;max-height:calc(95vh - 150px);margin:auto;border-radius:7px;background:#fff;box-shadow:0 5px 22px rgba(30,49,63,.13)}
-      .ap-sheet{min-width:100%;border-collapse:collapse;background:#fff;font-size:10px}.ap-sheet th,.ap-sheet td{padding:6px 8px;border:1px solid #dfe5e9;white-space:nowrap}.ap-sheet th{position:sticky;top:-16px;z-index:2;background:#f5f7f8;color:#60717c}.ap-sheet-limit{margin-bottom:9px;padding:8px 10px;border-radius:7px;background:#fff7df;color:#8b6a28;font-size:9.5px}.ap-docx{min-height:100%;padding:16px;background:#dfe4e8;border-radius:8px}.ap-docx .docx-wrapper{padding:16px!important;background:transparent!important}.ap-pptx{min-height:100%;display:flex;align-items:center;justify-content:center;overflow:auto;border-radius:8px;background:#ccd4db}.ap-pptx>div{max-width:100%}.ap-web-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}.ap-note{position:absolute;left:14px;right:14px;bottom:12px;z-index:3;padding:9px 11px;border-radius:8px;background:rgba(32,43,53,.9);color:#fff;text-align:center;font-size:9.5px;line-height:1.5}.ap-error{color:#b94e47}
+      .ap-pdf-stage{min-height:100%;display:grid;place-items:start center}.ap-pdf-canvas{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 5px 22px rgba(30,49,63,.17)}.ap-image-stage,.ap-hwp-stage{min-width:100%;min-height:100%;display:flex;align-items:flex-start;justify-content:center;box-sizing:border-box;padding:4px 4px 24px}.ap-image,.ap-hwp-page{display:block;flex:none;max-width:none;max-height:none;border-radius:7px;background:#fff;box-shadow:0 5px 22px rgba(30,49,63,.13);user-select:none}.ap-hwp-page{border-radius:2px}
+      .ap-sheet{min-width:100%;border-collapse:collapse;background:#fff;font-size:10px}.ap-sheet th,.ap-sheet td{padding:6px 8px;border:1px solid #dfe5e9;white-space:nowrap}.ap-sheet th{position:sticky;top:-16px;z-index:2;background:#f5f7f8;color:#60717c}.ap-sheet-limit{margin-bottom:9px;padding:8px 10px;border-radius:7px;background:#fff7df;color:#8b6a28;font-size:9.5px}.ap-docx{min-height:100%;padding:16px;background:#dfe4e8;border-radius:8px}.ap-docx .docx-wrapper{padding:16px!important;background:transparent!important}.ap-pptx{min-height:100%;display:flex;align-items:flex-start;justify-content:center;overflow:visible;box-sizing:border-box;padding:12px 12px 32px;border-radius:8px;background:#ccd4db}.ap-pptx>div{max-width:none;flex:none}.ap-web-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}.ap-note{position:absolute;left:14px;right:14px;bottom:12px;z-index:3;padding:9px 11px;border-radius:8px;background:rgba(32,43,53,.9);color:#fff;text-align:center;font-size:9.5px;line-height:1.5}.ap-error{color:#b94e47}
       @media(max-width:680px){.ap-overlay{padding:5px}.ap-modal{width:100%;height:98vh}.ap-title-copy strong{max-width:45vw}.ap-head{padding-left:10px}.ap-body{padding:8px}.ap-toolbar{padding:6px 8px}.ap-button{padding:0 8px}.ap-docx{padding:4px}.ap-docx .docx-wrapper{padding:4px!important}}
     `;
     document.head.appendChild(style);
@@ -131,9 +135,13 @@
     try { state.pdfRenderTask?.cancel(); } catch (_) { /* no-op */ }
     try { state.pdfDocument?.destroy(); } catch (_) { /* no-op */ }
     try { state.pptxViewer?.destroy(); } catch (_) { /* no-op */ }
+    try { state.pptxObserver?.disconnect(); } catch (_) { /* no-op */ }
+    try { state.hwpDocument?.free(); } catch (_) { /* no-op */ }
     state.pdfRenderTask = null;
     state.pdfDocument = null;
     state.pptxViewer = null;
+    state.pptxObserver = null;
+    state.hwpDocument = null;
     for (const url of state.objectUrls) URL.revokeObjectURL(url);
     state.objectUrls.clear();
     if (state.dom) {
@@ -162,12 +170,154 @@
   }
 
   function renderImage(url, name) {
-    state.dom.toolbar.replaceChildren();
+    let scale = 1;
+    let naturalWidth = 0;
+    let naturalHeight = 0;
+    const stage = document.createElement('div');
+    stage.className = 'ap-image-stage';
     const image = document.createElement('img');
     image.className = 'ap-image';
     image.src = url;
     image.alt = name;
-    state.dom.body.replaceChildren(image);
+    const counter = document.createElement('span');
+    counter.className = 'ap-counter';
+    const applyScale = () => {
+      if (!naturalWidth || !naturalHeight) return;
+      const width = Math.max(1, Math.round(naturalWidth * scale));
+      const height = Math.max(1, Math.round(naturalHeight * scale));
+      image.style.width = `${width}px`;
+      image.style.height = `${height}px`;
+      stage.style.width = `${Math.max(state.dom.body.clientWidth - 32, width + 8)}px`;
+      counter.textContent = `${Math.round(scale * 100)}%`;
+    };
+    const fit = () => {
+      if (!naturalWidth || !naturalHeight) return;
+      const widthScale = Math.max(.1, (state.dom.body.clientWidth - 48) / naturalWidth);
+      const heightScale = Math.max(.1, (state.dom.body.clientHeight - 48) / naturalHeight);
+      scale = Math.min(1, widthScale, heightScale);
+      applyScale();
+    };
+    const zoomOut = button('－', () => { scale = Math.max(.1, scale - .1); applyScale(); }, '축소');
+    const zoomIn = button('＋', () => { scale = Math.min(5, scale + .1); applyScale(); }, '확대');
+    const actual = button('100%', () => { scale = 1; applyScale(); }, '원본 크기');
+    const fitButton = button('화면 맞춤', fit);
+    const spacer = document.createElement('span');
+    spacer.className = 'ap-spacer';
+    state.dom.toolbar.replaceChildren(fitButton, actual, spacer, zoomOut, counter, zoomIn);
+    image.addEventListener('load', () => {
+      naturalWidth = image.naturalWidth;
+      naturalHeight = image.naturalHeight;
+      fit();
+    }, { once: true });
+    image.addEventListener('error', () => showError('이미지를 불러오지 못했습니다.'), { once: true });
+    stage.appendChild(image);
+    state.dom.body.replaceChildren(stage);
+  }
+
+  let textMeasureContext = null;
+  let textMeasureFont = '';
+
+  async function ensureRhwp() {
+    global.measureTextWidth = (font, text) => {
+      textMeasureContext ||= document.createElement('canvas').getContext('2d');
+      if (!textMeasureContext) return String(text || '').length * 8;
+      if (font !== textMeasureFont) {
+        textMeasureContext.font = font;
+        textMeasureFont = font;
+      }
+      return textMeasureContext.measureText(String(text || '')).width;
+    };
+    const module = await loadModule(ASSETS.rhwp);
+    await module.default({ module_or_path: ASSETS.rhwpWasm });
+    return module;
+  }
+
+  async function renderHangul(ticket, requestNumber) {
+    const [buffer, module] = await Promise.all([
+      fetchBuffer(ticket.source_url, state.abortController.signal),
+      ensureRhwp()
+    ]);
+    if (requestNumber !== state.requestNumber) return;
+    const documentModel = new module.HwpDocument(new Uint8Array(buffer));
+    if (requestNumber !== state.requestNumber) return documentModel.free();
+    state.hwpDocument = documentModel;
+    const pageCount = documentModel.pageCount();
+    if (!Number.isInteger(pageCount) || pageCount < 1) throw new Error('표시할 한글 문서 페이지가 없습니다.');
+    let pageNumber = 0;
+    let scale = 1;
+    let pageRenderNumber = 0;
+    let currentUrl = '';
+    let naturalWidth = 0;
+    let naturalHeight = 0;
+    const previous = button('◀ 이전', () => { if (pageNumber > 0) { pageNumber -= 1; draw(true); } });
+    const pageCounter = document.createElement('span');
+    pageCounter.className = 'ap-counter';
+    const next = button('다음 ▶', () => { if (pageNumber < pageCount - 1) { pageNumber += 1; draw(true); } });
+    const zoomCounter = document.createElement('span');
+    zoomCounter.className = 'ap-counter';
+    const applyScale = image => {
+      if (!naturalWidth || !naturalHeight) return;
+      const width = Math.max(1, Math.round(naturalWidth * scale));
+      const height = Math.max(1, Math.round(naturalHeight * scale));
+      image.style.width = `${width}px`;
+      image.style.height = `${height}px`;
+      image.parentElement.style.width = `${Math.max(state.dom.body.clientWidth - 32, width + 8)}px`;
+      zoomCounter.textContent = `${Math.round(scale * 100)}%`;
+    };
+    const fit = () => {
+      const image = state.dom.body.querySelector('.ap-hwp-page');
+      if (!image || !naturalWidth) return;
+      scale = Math.min(1.25, Math.max(.2, (state.dom.body.clientWidth - 48) / naturalWidth));
+      applyScale(image);
+    };
+    const zoomOut = button('－', () => {
+      const image = state.dom.body.querySelector('.ap-hwp-page');
+      if (image) { scale = Math.max(.2, scale - .1); applyScale(image); }
+    }, '축소');
+    const zoomIn = button('＋', () => {
+      const image = state.dom.body.querySelector('.ap-hwp-page');
+      if (image) { scale = Math.min(4, scale + .1); applyScale(image); }
+    }, '확대');
+    const actual = button('100%', () => {
+      const image = state.dom.body.querySelector('.ap-hwp-page');
+      if (image) { scale = 1; applyScale(image); }
+    }, '원본 크기');
+    const fitButton = button('너비 맞춤', fit);
+    const spacer = document.createElement('span');
+    spacer.className = 'ap-spacer';
+    state.dom.toolbar.replaceChildren(previous, pageCounter, next, spacer, fitButton, actual, zoomOut, zoomCounter, zoomIn);
+
+    async function draw(resetToFit) {
+      const renderNumber = ++pageRenderNumber;
+      const svg = documentModel.renderPageSvg(pageNumber);
+      if (requestNumber !== state.requestNumber || renderNumber !== pageRenderNumber) return;
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      state.objectUrls.add(url);
+      const stage = document.createElement('div');
+      stage.className = 'ap-hwp-stage';
+      const image = document.createElement('img');
+      image.className = 'ap-hwp-page';
+      image.alt = `한글 문서 ${pageNumber + 1}페이지`;
+      image.addEventListener('load', () => {
+        if (requestNumber !== state.requestNumber || renderNumber !== pageRenderNumber) return;
+        naturalWidth = image.naturalWidth;
+        naturalHeight = image.naturalHeight;
+        if (resetToFit) fit(); else applyScale(image);
+        if (currentUrl && currentUrl !== url) {
+          URL.revokeObjectURL(currentUrl);
+          state.objectUrls.delete(currentUrl);
+        }
+        currentUrl = url;
+      }, { once: true });
+      image.addEventListener('error', () => showError('한글 문서 페이지를 표시하지 못했습니다.'), { once: true });
+      image.src = url;
+      stage.appendChild(image);
+      state.dom.body.replaceChildren(stage);
+      previous.disabled = pageNumber <= 0;
+      next.disabled = pageNumber >= pageCount - 1;
+      pageCounter.textContent = `${pageNumber + 1} / ${pageCount}`;
+    }
+    await draw(true);
   }
 
   async function renderPdf(ticket, requestNumber) {
@@ -289,6 +439,37 @@
     });
   }
 
+  function repairPptxTextClipping(container) {
+    const repair = () => {
+      if (!container.isConnected) return;
+      for (const textBox of container.querySelectorAll('div')) {
+        if (textBox.dataset.apPptTextFixed === 'true') continue;
+        const directParagraphs = [...textBox.children].filter(child =>
+          child.tagName === 'DIV' && child.style.width === '100%' && child.textContent.trim()
+        );
+        if (!directParagraphs.length || textBox.style.position !== 'absolute' || textBox.style.flexDirection !== 'column') continue;
+        const overflow = Math.max(0, textBox.scrollHeight - textBox.clientHeight);
+        const needsRepair = ['hidden', 'clip'].includes(textBox.style.overflowY) || (overflow > 0 && overflow <= 12);
+        if (!needsRepair) continue;
+        textBox.dataset.apPptTextFixed = 'true';
+        textBox.style.setProperty('overflow-y', 'visible', 'important');
+        const lastParagraph = directParagraphs.at(-1);
+        lastParagraph.style.setProperty('overflow', 'visible', 'important');
+        lastParagraph.style.setProperty('padding-bottom', '2px', 'important');
+        if (textBox.style.height && textBox.style.height !== 'auto') {
+          const height = textBox.getBoundingClientRect().height;
+          if (height > 0) textBox.style.height = `${Math.ceil(height + Math.min(6, overflow + 2))}px`;
+        }
+      }
+    };
+    const schedule = () => requestAnimationFrame(() => requestAnimationFrame(repair));
+    schedule();
+    document.fonts?.ready?.then(schedule).catch(() => {});
+    state.pptxObserver = new MutationObserver(schedule);
+    state.pptxObserver.observe(container, { childList: true, subtree: true });
+    return schedule;
+  }
+
   async function renderPptx(ticket, requestNumber) {
     const [buffer, module] = await Promise.all([
       fetchBuffer(ticket.source_url, state.abortController.signal),
@@ -309,6 +490,7 @@
     });
     if (requestNumber !== state.requestNumber) return viewer.destroy();
     state.pptxViewer = viewer;
+    const scheduleTextRepair = repairPptxTextClipping(container);
     let slide = Math.max(0, viewer.currentSlideIndex || 0);
     let zoom = 100;
     const previous = button('◀ 이전', async () => { if (slide > 0) await viewer.goToSlide(slide - 1); });
@@ -324,6 +506,7 @@
       previous.disabled = slide <= 0;
       next.disabled = slide >= viewer.slideCount - 1;
       counter.textContent = `${slide + 1} / ${viewer.slideCount}`;
+      scheduleTextRepair();
     };
     viewer.addEventListener('slidechange', update);
     state.dom.toolbar.replaceChildren(previous, counter, next, spacer, zoomOut, zoomIn);
@@ -395,7 +578,11 @@
         try { return await renderPptx(ticket, requestNumber); }
         catch (error) { if (error?.name === 'AbortError') return; console.warn('PPTX preview fallback', error); return renderWebViewer(ticket, extension, '브라우저 슬라이드 렌더링에 실패해 Office 웹뷰어로 표시합니다.'); }
       }
-      if (OFFICE_FALLBACK.has(extension) || HANGUL_FALLBACK.has(extension)) return renderWebViewer(ticket, extension);
+      if (HANGUL_FALLBACK.has(extension)) {
+        try { return await renderHangul(ticket, requestNumber); }
+        catch (error) { if (error?.name === 'AbortError') return; console.warn('HWP/HWPX preview fallback', error); return renderWebViewer(ticket, extension, '브라우저 한글 문서 렌더링에 실패해 외부 문서뷰어로 표시합니다.'); }
+      }
+      if (OFFICE_FALLBACK.has(extension)) return renderWebViewer(ticket, extension);
       renderUnsupported(extension);
     } catch (error) {
       if (error?.name !== 'AbortError') {
