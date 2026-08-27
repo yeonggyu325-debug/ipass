@@ -1,4 +1,6 @@
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=utf-8'}})}
+const REQUIRED_TABLES=['evaluation_templates_v2','evaluation_cycles_v2','evaluation_targets_v2','evaluation_target_items_v2','evaluation_evidence_files_v2','evaluation_partner_submission_logs_v2','evaluation_scoring_logs_v2','system_request_audit_v2'];
+const FAST_INDEXES=['idx_eval_items_v2_template_type','idx_eval_targets_v2_cycle_company','idx_eval_target_items_v2_target_applicable','idx_evidence_files_v2_target_live_created','idx_evidence_files_v2_item_live_created','idx_upload_reservations_v2_created'];
 
 async function admin(request,env,ctx,innerApp){
   const url=new URL(request.url);url.pathname='/api/me';url.search='';
@@ -22,13 +24,21 @@ export async function handleSystemAdmin(request,env,ctx,innerApp){
   if(request.method==='GET'&&path==='/api/admin/system/diagnostics'){
     const checks={d1:false,r2:!!env.EVIDENCE_FILES,assets:!!env.ASSETS};
     let dbError=null;
-    try{await env.partner_evaluation_db.prepare('SELECT 1 AS ok').first();checks.d1=true}catch(error){dbError=String(error?.message||error)}
-    const tables=['evaluation_templates_v2','evaluation_cycles_v2','evaluation_targets_v2','evaluation_target_items_v2','evaluation_evidence_files_v2','evaluation_partner_submission_logs_v2','evaluation_scoring_logs_v2','system_request_audit_v2'];
-    const present={};
-    for(const table of tables){
-      try{const row=await env.partner_evaluation_db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).bind(table).first();present[table]=!!row}catch{present[table]=false}
-    }
+    let rows=[];try{const result=await env.partner_evaluation_db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN (${REQUIRED_TABLES.map(()=>'?').join(',')})`).bind(...REQUIRED_TABLES).all();rows=result.results||[];checks.d1=true}catch(error){dbError=String(error?.message||error)}
+    const names=new Set(rows.map(row=>row.name)),present=Object.fromEntries(REQUIRED_TABLES.map(table=>[table,names.has(table)]));
     return json({success:true,service:'ipass',checks,tables:present,d1_error:dbError,storage:{bucket_binding:'EVIDENCE_FILES',bucket_available:!!env.EVIDENCE_FILES},user:{id:auth.user.id,role:auth.user.role}});
+  }
+
+  if(request.method==='GET'&&path==='/api/admin/system/database'){
+    const [indexResult,templateResult,cycleResult,targetResult,itemResult,fileResult]=await env.partner_evaluation_db.batch([
+      env.partner_evaluation_db.prepare(`SELECT name FROM sqlite_master WHERE type='index' AND name IN (${FAST_INDEXES.map(()=>'?').join(',')})`).bind(...FAST_INDEXES),
+      env.partner_evaluation_db.prepare(`SELECT COUNT(*) AS count FROM evaluation_templates_v2`),
+      env.partner_evaluation_db.prepare(`SELECT COUNT(*) AS count FROM evaluation_cycles_v2`),
+      env.partner_evaluation_db.prepare(`SELECT COUNT(*) AS count FROM evaluation_targets_v2`),
+      env.partner_evaluation_db.prepare(`SELECT COUNT(*) AS count FROM evaluation_target_items_v2`),
+      env.partner_evaluation_db.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(file_size),0) AS bytes FROM evaluation_evidence_files_v2 WHERE deleted_at IS NULL`)
+    ]),installed=new Set((indexResult.results||[]).map(row=>row.name));
+    return json({success:true,database:{engine:'cloudflare-d1',schema:'evaluation_v2',fast_path_ready:FAST_INDEXES.every(index=>installed.has(index)),indexes:{required:FAST_INDEXES,installed:[...installed],missing:FAST_INDEXES.filter(index=>!installed.has(index))},rows:{templates:Number(templateResult.results?.[0]?.count||0),cycles:Number(cycleResult.results?.[0]?.count||0),targets:Number(targetResult.results?.[0]?.count||0),target_items:Number(itemResult.results?.[0]?.count||0),active_files:Number(fileResult.results?.[0]?.count||0)},active_file_bytes:Number(fileResult.results?.[0]?.bytes||0)}});
   }
 
   if(request.method==='GET'&&path==='/api/admin/system/requests'){

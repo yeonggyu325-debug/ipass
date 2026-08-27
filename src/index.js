@@ -140,6 +140,33 @@ export default {
         const firebase = await firebaseUserFromRequest(request);
         if (!firebase.ok) return json({ success: false, error: firebase.error }, firebase.status);
 
+        const cachedApproved = APPROVED_ACCOUNT_CACHE.get(firebase.user.localId);
+        if (cachedApproved?.expiresAt > Date.now() && cachedApproved.account?.profile_complete) {
+          const cachedAccount = cachedApproved.account;
+          if (cachedAccount.role === "admin" || firebase.user.emailVerified) {
+            return json({
+              success: true,
+              auth_state: "approved",
+              user: {
+                id: cachedAccount.id,
+                email: cachedAccount.email,
+                role: cachedAccount.role,
+                company_id: cachedAccount.company_id,
+                company_name: cachedAccount.company_name,
+                industry_name: cachedAccount.industry_name,
+                name: cachedAccount.name,
+                position: cachedAccount.position,
+                phone: cachedAccount.phone,
+                approval_status: cachedAccount.approval_status,
+                rejection_reason: cachedAccount.rejection_reason || null,
+                email_verified: !!firebase.user.emailVerified,
+                unread_notification_count: Number(cachedAccount.unread_notification_count || 0)
+              }
+            });
+          }
+        }
+        if (cachedApproved) APPROVED_ACCOUNT_CACHE.delete(firebase.user.localId);
+
         let account = await env.partner_evaluation_db.prepare(`
           SELECT
             pa.id, pa.firebase_uid, pa.email, pa.role, pa.company_id,
@@ -173,9 +200,7 @@ export default {
           else if (account.approval_status === "rejected") authState = "rejected";
           else if (account.approval_status === "suspended") authState = "suspended";
 
-          if (authState === "approved") rememberApprovedAccount(firebase.user.localId, {
-            id: account.id, email: account.email, role: account.role, company_id: account.company_id, approval_status: account.approval_status
-          });
+          if (authState === "approved") rememberApprovedAccount(firebase.user.localId, { ...account, profile_complete: true });
 
           return json({
             success: true,
@@ -1297,9 +1322,11 @@ async function requireApprovedAccount(request, env) {
   if (cached) APPROVED_ACCOUNT_CACHE.delete(uid);
 
   const portal = await env.partner_evaluation_db.prepare(`
-    SELECT id, email, role, company_id, approval_status
-    FROM portal_accounts
-    WHERE firebase_uid = ?
+    SELECT pa.id,pa.email,pa.role,pa.company_id,pa.approval_status,pa.name,pa.position,pa.phone,
+           pa.email_verified,pa.rejection_reason,c.company_name,c.industry_name
+    FROM portal_accounts pa
+    LEFT JOIN companies c ON c.id=pa.company_id
+    WHERE pa.firebase_uid = ?
     LIMIT 1
   `).bind(uid).first();
 
@@ -1325,7 +1352,7 @@ if (portal) {
         auth_state: portal.approval_status
       };
     }
-    rememberApprovedAccount(uid, portal);
+    rememberApprovedAccount(uid, { ...portal, unread_notification_count: 0, profile_complete: true });
     return { ok: true, account: portal, firebase: firebase.user };
   }
 

@@ -50,12 +50,13 @@ function visibleWorkspace(w,user){
 
 async function recalcNa(env,t){
   const [itemRes,ruleRes]=await env.partner_evaluation_db.batch([
-    env.partner_evaluation_db.prepare(`SELECT ti.id AS target_item_id,ti.template_item_id,ti.manual_na_reason FROM evaluation_target_items_v2 ti WHERE ti.target_id=?`).bind(t.target_id),
+    env.partner_evaluation_db.prepare(`SELECT ti.id AS target_item_id,ti.template_item_id,ti.manual_na_reason,ti.applicable,ti.na_source FROM evaluation_target_items_v2 ti WHERE ti.target_id=?`).bind(t.target_id),
     env.partner_evaluation_db.prepare(`SELECT r.item_id,r.rule_type,r.industry_name,r.min_worker_count FROM evaluation_na_rules_v2 r JOIN evaluation_items_v2 i ON i.id=r.item_id WHERE i.template_id=? ORDER BY r.sort_order`).bind(t.template_id)
   ]);
   const rules=new Map();for(const r of ruleRes.results||[]){if(!rules.has(r.item_id))rules.set(r.item_id,[]);rules.get(r.item_id).push(r)}const wc=Number(t.worker_count);const hasWc=Number.isFinite(wc);const industry=String(t.industry_name||'');const stmts=[];
-  for(const item of itemRes.results||[]){if(item.manual_na_reason)continue;const rs=rules.get(item.template_item_id)||[];let applicable=1,source=null;if(rs.length&&hasWc){const industryRules=rs.filter(r=>r.rule_type==='industry_worker');if(industryRules.length){const matched=industryRules.find(r=>industry&&industry.includes(String(r.industry_name||'')));if(!matched){applicable=0;source='auto_industry_worker'}else if(wc<Number(matched.min_worker_count||0)){applicable=0;source='auto_industry_worker'}}else{const worker=rs.find(r=>r.rule_type==='worker_count');if(worker&&wc<Number(worker.min_worker_count||0)){applicable=0;source='auto_worker_count'}}}stmts.push(env.partner_evaluation_db.prepare(`UPDATE evaluation_target_items_v2 SET applicable=?,na_source=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(applicable,source,item.target_item_id))}
+  for(const item of itemRes.results||[]){if(item.manual_na_reason)continue;const rs=rules.get(item.template_item_id)||[];let applicable=1,source=null;if(rs.length&&hasWc){const industryRules=rs.filter(r=>r.rule_type==='industry_worker');if(industryRules.length){const matched=industryRules.find(r=>industry&&industry.includes(String(r.industry_name||'')));if(!matched){applicable=0;source='auto_industry_worker'}else if(wc<Number(matched.min_worker_count||0)){applicable=0;source='auto_industry_worker'}}else{const worker=rs.find(r=>r.rule_type==='worker_count');if(worker&&wc<Number(worker.min_worker_count||0)){applicable=0;source='auto_worker_count'}}}if(Number(item.applicable)===applicable&&String(item.na_source||'')===String(source||''))continue;stmts.push(env.partner_evaluation_db.prepare(`UPDATE evaluation_target_items_v2 SET applicable=?,na_source=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(applicable,source,item.target_item_id))}
   for(let i=0;i<stmts.length;i+=90)await env.partner_evaluation_db.batch(stmts.slice(i,i+90));
+  return stmts.length;
 }
 
 async function saveProfile(env,access,body){
@@ -64,12 +65,24 @@ async function saveProfile(env,access,body){
   const before={business_number:access.target.business_number,representative_name:access.target.representative_name,worker_count:access.target.worker_count};
   const after={business_number:business,representative_name:rep,worker_count:wc};
   const changed=String(before.business_number||'')!==business||String(before.representative_name||'')!==rep||Number(before.worker_count)!==wc;
+  if(!changed)return {ok:true,changed:false};
   await env.partner_evaluation_db.prepare(`UPDATE evaluation_targets_v2 SET business_number=?,representative_name=?,worker_count=?,status=CASE WHEN status='not_started' THEN 'in_progress' ELSE status END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(business,rep,wc,access.target.target_id).run();
   access.target={...access.target,...after};
-  await recalcNa(env,access.target);
+  if(Number(before.worker_count)!==wc)await recalcNa(env,access.target);
   if(changed&&access.target.submitted_at)await markPartnerChange(env,access.target.target_id,null,true);
   await log(env,access.target.target_id,null,access.target.submitted_at?'post_submit_profile_edit':'profile_saved',{before,after,needs_rescore:changed&&!!access.target.submitted_at},access.user.id);
-  return {ok:true};
+  return {ok:true,changed:true};
+}
+
+function bulkDescriptionStatements(env,targetId,changed,postSubmit){
+  const statements=[];
+  for(let offset=0;offset<changed.length;offset+=25){
+    const part=changed.slice(offset,offset+25),cases=part.map(()=>`WHEN ? THEN ?`).join(' '),marks=part.map(()=>'?').join(','),binds=[];
+    for(const {row,description} of part)binds.push(row.id,description||null);
+    binds.push(targetId,...part.map(({row})=>row.id));
+    statements.push(env.partner_evaluation_db.prepare(`UPDATE evaluation_target_items_v2 SET description=CASE id ${cases} ELSE description END,needs_rescore=CASE WHEN ${postSubmit?1:0}=1 AND earned_score IS NOT NULL THEN 1 ELSE needs_rescore END,partner_changed_at=CASE WHEN ${postSubmit?1:0}=1 AND earned_score IS NOT NULL THEN CURRENT_TIMESTAMP ELSE partner_changed_at END,updated_at=CURRENT_TIMESTAMP WHERE target_id=? AND id IN (${marks})`).bind(...binds));
+  }
+  return statements;
 }
 
 async function saveItemsBulk(env,access,body){
@@ -80,7 +93,7 @@ async function saveItemsBulk(env,access,body){
   for(const id of requested.keys()){const row=rows.get(id);if(!row)return {error:'평가항목을 찾을 수 없습니다.',status:404};if(Number(row.applicable)===0)return {error:'N/A 항목은 제출자료를 입력할 수 없습니다.',status:409}}
   const changed=[];for(const [id,description] of requested){const row=rows.get(id);if(String(row.description||'')!==description)changed.push({row,description})}
   const savedAt=new Date().toISOString();if(!changed.length)return {ok:true,items:[...requested].map(([id,description])=>({id,description})),changed_count:0,saved_at:savedAt};
-  const postSubmit=!!access.target.submitted_at,stmts=changed.map(({row,description})=>env.partner_evaluation_db.prepare(`UPDATE evaluation_target_items_v2 SET description=?,needs_rescore=CASE WHEN ?=1 AND earned_score IS NOT NULL THEN 1 ELSE needs_rescore END,partner_changed_at=CASE WHEN ?=1 AND earned_score IS NOT NULL THEN CURRENT_TIMESTAMP ELSE partner_changed_at END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND target_id=?`).bind(description||null,postSubmit?1:0,postSubmit?1:0,row.id,access.target.target_id));
+  const postSubmit=!!access.target.submitted_at,stmts=bulkDescriptionStatements(env,access.target.target_id,changed,postSubmit);
   stmts.push(env.partner_evaluation_db.prepare(`UPDATE evaluation_targets_v2 SET status=CASE WHEN ?=1 AND status='completed' THEN 'evaluating' WHEN status='not_started' THEN 'in_progress' ELSE status END,finalized_at=CASE WHEN ?=1 AND status='completed' THEN NULL ELSE finalized_at END,finalized_by=CASE WHEN ?=1 AND status='completed' THEN NULL ELSE finalized_by END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(postSubmit?1:0,postSubmit?1:0,postSubmit?1:0,access.target.target_id));
   stmts.push(env.partner_evaluation_db.prepare(`INSERT INTO evaluation_partner_submission_logs_v2 (id,target_id,target_item_id,action,detail_json,changed_by) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(),access.target.target_id,null,postSubmit?'post_submit_items_bulk_edit':'items_bulk_saved',JSON.stringify({item_count:changed.length,item_ids:changed.map(x=>x.row.id),needs_rescore:postSubmit&&changed.some(x=>x.row.earned_score!==null&&x.row.earned_score!==undefined)}),access.user.id));
   for(let i=0;i<stmts.length;i+=90)await env.partner_evaluation_db.batch(stmts.slice(i,i+90));
@@ -88,16 +101,25 @@ async function saveItemsBulk(env,access,body){
   return {ok:true,items:[...requested].map(([id,description])=>({id,description})),changed_count:changed.length,saved_at:savedAt};
 }
 async function saveItem(env,access,itemId,body){const result=await saveItemsBulk(env,access,{items:[{id:itemId,description:body?.description}]});if(result.error)return result;return {ok:true,saved_at:result.saved_at}}
+function summaryStatement(env,targetId){return env.partner_evaluation_db.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN ti.applicable<>0 THEN 1 ELSE 0 END) AS applicable,SUM(CASE WHEN ti.applicable=0 THEN 1 ELSE 0 END) AS na,SUM(CASE WHEN ti.applicable<>0 AND (TRIM(COALESCE(ti.description,''))<>'' OR EXISTS (SELECT 1 FROM evaluation_evidence_files_v2 f WHERE f.target_id=ti.target_id AND f.target_item_id=ti.id AND f.deleted_at IS NULL)) THEN 1 ELSE 0 END) AS prepared FROM evaluation_target_items_v2 ti WHERE ti.target_id=?`).bind(targetId)}
+function summaryFromRow(row){const total=Number(row?.total||0),applicable=Number(row?.applicable||0),na=Number(row?.na||0),prepared=Number(row?.prepared||0);return {total,applicable,na,prepared,blank:Math.max(0,applicable-prepared),progress:total?Math.round(((prepared+na)/total)*100):0}}
 async function submissionSummary(env,targetId){
-  const row=await env.partner_evaluation_db.prepare(`SELECT COUNT(*) AS total,SUM(CASE WHEN ti.applicable<>0 THEN 1 ELSE 0 END) AS applicable,SUM(CASE WHEN ti.applicable=0 THEN 1 ELSE 0 END) AS na,SUM(CASE WHEN ti.applicable<>0 AND (TRIM(COALESCE(ti.description,''))<>'' OR f.target_item_id IS NOT NULL) THEN 1 ELSE 0 END) AS prepared FROM evaluation_target_items_v2 ti LEFT JOIN (SELECT target_item_id FROM evaluation_evidence_files_v2 WHERE target_id=? AND deleted_at IS NULL GROUP BY target_item_id) f ON f.target_item_id=ti.id WHERE ti.target_id=?`).bind(targetId,targetId).first();
-  const total=Number(row?.total||0),applicable=Number(row?.applicable||0),na=Number(row?.na||0),prepared=Number(row?.prepared||0);return {total,applicable,na,prepared,blank:Math.max(0,applicable-prepared),progress:total?Math.round(((prepared+na)/total)*100):0};
+  return summaryFromRow(await summaryStatement(env,targetId).first());
 }
-async function submit(env,access){
+async function submitWithItems(env,access,body){
   const t=access.target;if(!clean(t.business_number,30)||!clean(t.representative_name,100)||t.worker_count===null||t.worker_count===undefined)return {error:'제출 전 회사 기본정보를 먼저 저장하세요.',status:400};
-  const summary=await submissionSummary(env,t.target_id),resubmitted=!!t.submitted_at,submittedAt=t.submitted_at||new Date().toISOString();
-  await env.partner_evaluation_db.batch([env.partner_evaluation_db.prepare(`UPDATE evaluation_targets_v2 SET status=CASE WHEN status IN ('not_started','in_progress','submitted') THEN 'submitted' ELSE status END,submitted_at=COALESCE(submitted_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(t.target_id),env.partner_evaluation_db.prepare(`INSERT INTO evaluation_partner_submission_logs_v2 (id,target_id,target_item_id,action,detail_json,changed_by) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(),t.target_id,null,resubmitted?'resubmitted':'submitted',JSON.stringify({prepared:summary.prepared,blank:summary.blank,applicable:summary.applicable}),access.user.id)]);
-  const status=['not_started','in_progress','submitted'].includes(t.status)?'submitted':t.status;
-  return {ok:true,resubmitted,summary,submitted_at:submittedAt,status};
+  const incoming=Array.isArray(body?.items)?body.items.slice(0,150):[],requested=new Map();for(const item of incoming){const id=clean(item?.id,100);if(id)requested.set(id,clean(item?.description,4000))}
+  let rows=new Map();if(requested.size){const ids=[...requested.keys()],reads=[];for(let i=0;i<ids.length;i+=80){const part=ids.slice(i,i+80),marks=part.map(()=>'?').join(',');reads.push(env.partner_evaluation_db.prepare(`SELECT id,description,applicable,earned_score FROM evaluation_target_items_v2 WHERE target_id=? AND id IN (${marks})`).bind(t.target_id,...part))}const batches=await env.partner_evaluation_db.batch(reads);rows=new Map(batches.flatMap(result=>result.results||[]).map(row=>[row.id,row]));for(const id of requested.keys()){const row=rows.get(id);if(!row)return {error:'평가항목을 찾을 수 없습니다.',status:404};if(Number(row.applicable)===0)return {error:'N/A 항목은 제출자료를 입력할 수 없습니다.',status:409}}}
+  const changed=[];for(const [id,description] of requested){const row=rows.get(id);if(String(row?.description||'')!==description)changed.push({row,description})}
+  const postSubmit=!!t.submitted_at,resubmitted=postSubmit,submittedAt=t.submitted_at||new Date().toISOString(),statements=[];
+  statements.push(...bulkDescriptionStatements(env,t.target_id,changed,postSubmit));
+  statements.push(env.partner_evaluation_db.prepare(`UPDATE evaluation_targets_v2 SET status=CASE WHEN ?=1 AND ?=1 AND status='completed' THEN 'evaluating' WHEN status IN ('not_started','in_progress','submitted') THEN 'submitted' ELSE status END,submitted_at=COALESCE(submitted_at,CURRENT_TIMESTAMP),finalized_at=CASE WHEN ?=1 AND ?=1 AND status='completed' THEN NULL ELSE finalized_at END,finalized_by=CASE WHEN ?=1 AND ?=1 AND status='completed' THEN NULL ELSE finalized_by END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(postSubmit?1:0,changed.length?1:0,postSubmit?1:0,changed.length?1:0,postSubmit?1:0,changed.length?1:0,t.target_id));
+  if(changed.length)statements.push(env.partner_evaluation_db.prepare(`INSERT INTO evaluation_partner_submission_logs_v2 (id,target_id,target_item_id,action,detail_json,changed_by) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(),t.target_id,null,postSubmit?'post_submit_items_bulk_edit':'items_bulk_saved',JSON.stringify({item_count:changed.length,item_ids:changed.map(x=>x.row.id),needs_rescore:postSubmit&&changed.some(x=>x.row.earned_score!==null&&x.row.earned_score!==undefined)}),access.user.id));
+  statements.push(env.partner_evaluation_db.prepare(`INSERT INTO evaluation_partner_submission_logs_v2 (id,target_id,target_item_id,action,detail_json,changed_by) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(),t.target_id,null,resubmitted?'resubmitted':'submitted',JSON.stringify({changed_count:changed.length,requested_count:requested.size}),access.user.id));
+  statements.push(summaryStatement(env,t.target_id));
+  const results=await env.partner_evaluation_db.batch(statements),summary=summaryFromRow(results.at(-1)?.results?.[0]);
+  const status=postSubmit&&changed.length&&t.status==='completed'?'evaluating':['not_started','in_progress','submitted'].includes(t.status)?'submitted':t.status;
+  return {ok:true,resubmitted,summary,submitted_at:submittedAt,status,changed_count:changed.length};
 }
 
 async function addFile(request,env,access,itemId,quota=null){
@@ -146,6 +168,6 @@ export async function handlePartnerSubmission(request,env,ctx,baseWorker,quota=n
   const bulkItems=path.match(/^\/api\/partner\/submission\/([^/]+)\/items\/bulk$/);if(bulkItems&&request.method==='PATCH'){const access=await accessFor(decodeURIComponent(bulkItems[1]),true);if(!access.ok)return access.response;const r=await saveItemsBulk(env,access,await request.json());if(r.error)return json({success:false,error:r.error},r.status);return json({success:true,...r})}
   const item=path.match(/^\/api\/partner\/submission\/([^/]+)\/items\/([^/]+)$/);if(item&&request.method==='PATCH'){const access=await accessFor(decodeURIComponent(item[1]),true);if(!access.ok)return access.response;const r=await saveItem(env,access,decodeURIComponent(item[2]),await request.json());if(r.error)return json({success:false,error:r.error},r.status);return json({success:true,...r})}
   const files=path.match(/^\/api\/partner\/submission\/([^/]+)\/items\/([^/]+)\/files$/);if(files&&request.method==='POST'){const access=await accessFor(decodeURIComponent(files[1]),true);if(!access.ok)return access.response;const r=await addFile(request,env,access,decodeURIComponent(files[2]),quota);if(r.error)return json({success:false,error:r.error,code:r.code,storage_available:r.storage_available,storage_usage:r.storage_usage},r.status);return json({success:true,file:r.file},201)}
-  const submitMatch=path.match(/^\/api\/partner\/submission\/([^/]+)\/submit$/);if(submitMatch&&request.method==='POST'){const access=await accessFor(decodeURIComponent(submitMatch[1]),true);if(!access.ok)return access.response;const body=await request.json().catch(()=>({}));if(Array.isArray(body.items)&&body.items.length){const saved=await saveItemsBulk(env,access,body);if(saved.error)return json({success:false,error:saved.error},saved.status)}const r=await submit(env,access);if(r.error)return json({success:false,error:r.error},r.status);return json({success:true,...r})}
+  const submitMatch=path.match(/^\/api\/partner\/submission\/([^/]+)\/submit$/);if(submitMatch&&request.method==='POST'){const access=await accessFor(decodeURIComponent(submitMatch[1]),true);if(!access.ok)return access.response;const r=await submitWithItems(env,access,await request.json().catch(()=>({})));if(r.error)return json({success:false,error:r.error},r.status);return json({success:true,...r})}
   return json({success:false,error:'지원하지 않는 제출 요청입니다.'},404)
 }
