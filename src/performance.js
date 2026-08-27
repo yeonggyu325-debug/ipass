@@ -6,8 +6,8 @@ function finite(value,max=120000){const n=Number(value);return Number.isFinite(n
 
 export function normalizeMetricPath(path){
   const routes=[
-    [/^\/api\/education\/preview\/[^/]+$/,'/api/education/preview/:ticket'],
-    [/^\/api\/partner\/submission\/preview\/[^/]+$/,'/api/partner/submission/preview/:ticket'],
+    [/^\/api\/education\/preview\/[^/]+(?:\/[^/]+)?$/,'/api/education/preview/:ticket/:file'],
+    [/^\/api\/partner\/submission\/preview\/[^/]+(?:\/[^/]+)?$/,'/api/partner/submission/preview/:ticket/:file'],
     [/^\/api\/partner\/submission\/files\/[^/]+\/preview-ticket$/,'/api/partner/submission/files/:file/preview-ticket'],
     [/^\/api\/partner\/submission\/files\/[^/]+$/,'/api/partner/submission/files/:file'],
     [/^\/api\/partner\/submission\/[^/]+\/items\/bulk$/,'/api/partner/submission/:target/items/bulk'],

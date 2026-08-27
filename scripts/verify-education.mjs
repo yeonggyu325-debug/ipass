@@ -20,7 +20,8 @@ for (const status of ['overdue_missing', 'draft', 'under_review', 'approved', 'c
   requireText(files.api, `'${status}'`, `${status} 상태 누락`);
   requireText(files.page, `${status}`, `${status} 화면 표시 누락`);
 }
-for (const extension of ['pdf', 'hwp', 'hwpx', 'xls', 'xlsx']) requireText(files.api, `'${extension}'`, `${extension} 업로드 형식 누락`);
+const allowedExtensions = ['pdf', 'hwp', 'hwpx', 'xls', 'xlsx', 'ppt', 'pptx', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+for (const extension of allowedExtensions) requireText(files.api, `'${extension}'`, `${extension} 업로드 형식 누락`);
 
 requireText(files.api, "if (key < current) return 'overdue_missing'", '지난 월 미제출 자동판정 누락');
 requireText(files.api, "user.role !== 'admin'", '관리자 권한검사 누락');
@@ -50,7 +51,7 @@ console.log(JSON.stringify({
   success: true,
   education_tables: 4,
   statuses: 5,
-  allowed_extensions: 5,
+  allowed_extensions: allowedExtensions.length,
   department_scope: false,
   dom_ids: ids.length,
   worker_route: true

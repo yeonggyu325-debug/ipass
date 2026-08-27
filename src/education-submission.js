@@ -1,4 +1,7 @@
-const ALLOWED_EXTENSIONS = new Set(['pdf', 'hwp', 'hwpx', 'xls', 'xlsx']);
+const ALLOWED_EXTENSIONS = new Set([
+  'pdf', 'hwp', 'hwpx', 'xls', 'xlsx',
+  'ppt', 'pptx', 'doc', 'docx', 'jpg', 'jpeg', 'png'
+]);
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_MONTH_BYTES = 100 * 1024 * 1024;
 const MAX_MONTH_FILES = 10;
@@ -9,7 +12,14 @@ const MIME_BY_EXTENSION = {
   hwp: 'application/x-hwp',
   hwpx: 'application/vnd.hancom.hwpx',
   xls: 'application/vnd.ms-excel',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png'
 };
 
 function json(data, status = 200) {
@@ -246,11 +256,15 @@ async function annualOverview(env, user, year) {
 }
 
 async function validateFileSignature(file, extension) {
-  const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
   const starts = (...values) => values.every((value, index) => bytes[index] === value);
   if (extension === 'pdf') return starts(0x25, 0x50, 0x44, 0x46);
-  if (extension === 'xlsx' || extension === 'hwpx') return starts(0x50, 0x4b, 0x03, 0x04) || starts(0x50, 0x4b, 0x05, 0x06) || starts(0x50, 0x4b, 0x07, 0x08);
-  if (extension === 'xls' || extension === 'hwp') return starts(0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1);
+  if (['xlsx', 'hwpx', 'pptx', 'docx'].includes(extension)) {
+    return starts(0x50, 0x4b, 0x03, 0x04) || starts(0x50, 0x4b, 0x05, 0x06) || starts(0x50, 0x4b, 0x07, 0x08);
+  }
+  if (['xls', 'hwp', 'ppt', 'doc'].includes(extension)) return starts(0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1);
+  if (extension === 'png') return starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+  if (extension === 'jpg' || extension === 'jpeg') return starts(0xff, 0xd8, 0xff);
   return false;
 }
 
@@ -261,7 +275,7 @@ async function addFile(request, env, user, year, month) {
   if (!(file instanceof File) || !file.name) return { error: '첨부할 파일을 선택하세요.', status: 400 };
   if (file.size <= 0 || file.size > MAX_FILE_BYTES) return { error: '파일은 25MB 이하만 첨부할 수 있습니다.', status: 400 };
   const extension = extensionOf(file.name);
-  if (!ALLOWED_EXTENSIONS.has(extension)) return { error: 'PDF, HWP, HWPX, XLS, XLSX 파일만 첨부할 수 있습니다.', status: 400 };
+  if (!ALLOWED_EXTENSIONS.has(extension)) return { error: 'PDF, 한글, Excel, PowerPoint, Word, JPG, PNG 파일만 첨부할 수 있습니다.', status: 400 };
   if (!(await validateFileSignature(file, extension))) return { error: '파일 내용과 확장자가 일치하지 않거나 손상된 파일입니다.', status: 400 };
 
   const submission = await ensureMonthSubmission(env, user, year, month);
@@ -326,7 +340,7 @@ export async function handleEducationSubmission(request, env, ctx, baseWorker) {
   if (!path.startsWith('/api/education') && !path.startsWith('/api/admin/education')) return null;
   if (request.method === 'OPTIONS') return json({ success: true });
 
-  const publicPreviewMatch = path.match(/^\/api\/education\/preview\/([^/]+)$/);
+  const publicPreviewMatch = path.match(/^\/api\/education\/preview\/([^/]+)(?:\/[^/]+)?$/);
   if (publicPreviewMatch && request.method === 'GET') return publicPreview(request, env, decodeURIComponent(publicPreviewMatch[1]));
 
   const auth = await account(request, env, ctx, baseWorker);
@@ -431,7 +445,7 @@ export async function handleEducationSubmission(request, env, ctx, baseWorker) {
         VALUES (?, ?, ?, datetime('now', ?))
       `).bind(ticketId, access.file.id, user.id || null, `+${PREVIEW_TICKET_MINUTES} minutes`)
     ]);
-    const sourceUrl = `${url.origin}/api/education/preview/${encodeURIComponent(ticketId)}`;
+    const sourceUrl = `${url.origin}/api/education/preview/${encodeURIComponent(ticketId)}/${encodeURIComponent(access.file.file_name)}`;
     return json({
       success: true,
       source_url: sourceUrl,

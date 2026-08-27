@@ -31,6 +31,15 @@
   }
   async function previewTicket(id){return apiClient().request(`/api/partner/submission/files/${encodeURIComponent(id)}/preview-ticket`,{method:'POST',body:'{}'})}
   async function previewFile(id,name,size,contentType){
+    if(window.AttachmentPreview){
+      window.AttachmentPreview.init({
+        getPreviewTicket:file=>previewTicket(file.id),
+        download:file=>authenticatedDownload(file.id),
+        maxPreviewBytes:25*1024*1024,
+        onError:error=>console.error('submission attachment preview failed',error)
+      });
+      return window.AttachmentPreview.open({id,file_name:name,file_size:size,content_type:contentType});
+    }
     if(typeof modal!=='function')return;
     clearPreviewObjectUrl();
     const requestId=previewRequest;

@@ -2,14 +2,22 @@
   "name": "ipass",
   "private": true,
   "scripts": {
-    "check": "wrangler deploy --dry-run",
+    "prepare:preview": "node scripts/prepare-preview-assets.mjs",
+    "check": "npm run prepare:preview && wrangler deploy --dry-run",
     "verify:db": "node scripts/verify-database.mjs",
     "verify:education": "node scripts/verify-education.mjs",
+    "verify:preview": "node scripts/verify-attachment-preview.mjs",
     "migrate:local": "wrangler d1 migrations apply partner-evaluation-db --local",
     "migrate:remote": "wrangler d1 migrations apply partner-evaluation-db --remote",
-    "deploy": "npm run verify:education && npm run migrate:remote && wrangler deploy"
+    "deploy": "npm run verify:education && npm run verify:preview && npm run prepare:preview && npm run migrate:remote && wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.123.0"
+  },
+  "dependencies": {
+    "@aiden0z/pptx-renderer": "1.2.4",
+    "docx-preview": "0.4.0",
+    "jszip": "3.10.1",
+    "pdfjs-dist": "5.4.624"
   }
 }
