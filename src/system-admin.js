@@ -1,5 +1,5 @@
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=utf-8'}})}
-const REQUIRED_TABLES=['evaluation_templates_v2','evaluation_cycles_v2','evaluation_targets_v2','evaluation_target_items_v2','evaluation_evidence_files_v2','evaluation_partner_submission_logs_v2','evaluation_scoring_logs_v2','system_request_audit_v2'];
+const REQUIRED_TABLES=['evaluation_templates_v2','evaluation_cycles_v2','evaluation_targets_v2','evaluation_target_items_v2','evaluation_evidence_files_v2','evaluation_partner_submission_logs_v2','evaluation_scoring_logs_v2','system_request_audit_v2','education_submissions','education_submission_files','education_preview_tickets','education_submission_logs'];
 const FAST_INDEXES=['idx_eval_items_v2_template_type','idx_eval_targets_v2_cycle_company','idx_eval_target_items_v2_target_applicable','idx_evidence_files_v2_target_live_created','idx_evidence_files_v2_item_live_created','idx_upload_reservations_v2_created'];
 
 async function admin(request,env,ctx,innerApp){

@@ -6,6 +6,7 @@ function finite(value,max=120000){const n=Number(value);return Number.isFinite(n
 
 export function normalizeMetricPath(path){
   const routes=[
+    [/^\/api\/education\/preview\/[^/]+$/,'/api/education/preview/:ticket'],
     [/^\/api\/partner\/submission\/preview\/[^/]+$/,'/api/partner/submission/preview/:ticket'],
     [/^\/api\/partner\/submission\/files\/[^/]+\/preview-ticket$/,'/api/partner/submission/files/:file/preview-ticket'],
     [/^\/api\/partner\/submission\/files\/[^/]+$/,'/api/partner/submission/files/:file'],
@@ -20,6 +21,12 @@ export function normalizeMetricPath(path){
     [/^\/api\/admin\/evaluation-runtime\/cycles\/[^/]+\/(start|close)$/,'/api/admin/evaluation-runtime/cycles/:cycle/:action'],
     [/^\/api\/admin\/evaluation-runtime\/cycles\/[^/]+$/,'/api/admin/evaluation-runtime/cycles/:cycle'],
     [/^\/api\/admin\/annual-ipass\/[^/]+\/\d{4}$/,'/api/admin/annual-ipass/:company/:year'],
+    [/^\/api\/education\/months\/\d{4}\/\d{1,2}\/(files|submit)$/,'/api/education/months/:year/:month/:action'],
+    [/^\/api\/education\/months\/\d{4}\/\d{1,2}$/,'/api/education/months/:year/:month'],
+    [/^\/api\/education\/files\/[^/]+\/preview-ticket$/,'/api/education/files/:file/preview-ticket'],
+    [/^\/api\/education\/files\/[^/]+$/,'/api/education/files/:file'],
+    [/^\/api\/education\/submissions\/[^/]+$/,'/api/education/submissions/:submission'],
+    [/^\/api\/admin\/education\/[^/]+\/review$/,'/api/admin/education/:submission/review'],
     [/^\/api\/evaluations\/[^/]+$/,'/api/evaluations/:target']
   ];
   for(const [pattern,label] of routes)if(pattern.test(path))return label;
@@ -124,7 +131,7 @@ export async function handlePerformanceRum(request,env){
   const origin=request.headers.get('origin');if(origin!==url.origin)return new Response(null,{status:403});
   const length=Number(request.headers.get('content-length')||0);if(length>4096)return new Response(null,{status:413});
   const body=await request.json().catch(()=>null);if(!body||typeof body!=='object')return new Response(null,{status:400});
-  const allowedPages=new Set(['/','/home','/committee','/ipass','/ipass/templates','/ipass/cycles','/evaluation-management.html','/evaluation-cycle.html','/evaluation-submit.html','/evaluation-scoring.html']);
+  const allowedPages=new Set(['/','/home','/committee','/education','/ipass','/ipass/templates','/ipass/cycles','/evaluation-management.html','/evaluation-cycle.html','/evaluation-submit.html','/evaluation-scoring.html']);
   const requestedPage=body.page==='/index.html'?'/':body.page==='/committee.html'?'/committee':body.page==='/ipass/'?'/ipass':body.page;
   const page=allowedPages.has(requestedPage)?requestedPage:'/other';
   const country=String(request.cf?.country||'ZZ').slice(0,8),colo=String(request.cf?.colo||'unknown').slice(0,16),navigation=String(body.navigation||'navigate').slice(0,24);

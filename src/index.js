@@ -29,7 +29,7 @@ export default {
       }
 
       if (request.method === "GET" && path === "/api/health") {
-        return json({ success: true, service: "ipass", status: "ok", version: "16.6.0", annual_ipass_routes: true, committee_routes: true, voc_routes: true });
+        return json({ success: true, service: "ipass", status: "ok", version: "16.7.0", annual_ipass_routes: true, committee_routes: true, education_routes: true, voc_routes: true });
       }
 
       if (request.method === "GET" && path === "/api/public/companies") {

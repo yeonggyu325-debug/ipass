@@ -1529,7 +1529,7 @@ main{
           <button class="gnb-trigger" type="button">평가·교육</button>
           <div class="gnb-menu">
             <button type="button" onclick="openPortalService('ipass')">i-PaSS</button>
-            <button type="button" onclick="openPortalService('training')">교육 제출 현황</button>
+            <button class="hidden" id="educationStatusNav" type="button" onclick="openPortalService('training')">교육 제출 현황</button>
           </div>
         </div>
 
@@ -1632,9 +1632,9 @@ main{
               <span class="service-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c0-4 2-6 5-6s5 2 5 6M13 20c0-3 1-5 3-6 3 0 5 2 5 6"/></svg></span>
               <span class="service-text"><strong>안전보건협의체</strong><span>참석 현황 · 불참 1회당 -3점</span></span>
             </button>
-            <button class="service-tile coming" type="button" onclick="openPortalService('training')">
+            <button class="service-tile" type="button" onclick="openPortalService('training')">
               <span class="service-icon"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5z"/><path d="M7 11v5c3 2 7 2 10 0v-5M21 8v6"/></svg></span>
-              <span class="service-text"><strong>교육 제출</strong><span>교육자료 제출 현황</span><span class="service-mini-badge">준비 중</span></span>
+              <span class="service-text"><strong>교육 제출</strong><span>월별 교육자료 제출 · 심사상태 확인</span></span>
             </button>
                       <button class="service-tile coming" type="button" onclick="openPortalService('voc')">
               <span class="service-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 4z"/><path d="M8 9h8M8 13h5"/></svg></span>
@@ -1912,6 +1912,7 @@ async function routeAfterLogin(me){
   $("homeUserName").textContent=displayName;
   $("portalWelcome").textContent=`${company}의 EHS 업무를 한 화면에서 확인하세요.`;
   $("adminNavGroup").classList.toggle("hidden",currentUser.role!=="admin");
+  $("educationStatusNav").classList.toggle("hidden",currentUser.role!=="admin");
   showPage("portalHome");
   loadPortalHome();
   showLatestNotice("after_login");
@@ -2362,6 +2363,7 @@ function openPortalService(service){
   if(service==="resources"){navigatePage("resources");return}
   if(service==="notifications"){navigatePage("notificationCenter");return}
   if(service==="committee"){location.href="/committee.html";return}
+  if(service==="training"){location.href="/education";return}
   showServicePlaceholder(service);
 }
 

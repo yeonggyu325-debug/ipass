@@ -4,9 +4,10 @@
   "scripts": {
     "check": "wrangler deploy --dry-run",
     "verify:db": "node scripts/verify-database.mjs",
+    "verify:education": "node scripts/verify-education.mjs",
     "migrate:local": "wrangler d1 migrations apply partner-evaluation-db --local",
     "migrate:remote": "wrangler d1 migrations apply partner-evaluation-db --remote",
-    "deploy": "npm run migrate:remote && wrangler deploy"
+    "deploy": "npm run verify:education && npm run migrate:remote && wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.123.0"
