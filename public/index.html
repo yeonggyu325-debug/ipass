@@ -1636,9 +1636,9 @@ main{
               <span class="service-icon"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5z"/><path d="M7 11v5c3 2 7 2 10 0v-5M21 8v6"/></svg></span>
               <span class="service-text"><strong>교육 제출</strong><span>월별 교육자료 제출 · 심사상태 확인</span></span>
             </button>
-                      <button class="service-tile coming" type="button" onclick="openPortalService('voc')">
+                      <button class="service-tile" type="button" onclick="openPortalService('voc')">
               <span class="service-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 4z"/><path d="M8 9h8M8 13h5"/></svg></span>
-              <span class="service-text"><strong>VOC 건의</strong><span>문의·개선 건의 접수</span><span class="service-mini-badge">준비 중</span></span>
+              <span class="service-text"><strong>VOC 건의</strong><span>문의·개선 건의 접수</span></span>
             </button>
             <button class="service-tile" type="button" onclick="openPortalService('notices')">
               <span class="service-icon"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
@@ -2364,6 +2364,7 @@ function openPortalService(service){
   if(service==="notifications"){navigatePage("notificationCenter");return}
   if(service==="committee"){location.href="/committee.html";return}
   if(service==="training"){location.href="/education";return}
+  if(service==="voc"){location.href="/voc";return}
   showServicePlaceholder(service);
 }
 

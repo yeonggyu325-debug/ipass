@@ -6,10 +6,12 @@
     "check": "npm run prepare:preview && wrangler deploy --dry-run",
     "verify:db": "node scripts/verify-database.mjs",
     "verify:education": "node scripts/verify-education.mjs",
+    "verify:voc": "node scripts/verify-voc.mjs",
+    "test:voc-api": "node scripts/test-voc-api.mjs",
     "verify:preview": "node scripts/verify-attachment-preview.mjs",
     "migrate:local": "wrangler d1 migrations apply partner-evaluation-db --local",
     "migrate:remote": "wrangler d1 migrations apply partner-evaluation-db --remote",
-    "deploy": "npm run verify:education && npm run verify:preview && npm run prepare:preview && npm run migrate:remote && wrangler deploy"
+    "deploy": "npm run verify:education && npm run verify:voc && npm run test:voc-api && npm run verify:preview && npm run prepare:preview && npm run migrate:remote && wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.123.0"

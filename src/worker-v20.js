@@ -6,6 +6,7 @@ import { handleStorageAdmin } from './storage-admin.js';
 import { handleSystemAdmin, recordRequestAudit } from './system-admin.js';
 import { handleEvaluationScoring } from './evaluation-scoring.js';
 import { handleEducationSubmission } from './education-submission.js';
+import { handleVocSubmission } from './voc-submission.js';
 import { createRequestMetrics, finalizeRequestMetrics, handlePerformanceRum, instrumentEnvironment } from './performance.js';
 
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
@@ -17,7 +18,7 @@ const COMMON_PREVIEW='<script src="/attachment-preview.js?v=2"></script>';
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{if(!window.EHSAuth||!window.EHSAuth.readSession())window.EHSAuth?window.EHSAuth.redirectToLogin("/home"):location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
 const SUBMISSION_ASSETS='<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=3"><link rel="stylesheet" href="/evaluation-submit-redesign.css?v=1"><link rel="stylesheet" href="/evaluation-submit-progress.css?v=2"><script src="/evaluation-submit-enhance.js?v=10"></script>';
 const EMBED_STYLE='<style id="ipass-embedded-style">body{background:#f5f7f9!important}.header{display:none!important}.layout{min-height:100vh!important}.side{top:0!important;height:100vh!important}.main{padding-top:20px!important}.shell{padding-top:20px!important}.page-head{margin-top:0!important}</style>';
-const ROOT_ROUTE_SCRIPT=`<script id="ipass-route-v21">(function(){var tries=0,t=setInterval(function(){try{if(typeof window.openPortalService==='function'&&!window.openPortalService.__ipassRouted){var original=window.openPortalService;var wrapped=function(service){if(service==='ipass'){location.href='/ipass';return}if(service==='training'){location.href='/education';return}return original.apply(this,arguments)};wrapped.__ipassRouted=true;window.openPortalService=wrapped}}catch(_){}if(++tries>40)clearInterval(t)},200);document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var text=(b.textContent||'').trim();if(text==='i-PaSS 관리'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass'}else if(text==='평가표 관리'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass/templates'}else if(text==='평가회차 운영'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass/cycles'}else if(text.indexOf('안전보건협의체')>=0){e.preventDefault();e.stopImmediatePropagation();location.href='/committee'}else if(text.indexOf('교육 제출')>=0){e.preventDefault();e.stopImmediatePropagation();location.href='/education'}},true)})();</script>`;
+const ROOT_ROUTE_SCRIPT=`<script id="ipass-route-v22">(function(){var tries=0,t=setInterval(function(){try{if(typeof window.openPortalService==='function'&&!window.openPortalService.__ipassRouted){var original=window.openPortalService;var wrapped=function(service){if(service==='ipass'){location.href='/ipass';return}if(service==='training'){location.href='/education';return}if(service==='voc'){location.href='/voc';return}return original.apply(this,arguments)};wrapped.__ipassRouted=true;window.openPortalService=wrapped}}catch(_){}if(++tries>40)clearInterval(t)},200);document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var text=(b.textContent||'').trim();if(text==='i-PaSS 관리'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass'}else if(text==='평가표 관리'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass/templates'}else if(text==='평가회차 운영'){e.preventDefault();e.stopImmediatePropagation();location.href='/ipass/cycles'}else if(text.indexOf('안전보건협의체')>=0){e.preventDefault();e.stopImmediatePropagation();location.href='/committee'}else if(text.indexOf('교육 제출')>=0){e.preventDefault();e.stopImmediatePropagation();location.href='/education'}else if(text.indexOf('VOC')>=0){e.preventDefault();e.stopImmediatePropagation();location.href='/voc'}},true)})();</script>`;
 const IPASS_GRADE_SCRIPT=`<script id="ipass-grade-v21">(function(){window.getAnnualGrade=function(score,complete,settings){if(complete===false||score==null)return{label:'산정 중',cls:'pending'};var s=settings||{},n=Number(score),excellent=Number(s.excellent_min==null?90:s.excellent_min),qualified=Number(s.qualified_min==null?70:s.qualified_min);if(n>=excellent)return{label:'안전관리 우수협력사',cls:'excellent'};if(n>=qualified)return{label:'적격 협력사',cls:'qualified'};return{label:'역량 강화 협력사',cls:'strengthen'}}})();</script>`;
 const PARTNER_ROUTE_SCRIPT=`<script id="partner-eval-route-v20">(function(){var tries=0,t=setInterval(function(){try{if(typeof window.openEvaluation==='function'&&!window.openEvaluation.__partnerSubmissionWrapped){var original=window.openEvaluation;var wrapped=async function(id){try{var role=typeof currentUser!=='undefined'&&currentUser?currentUser.role:null;if(role==='partner'){location.href='/evaluation-submit.html?target='+encodeURIComponent(id);return}if(role==='admin'){location.href='/evaluation-scoring.html?target='+encodeURIComponent(id);return}}catch(_){}return original.apply(this,arguments)};wrapped.__partnerSubmissionWrapped=true;window.openEvaluation=wrapped}}catch(_){}if(++tries>40)clearInterval(t)},250)})();</script>`;
 
@@ -36,7 +37,7 @@ async function injectShared(response,{home=false,root=false,submission=false,emb
   html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=10');
   html=injectHead(html,COMMON_PREVIEW,'/attachment-preview.js?v=2');
   if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
-  if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v21');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20');html=injectBody(html,IPASS_GRADE_SCRIPT,'ipass-grade-v21')}
+  if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v22');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20');html=injectBody(html,IPASS_GRADE_SCRIPT,'ipass-grade-v21')}
   if(submission)html=injectBody(html,SUBMISSION_ASSETS,'evaluation-submit-enhance.js?v=10');if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');return htmlResponse(response,html)
 }
 async function serveAsset(request,env,path,options={}){const response=await env.ASSETS.fetch(rewriteRequest(request,path,{clearSearch:true}));return response.ok?injectShared(response,options):response}
@@ -57,6 +58,8 @@ async function core(request,env,ctx){
   if(request.method==='GET'&&path==='/committee')return serveAsset(request,env,'/committee.html');
   if(request.method==='GET'&&path==='/education.html'){const next=new URL(request.url);next.pathname='/education';return Response.redirect(next.toString(),302)}
   if(request.method==='GET'&&path==='/education')return serveAsset(request,env,'/education.html');
+  if(request.method==='GET'&&path==='/voc.html'){const next=new URL(request.url);next.pathname='/voc';return Response.redirect(next.toString(),302)}
+  if(request.method==='GET'&&path==='/voc')return serveAsset(request,env,'/voc.html');
   if(request.method==='GET'&&path==='/home'){
     const rootReq=rewriteRequest(request,'/');let response=await handleEvaluationRuntime(rootReq,env,ctx,baseWorker);if(!response)response=await baseWorker.fetch(rootReq,env,ctx);return injectShared(response,{home:true,root:true});
   }
@@ -65,6 +68,7 @@ async function core(request,env,ctx){
   const management=await handleEvaluationManagement(request,env,ctx,baseWorker);if(management)return management;
   const storage=await handleStorageAdmin(request,env,ctx,baseWorker);if(storage)return storage;
   const education=await handleEducationSubmission(request,env,ctx,baseWorker);if(education)return education;
+  const voc=await handleVocSubmission(request,env,ctx,baseWorker);if(voc)return voc;
   const submission=await handlePartnerSubmissionWithQuota(request,env,ctx,baseWorker);if(submission)return request.method==='GET'?augmentSubmission(submission,path,env):submission;
   const runtime=await handleEvaluationRuntime(request,env,ctx,baseWorker);if(runtime){if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(runtime,{root:true});return runtime}
   const response=await baseWorker.fetch(request,env,ctx);
@@ -72,6 +76,7 @@ async function core(request,env,ctx){
   if(request.method==='GET'&&path==='/evaluation-management.html')return injectShared(response,{embedded:url.searchParams.get('embedded')==='1'});
   if(request.method==='GET'&&path==='/committee.html')return injectShared(response);
   if(request.method==='GET'&&path==='/education.html')return injectShared(response);
+  if(request.method==='GET'&&path==='/voc.html')return injectShared(response);
   return response;
 }
 

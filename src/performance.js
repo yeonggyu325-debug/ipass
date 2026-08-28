@@ -27,6 +27,12 @@ export function normalizeMetricPath(path){
     [/^\/api\/education\/files\/[^/]+$/,'/api/education/files/:file'],
     [/^\/api\/education\/submissions\/[^/]+$/,'/api/education/submissions/:submission'],
     [/^\/api\/admin\/education\/[^/]+\/review$/,'/api/admin/education/:submission/review'],
+    [/^\/api\/voc\/images\/[^/]+\/preview-ticket$/,'/api/voc/images/:image/preview-ticket'],
+    [/^\/api\/voc\/images\/[^/]+$/,'/api/voc/images/:image'],
+    [/^\/api\/voc\/[^/]+\/images$/,'/api/voc/:case/images'],
+    [/^\/api\/voc\/[^/]+\/submit$/,'/api/voc/:case/submit'],
+    [/^\/api\/admin\/voc\/[^/]+$/,'/api/admin/voc/:case'],
+    [/^\/api\/voc\/[^/]+$/,'/api/voc/:case'],
     [/^\/api\/evaluations\/[^/]+$/,'/api/evaluations/:target']
   ];
   for(const [pattern,label] of routes)if(pattern.test(path))return label;
