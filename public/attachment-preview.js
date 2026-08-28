@@ -11,13 +11,13 @@
     docx: '/vendor/attachment-preview/docx-preview.min.js',
     xlsx: 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'
   };
-  const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png']);
+  const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
   const OFFICE_FALLBACK = new Set(['xls', 'xlsx', 'doc', 'docx', 'ppt', 'pptx']);
   const HANGUL_FALLBACK = new Set(['hwp', 'hwpx']);
   const ICONS = {
     pdf: 'PDF', xls: 'XLS', xlsx: 'XLSX', doc: 'DOC', docx: 'DOCX',
     ppt: 'PPT', pptx: 'PPTX', hwp: 'HWP', hwpx: 'HWPX',
-    jpg: 'IMG', jpeg: 'IMG', png: 'IMG'
+    jpg: 'IMG', jpeg: 'IMG', png: 'IMG', webp: 'IMG'
   };
   const state = {
     options: null,
@@ -613,7 +613,7 @@
     open,
     close,
     isSupported(fileName) {
-      return ['pdf', 'xls', 'xlsx', 'doc', 'docx', 'ppt', 'pptx', 'hwp', 'hwpx', 'jpg', 'jpeg', 'png'].includes(extensionOf({ file_name: fileName }));
+      return ['pdf', 'xls', 'xlsx', 'doc', 'docx', 'ppt', 'pptx', 'hwp', 'hwpx', 'jpg', 'jpeg', 'png', 'webp'].includes(extensionOf({ file_name: fileName }));
     }
   };
 })(window);

@@ -266,6 +266,15 @@ button{cursor:pointer}
   border-radius:var(--radius-sm);
   background:#fff;color:var(--text);
 }
+.notice-popup-image{
+  display:grid;place-items:center;width:100%;margin:0 0 16px;padding:0;
+  overflow:hidden;border:1px solid var(--line);border-radius:10px;background:#eef2f4;cursor:zoom-in;
+}
+.notice-popup-image img{display:block;max-width:100%;max-height:55vh;width:auto;height:auto;object-fit:contain;image-rendering:auto}
+.notice-image-viewer{position:fixed;inset:0;z-index:5200;display:flex;flex-direction:column;background:rgba(12,20,27,.92)}
+.notice-image-viewer.hidden{display:none}.notice-image-toolbar{min-height:54px;padding:8px 14px;display:flex;justify-content:center;align-items:center;gap:7px;background:#18242d;color:#fff}
+.notice-image-toolbar button{height:34px;min-width:38px;padding:0 10px;border:1px solid #52616b;border-radius:7px;background:#24333d;color:#fff;font-size:11px}.notice-image-toolbar span{min-width:58px;text-align:center;font-size:11px}
+.notice-image-stage{flex:1;min-height:0;overflow:auto;display:grid;place-items:center;padding:18px}.notice-image-stage img{display:block;max-width:none;height:auto;image-rendering:auto;box-shadow:0 10px 38px rgba(0,0,0,.34)}
 
 /* ===== App shell ===== */
 #app{font-size:14px}
@@ -1475,12 +1484,17 @@ main{
       <div><span class="notice-label">NOTICE</span><h3 id="noticePopupTitle">공지사항</h3><div class="notice-date" id="noticePopupDate"></div></div>
       <button class="modal-close" id="closeNoticePopup">×</button>
     </div>
-    <div class="modal-body" id="noticePopupContent"></div>
+    <div class="modal-body"><button class="notice-popup-image hidden" id="noticePopupImage" type="button"><img id="noticePopupImageSource" alt="공지 팝업 이미지"></button><div id="noticePopupContent"></div></div>
     <div class="notice-foot">
-      <label><input type="checkbox" id="hideNoticeToday"> 오늘 하루 보지 않기</label>
+      <label><input type="checkbox" id="hideNoticeWeek"> 일주일 동안 보지 않기</label>
       <button id="closeNoticePopupBottom">닫기</button>
     </div>
   </div>
+</div>
+
+<div class="notice-image-viewer hidden" id="noticeImageViewer">
+  <div class="notice-image-toolbar"><button id="noticeImageMinus" type="button">－</button><button id="noticeImageFit" type="button">화면 맞춤</button><span id="noticeImagePercent">100%</span><button id="noticeImagePlus" type="button">＋</button><button id="noticeImageClose" type="button">닫기</button></div>
+  <div class="notice-image-stage" id="noticeImageStage"><img id="noticeImageFull" alt="공지 이미지 확대보기"></div>
 </div>
 
 
@@ -1556,7 +1570,7 @@ main{
             <button type="button" onclick="navigatePage('approvals')">회원가입 승인</button>
             <button type="button" onclick="navigatePage('accounts')">협력사 계정 관리</button>
             <div class="menu-divider"></div>
-            <button type="button" onclick="navigatePage('notices')">공지사항 관리</button>
+            <button type="button" onclick="location.href='/notices'">공지사항 관리</button>
           </div>
         </div>
       </nav>
@@ -1648,9 +1662,9 @@ main{
               <span class="service-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 0 1 4.5 1.2c0 1.8-2.3 2-2.3 3.6M12 17h.01"/></svg></span>
               <span class="service-text"><strong>FAQ</strong><span>자주 묻는 질문</span></span>
             </button>
-            <button class="service-tile coming" type="button" onclick="openPortalService('resources')">
+            <button class="service-tile" type="button" onclick="openPortalService('resources')">
               <span class="service-icon"><svg viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3z"/><path d="M3 9h18"/></svg></span>
-              <span class="service-text"><strong>EHS 자료실</strong><span>양식·안전자료 다운로드</span><span class="service-mini-badge">준비 중</span></span>
+              <span class="service-text"><strong>안전자료실</strong><span>양식·안전자료 미리보기·다운로드</span></span>
             </button>
           </div>
         </section>
@@ -1786,7 +1800,7 @@ const FIREBASE_API_KEY="AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
 const PRODUCTION_API_ORIGIN="https://ipass.i-pass-eval.workers.dev";
 const API_BASE=(location.hostname==="ipass.i-pass-eval.workers.dev")?"":PRODUCTION_API_ORIGIN;
 const SESSION_KEY="ipass.session.v10";
-let session=null,currentUser=null,activeNoticeKey=null;
+let session=null,currentUser=null,activeNoticeKey=null,noticeImageScale=100;
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
 function tag(s){
@@ -1835,11 +1849,15 @@ function apiCached(path,ttl=15000){return cachedGet(`auth:${path}`,()=>api(path)
 function publicApiCached(path,ttl=30000){return cachedGet(`public:${path}`,()=>publicApi(path),ttl)}
 function invalidateGetCache(prefix=""){for(const key of GET_CACHE.keys()){if(!prefix||key.includes(prefix))GET_CACHE.delete(key)}}
 
-function todayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function formatNoticeDate(v){if(!v)return"";const d=new Date(v);if(Number.isNaN(d.getTime()))return String(v).slice(0,10);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`}
-async function showLatestNotice(placement){try{const data=await publicApiCached(`/api/public/notices?placement=${encodeURIComponent(placement)}`,30000);const notice=(data.notices||[])[0];if(!notice)return;const key=`ipass.notice.hide.${placement}.${notice.id}`;if(localStorage.getItem(key)===todayKey())return;activeNoticeKey=key;$("hideNoticeToday").checked=false;$("noticePopupTitle").textContent=(notice.is_important?"[중요] ":"")+notice.title;$("noticePopupDate").textContent=formatNoticeDate(notice.created_at);$("noticePopupContent").innerHTML=`<div style="white-space:pre-wrap">${esc(notice.content||"")}</div>`;$("noticeModal").classList.remove("hidden")}catch{}}
-function closeNoticePopup(){if(activeNoticeKey&&$("hideNoticeToday").checked)localStorage.setItem(activeNoticeKey,todayKey());$("noticeModal").classList.add("hidden");activeNoticeKey=null}
+async function showLatestNotice(placement){try{const data=await publicApiCached(`/api/public/notices?placement=${encodeURIComponent(placement)}`,30000);const notice=(data.notices||[])[0];if(!notice)return;const key=`ipass.notice.hideUntil.${placement}.${notice.id}`;if(Number(localStorage.getItem(key)||0)>Date.now())return;activeNoticeKey=key;$("hideNoticeWeek").checked=false;$("noticePopupTitle").textContent=(notice.is_important?"[중요] ":"")+notice.title;$("noticePopupDate").textContent=formatNoticeDate(notice.created_at);$("noticePopupContent").innerHTML=`<div style="white-space:pre-wrap">${esc(notice.content||"")}</div>`;const image=$("noticePopupImage"),source=$("noticePopupImageSource");if(notice.popup_image_url){source.src=notice.popup_image_url;source.alt=`${notice.title} 팝업 이미지`;image.classList.remove("hidden");image.onclick=()=>openNoticeImage(notice.popup_image_url)}else{source.removeAttribute("src");image.classList.add("hidden")}$("noticeModal").classList.remove("hidden")}catch{}}
+function closeNoticePopup(){if(activeNoticeKey&&$("hideNoticeWeek").checked)localStorage.setItem(activeNoticeKey,String(Date.now()+7*24*60*60*1000));$("noticeModal").classList.add("hidden");activeNoticeKey=null}
 $("closeNoticePopup").onclick=closeNoticePopup;$("closeNoticePopupBottom").onclick=closeNoticePopup;$("noticeModal").onclick=e=>{if(e.target===$("noticeModal"))closeNoticePopup()};
+function updateNoticeImage(){const image=$("noticeImageFull");$("noticeImagePercent").textContent=`${Math.round(noticeImageScale)}%`;if(image.naturalWidth)image.style.width=`${Math.max(1,Math.round(image.naturalWidth*noticeImageScale/100))}px`}
+function fitNoticeImage(){const image=$("noticeImageFull"),stage=$("noticeImageStage");if(!image.naturalWidth||!image.naturalHeight)return;noticeImageScale=Math.min(100,(stage.clientWidth-36)/image.naturalWidth*100,(stage.clientHeight-36)/image.naturalHeight*100);updateNoticeImage()}
+function openNoticeImage(url){noticeImageScale=100;$("noticeImageFull").src=url;$("noticeImageViewer").classList.remove("hidden");$("noticeImageFull").onload=fitNoticeImage}
+function closeNoticeImage(){$("noticeImageViewer").classList.add("hidden");$("noticeImageFull").removeAttribute("src")}
+$("noticeImageMinus").onclick=()=>{noticeImageScale=Math.max(10,noticeImageScale-10);updateNoticeImage()};$("noticeImagePlus").onclick=()=>{noticeImageScale=Math.min(500,noticeImageScale+10);updateNoticeImage()};$("noticeImageFit").onclick=fitNoticeImage;$("noticeImageClose").onclick=closeNoticeImage;$("noticeImageViewer").onclick=e=>{if(e.target===$("noticeImageViewer")||e.target===$("noticeImageStage"))closeNoticeImage()};
 $("openTerms").onclick=()=>$("termsModal").classList.remove("hidden");$("closeTerms").onclick=()=>$("termsModal").classList.add("hidden");$("termsModal").onclick=e=>{if(e.target===$("termsModal"))$("termsModal").classList.add("hidden")};
 $("openPrivacy").onclick=()=>$("privacyModal").classList.remove("hidden");$("closePrivacy").onclick=()=>$("privacyModal").classList.add("hidden");$("privacyModal").onclick=e=>{if(e.target===$("privacyModal"))$("privacyModal").classList.add("hidden")};
 
@@ -2358,9 +2376,9 @@ function openPortalService(service){
     if(currentUser?.role==="admin")navigatePage("dashboard");else navigatePage("partnerHome");
     return;
   }
-  if(service==="notices"){navigatePage("portalNotices");return}
+  if(service==="notices"){location.href="/notices";return}
   if(service==="faq"){navigatePage("faq");return}
-  if(service==="resources"){navigatePage("resources");return}
+  if(service==="resources"){location.href="/resources";return}
   if(service==="notifications"){navigatePage("notificationCenter");return}
   if(service==="committee"){location.href="/committee.html";return}
   if(service==="training"){location.href="/education";return}

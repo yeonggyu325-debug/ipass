@@ -27,10 +27,11 @@ for (const extension of requiredExtensions) {
   const quoted = `'${extension}'`;
   if (!educationApi.includes(quoted)) failures.push(`education-api:${extension}`);
 }
-if (!education.includes('/attachment-preview.js?v=2')) failures.push('education:viewer-script');
+if (!education.includes('/attachment-preview.js?v=3')) failures.push('education:viewer-script');
 if (!education.includes('.ppt,.pptx')) failures.push('education:ppt-upload');
 if (!partnerApi.includes('office_viewer_url')) failures.push('partner-api:office-viewer');
-if (!worker.includes('attachment-preview.js?v=2')) failures.push('worker:viewer-injection');
+if (!worker.includes('attachment-preview.js?v=3')) failures.push('worker:viewer-injection');
+if (!viewer.includes("'webp'")) failures.push('viewer:webp');
 if (!packageJson.includes('"@rhwp/core": "0.8.4"')) failures.push('package:rhwp-version');
 for (const asset of ['@rhwp/core/rhwp.js', '@rhwp/core/rhwp_bg.wasm', 'LICENSE-rhwp.txt']) {
   if (!assetBuilder.includes(asset)) failures.push(`asset-builder:${asset}`);
