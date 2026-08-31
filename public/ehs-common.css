@@ -258,12 +258,25 @@ input:focus,select:focus,textarea:focus{
 .ipass-score-top,.score-card{background:#fff!important}
 .ipass-total-score,.score-value{color:#1c3c50!important}
 .ipass-formula,.formula{background:#f3f7f9!important;border-color:#dfe7eb!important}
-.side{
-  border-color:var(--ehs-line)!important;
-  box-shadow:var(--ehs-shadow)!important;
+#ipassShell{
+  width:min(1520px,calc(100% - 48px))!important;
+  max-width:none!important;
 }
-.nav-btn.active{background:var(--ehs-primary-soft)!important;color:#28698f!important}
-.nav-btn:hover{background:#f4f8fa!important;color:#28698f!important}
+#ipassShell .workspace-nav{
+  border:0!important;
+  box-shadow:none!important;
+}
+#ipassShell .nav-btn{
+  border:0!important;
+  box-shadow:none!important;
+}
+#ipassShell .nav-btn.active{
+  background:#fff!important;
+  color:#28698f!important;
+  box-shadow:0 4px 13px rgba(30,52,68,.09)!important;
+}
+#ipassShell .nav-btn:hover{background:rgba(255,255,255,.58)!important;color:#28698f!important}
+#ipassShell .partner-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 
 /* Committee */
 .shell{width:min(1400px,calc(100% - 48px))!important;max-width:1400px!important}
@@ -285,6 +298,13 @@ input:focus,select:focus,textarea:focus{
 
 .loading,.empty{color:#8d99a1!important}
 .error{color:var(--ehs-danger)!important}
+
+@media(max-width:640px){
+  #ipassShell{width:calc(100% - 22px)!important}
+  #ipassShell .workspace-nav{margin-inline:0!important;padding:4px!important}
+  #ipassShell .nav-btn{min-width:116px!important;height:40px!important;padding-inline:10px!important}
+  #ipassShell .partner-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
 
 /* Shared loading skeletons */
 .loading.ehs-skeleton-loading{

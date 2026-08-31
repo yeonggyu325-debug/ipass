@@ -7,6 +7,7 @@ const home = await readFile(new URL('../public/index.html', import.meta.url), 'u
 const content = await readFile(new URL('../public/content-hub.html', import.meta.url), 'utf8');
 const worker = await readFile(new URL('../src/worker-v20.js', import.meta.url), 'utf8');
 const faq = await readFile(new URL('../public/faq.html', import.meta.url), 'utf8');
+const ipass = await readFile(new URL('../public/ipass.html', import.meta.url), 'utf8');
 
 const services = [
   ['/ipass', 'i-PaSS'], ['/committee', '안전보건협의체'], ['/education', '교육 제출'],
@@ -24,5 +25,12 @@ assert.ok(common.includes('Cloudflare R2 저장공간') && css.includes('.ehs-st
 assert.ok(worker.includes("path==='/faq'"), '독립 FAQ 라우트가 필요');
 assert.ok(faq.includes('<h1>FAQ</h1>'), 'FAQ 페이지가 필요');
 assert.ok(!common.includes('>포털 홈</a>'), '사용자 메뉴의 홈 버튼은 제거되어야 함');
+assert.ok(ipass.includes('id="ipassShell"') && ipass.includes('class="workspace-nav"'), 'i-PaSS는 전체 폭 상단 업무 메뉴를 사용해야 함');
+assert.ok(!ipass.includes('<aside class="side" id="sideNav">') && !ipass.includes('grid-template-columns:220px'), 'i-PaSS 외부 좌측 메뉴는 제거되어야 함');
+assert.ok(ipass.includes('aria-current="page"'), 'i-PaSS 현재 업무 탭에 접근성 상태가 필요');
+assert.ok(ipass.includes('renderPartnerOverview') && ipass.includes('renderPartnerEvaluations'), '협력사 점수 요약과 평가 이력은 별도 화면이어야 함');
+assert.ok(css.includes('#ipassShell .workspace-nav') && css.includes('#ipassShell .nav-btn.active'), 'i-PaSS 탭 스타일은 다른 페이지와 충돌하지 않도록 범위가 지정되어야 함');
+const inlineScripts = [...ipass.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match => match[1]).filter(source => source.trim());
+for (const source of inlineScripts) new Function(source);
 
-console.log(JSON.stringify({success:true,services:services.length,single_board_pages:true,admin_storage_ui:true,faq_route:true}));
+console.log(JSON.stringify({success:true,services:services.length,single_board_pages:true,admin_storage_ui:true,faq_route:true,ipass_full_width:true,ipass_partner_views:true}));
