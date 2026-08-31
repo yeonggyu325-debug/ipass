@@ -19,6 +19,7 @@ for (const [href, label] of services) {
 assert.ok(!content.includes('id="noticeTab"') && !content.includes('id="resourceTab"'), '게시판 내부 교차 탭은 제거되어야 함');
 assert.ok(!home.includes('<h2>EHS 서비스</h2>'), 'EHS 서비스 문구는 제거되어야 함');
 assert.ok(home.includes('box-shadow:0 15px 14px -16px') && css.includes('border:0!important'), '기능 타일은 테두리 없이 하단 띠 그림자만 사용해야 함');
+assert.ok(css.includes('.ehs-global-link.active{box-shadow:none;border:0}'), '상단 활성 메뉴에 선 또는 테두리가 없어야 함');
 assert.ok(common.includes('Cloudflare R2 저장공간') && css.includes('.ehs-storage-capacity'), '관리자 저장공간 UI가 필요');
 assert.ok(worker.includes("path==='/faq'"), '독립 FAQ 라우트가 필요');
 assert.ok(faq.includes('<h1>FAQ</h1>'), 'FAQ 페이지가 필요');
