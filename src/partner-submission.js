@@ -112,6 +112,10 @@ async function submitWithItems(env,access,body){
   let rows=new Map();if(requested.size){const ids=[...requested.keys()],reads=[];for(let i=0;i<ids.length;i+=80){const part=ids.slice(i,i+80),marks=part.map(()=>'?').join(',');reads.push(env.partner_evaluation_db.prepare(`SELECT id,description,applicable,earned_score FROM evaluation_target_items_v2 WHERE target_id=? AND id IN (${marks})`).bind(t.target_id,...part))}const batches=await env.partner_evaluation_db.batch(reads);rows=new Map(batches.flatMap(result=>result.results||[]).map(row=>[row.id,row]));for(const id of requested.keys()){const row=rows.get(id);if(!row)return {error:'평가항목을 찾을 수 없습니다.',status:404};if(Number(row.applicable)===0)return {error:'N/A 항목은 제출자료를 입력할 수 없습니다.',status:409}}}
   const changed=[];for(const [id,description] of requested){const row=rows.get(id);if(String(row?.description||'')!==description)changed.push({row,description})}
   const postSubmit=!!t.submitted_at,resubmitted=postSubmit,submittedAt=t.submitted_at||new Date().toISOString(),statements=[];
+  if(postSubmit&&!changed.length){
+    await env.partner_evaluation_db.prepare(`INSERT INTO evaluation_partner_submission_logs_v2 (id,target_id,target_item_id,action,detail_json,changed_by) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(),t.target_id,null,'resubmitted',JSON.stringify({changed_count:0,requested_count:requested.size}),access.user.id).run();
+    return {ok:true,resubmitted:true,summary:null,submitted_at:submittedAt,status:t.status,changed_count:0,unchanged:true,next_url:'/ipass/evaluations?submitted=1'};
+  }
   statements.push(...bulkDescriptionStatements(env,t.target_id,changed,postSubmit));
   statements.push(env.partner_evaluation_db.prepare(`UPDATE evaluation_targets_v2 SET status=CASE WHEN ?=1 AND ?=1 AND status='completed' THEN 'evaluating' WHEN status IN ('not_started','in_progress','submitted') THEN 'submitted' ELSE status END,submitted_at=COALESCE(submitted_at,CURRENT_TIMESTAMP),finalized_at=CASE WHEN ?=1 AND ?=1 AND status='completed' THEN NULL ELSE finalized_at END,finalized_by=CASE WHEN ?=1 AND ?=1 AND status='completed' THEN NULL ELSE finalized_by END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(postSubmit?1:0,changed.length?1:0,postSubmit?1:0,changed.length?1:0,postSubmit?1:0,changed.length?1:0,t.target_id));
   if(changed.length)statements.push(env.partner_evaluation_db.prepare(`INSERT INTO evaluation_partner_submission_logs_v2 (id,target_id,target_item_id,action,detail_json,changed_by) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(),t.target_id,null,postSubmit?'post_submit_items_bulk_edit':'items_bulk_saved',JSON.stringify({item_count:changed.length,item_ids:changed.map(x=>x.row.id),needs_rescore:postSubmit&&changed.some(x=>x.row.earned_score!==null&&x.row.earned_score!==undefined)}),access.user.id));
@@ -119,7 +123,7 @@ async function submitWithItems(env,access,body){
   statements.push(summaryStatement(env,t.target_id));
   const results=await env.partner_evaluation_db.batch(statements),summary=summaryFromRow(results.at(-1)?.results?.[0]);
   const status=postSubmit&&changed.length&&t.status==='completed'?'evaluating':['not_started','in_progress','submitted'].includes(t.status)?'submitted':t.status;
-  return {ok:true,resubmitted,summary,submitted_at:submittedAt,status,changed_count:changed.length};
+  return {ok:true,resubmitted,summary,submitted_at:submittedAt,status,changed_count:changed.length,next_url:'/ipass/evaluations?submitted=1'};
 }
 
 async function addFile(request,env,access,itemId,quota=null){

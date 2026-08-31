@@ -257,11 +257,13 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
 
-  let tries=0;
-  const timer=setInterval(()=>{
-    install();
-    if(++tries>30)clearInterval(timer);
-  },250);
+  if(path!=='/evaluation-submit.html'){
+    let tries=0;
+    const timer=setInterval(()=>{
+      install();
+      if(++tries>30)clearInterval(timer);
+    },250);
+  }
 
   window.EHSPortal={goHome,goLogin,logout,readSession,hasSession};
 })();

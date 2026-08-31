@@ -1,13 +1,11 @@
 .submit-progress-float{position:fixed;left:50%;bottom:28px;z-index:140;width:min(390px,calc(100vw - 28px));transform:translateX(-50%);pointer-events:none}
-.submit-progress-compact{padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(32,45,55,.96);box-shadow:0 16px 42px rgba(20,33,43,.25);backdrop-filter:blur(12px);color:#fff}
-.submit-progress-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px;font-size:12px}
-.submit-progress-top strong{font-weight:760}.submit-progress-top span{font-size:17px;font-weight:850;font-variant-numeric:tabular-nums}
-.submit-progress-track{height:8px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
-.submit-progress-bar{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#55b8ff,#d7f0ff,#55b8ff);background-size:200% 100%;transition:width .24s ease;animation:submit-progress-flow 1.05s linear infinite}
-@keyframes submit-progress-flow{to{background-position:-200% 0}}
+.submit-progress-compact{padding:14px 16px;border:0;border-radius:13px;background:#fff;box-shadow:0 12px 32px rgba(27,46,60,.14);color:#314754;display:flex;align-items:center;gap:12px}
+.submit-progress-compact strong,.submit-progress-compact span{display:block}.submit-progress-compact strong{font-size:12px;font-weight:780}.submit-progress-compact div>span{margin-top:3px;color:#82919b;font-size:9.5px}
+.submit-progress-spinner{width:20px;height:20px;border:2px solid #dbe6ec;border-top-color:#2b75a6;border-radius:50%;animation:submit-progress-spin .7s linear infinite;flex:0 0 auto}
+@keyframes submit-progress-spin{to{transform:rotate(360deg)}}
 .evidence-preview-skeleton{height:min(72vh,760px);display:grid;grid-template-columns:190px minmax(0,1fr);gap:14px;padding:14px;border:1px solid #e4e9ed;border-radius:10px;background:#f5f7f9}
 .evidence-preview-skeleton-side,.evidence-preview-skeleton-page{border-radius:9px;background:#e6ebef;position:relative;overflow:hidden}
 .evidence-preview-skeleton-side::after,.evidence-preview-skeleton-page::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.74),transparent);animation:evidence-shimmer 1.3s ease-in-out infinite}
 @keyframes evidence-shimmer{to{transform:translateX(100%)}}
 @media(max-width:640px){.evidence-preview-skeleton{height:68vh;grid-template-columns:1fr}.evidence-preview-skeleton-side{display:none}.submit-progress-float{bottom:18px}}
-@media(prefers-reduced-motion:reduce){.submit-progress-bar{transition:none;animation:none}.evidence-preview-skeleton-side::after,.evidence-preview-skeleton-page::after{animation:none}}
+@media(prefers-reduced-motion:reduce){.submit-progress-spinner{animation:none}.evidence-preview-skeleton-side::after,.evidence-preview-skeleton-page::after{animation:none}}

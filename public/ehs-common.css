@@ -277,6 +277,8 @@ input:focus,select:focus,textarea:focus{
 }
 #ipassShell .nav-btn:hover{background:rgba(255,255,255,.58)!important;color:#28698f!important}
 #ipassShell .partner-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+#ipassShell .kpi:before{display:none!important}
+#ipassShell .route-notice{margin:0 0 14px;padding:12px 15px;border:0;border-radius:10px;background:var(--ehs-success-soft);color:var(--ehs-success);font-size:11px;font-weight:750}
 
 /* Committee */
 .shell{width:min(1400px,calc(100% - 48px))!important;max-width:1400px!important}
