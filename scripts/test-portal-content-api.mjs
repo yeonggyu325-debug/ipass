@@ -102,4 +102,15 @@ forgedForm.append('file', new File([new TextEncoder().encode('not a pdf')], 'for
 const forged = await call(`/api/admin/content/resources/${resourceId}/files`, { method: 'POST', role: 'admin', body: forgedForm });
 assert.equal(forged.response.status, 400);
 
-console.log(JSON.stringify({ success: true, admin_write_guard: true, title_only_notice: true, kst_schedule: true, public_popup: true, resource_library: true, attachment_preview: true, signature_validation: true, r2_objects: objects.size }));
+const deletedResource = await call(`/api/admin/content/resources/${resourceId}`, { method: 'DELETE', role: 'admin' });
+assert.equal(deletedResource.response.status, 200);
+assert.equal(deletedResource.data.deleted_files, 1);
+assert.equal((await call(`/api/content/resources/${resourceId}`)).response.status, 404);
+assert.equal((await call(new URL(ticket.data.source_url).pathname)).response.status, 410);
+const deletedNotice = await call(`/api/admin/content/notices/${noticeId}`, { method: 'DELETE', role: 'admin' });
+assert.equal(deletedNotice.response.status, 200);
+assert.equal(deletedNotice.data.deleted_files, 1);
+assert.equal((await call(`/api/content/notices/${noticeId}`)).response.status, 404);
+assert.equal(objects.size, 0, '게시물 삭제 시 R2 첨부파일도 모두 삭제되어야 함');
+
+console.log(JSON.stringify({ success: true, admin_write_guard: true, title_only_notice: true, kst_schedule: true, public_popup: true, resource_library: true, attachment_preview: true, signature_validation: true, hard_delete: true, r2_objects: objects.size }));

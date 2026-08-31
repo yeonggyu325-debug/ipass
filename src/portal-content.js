@@ -340,6 +340,31 @@ async function updateResource(env, user, resourceId, body) {
   return { resource: await resourceDetail(env, resourceId, true) };
 }
 
+async function deleteContent(env, ownerType, ownerId) {
+  const owner = await ownerExists(env, ownerType, ownerId, true);
+  if (!owner) return { error: ownerType === 'notice' ? '공지사항을 찾을 수 없습니다.' : '안전자료를 찾을 수 없습니다.', status: 404 };
+  const files = await env.partner_evaluation_db.prepare(`
+    SELECT id, object_key FROM portal_content_files_v2
+    WHERE owner_type = ? AND owner_id = ?
+  `).bind(ownerType, ownerId).all();
+  const fileRows = files.results || [];
+  await env.partner_evaluation_db.batch([
+    env.partner_evaluation_db.prepare(`
+      DELETE FROM portal_content_preview_tickets_v2
+      WHERE file_id IN (SELECT id FROM portal_content_files_v2 WHERE owner_type = ? AND owner_id = ?)
+    `).bind(ownerType, ownerId),
+    env.partner_evaluation_db.prepare(`DELETE FROM portal_content_files_v2 WHERE owner_type = ? AND owner_id = ?`).bind(ownerType, ownerId),
+    env.partner_evaluation_db.prepare(`DELETE FROM portal_content_logs_v2 WHERE owner_type = ? AND owner_id = ?`).bind(ownerType, ownerId),
+    env.partner_evaluation_db.prepare(ownerType === 'notice'
+      ? `DELETE FROM portal_notices WHERE id = ?`
+      : `DELETE FROM safety_resources_v2 WHERE id = ?`).bind(ownerId)
+  ]);
+  if (env.EVIDENCE_FILES) {
+    await Promise.allSettled(fileRows.map(file => env.EVIDENCE_FILES.delete(file.object_key)));
+  }
+  return { deleted_files: fileRows.length };
+}
+
 async function uploadFile(request, env, user, ownerType, ownerId) {
   if (!env.EVIDENCE_FILES) return { error: '파일 저장소가 연결되지 않았습니다.', status: 503 };
   if (!OWNER_TYPES.has(ownerType)) return { error: '지원하지 않는 자료 유형입니다.', status: 400 };
@@ -468,8 +493,8 @@ export async function handlePortalContent(request, env, ctx, baseWorker) {
   }
   if (adminNoticeMatch && request.method === 'DELETE') {
     const id = decodeURIComponent(adminNoticeMatch[1]);
-    const result = await updateNotice(env, user, id, { is_active: false });
-    return result.error ? json({ success: false, error: result.error }, result.status) : json({ success: true, notice: result.notice });
+    const result = await deleteContent(env, 'notice', id);
+    return result.error ? json({ success: false, error: result.error }, result.status) : json({ success: true, deleted_files: result.deleted_files });
   }
   const noticeUploadMatch = path.match(/^\/api\/admin\/content\/notices\/([^/]+)\/files$/);
   if (noticeUploadMatch && request.method === 'POST') {
@@ -488,8 +513,8 @@ export async function handlePortalContent(request, env, ctx, baseWorker) {
   }
   if (adminResourceMatch && request.method === 'DELETE') {
     const id = decodeURIComponent(adminResourceMatch[1]);
-    const result = await updateResource(env, user, id, { is_active: false });
-    return result.error ? json({ success: false, error: result.error }, result.status) : json({ success: true, resource: result.resource });
+    const result = await deleteContent(env, 'resource', id);
+    return result.error ? json({ success: false, error: result.error }, result.status) : json({ success: true, deleted_files: result.deleted_files });
   }
   const resourceUploadMatch = path.match(/^\/api\/admin\/content\/resources\/([^/]+)\/files$/);
   if (resourceUploadMatch && request.method === 'POST') {

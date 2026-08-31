@@ -908,6 +908,8 @@ tbody tr:last-child td{border-bottom:0}
   text-align:left;color:#4f5d68;font-size:12.5px;font-weight:550;
 }
 .gnb-menu button:hover{background:#f5f8fa;color:#255f8f}
+.gnb-service-link{height:38px;padding:0 9px;border:0;border-radius:8px;background:transparent;color:#66727d;font-size:11.5px;font-weight:650;text-decoration:none;display:flex;align-items:center;white-space:nowrap}
+.gnb-service-link:hover{background:#f2f6f9;color:#255f8f}
 .gnb-menu .menu-divider{height:1px;background:#edf0f2;margin:6px 4px}
 .app-actions{display:flex;align-items:center;gap:9px}
 .header-icon-btn{
@@ -1067,6 +1069,7 @@ main{
 @media(max-width:1050px){
   .app-header-inner{width:min(100% - 32px,1240px);gap:14px}
   .gnb-trigger,.gnb-home{padding:0 9px;font-size:12px}
+  .gnb-service-link{padding:0 7px;font-size:10.5px}
   .work-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .service-panel{grid-template-columns:none;grid-auto-columns:148px}
 }
@@ -1083,6 +1086,7 @@ main{
   .gnb.open{display:flex}
   .gnb-item{height:auto;display:block}
   .gnb-home,.gnb-trigger{width:100%;height:40px;justify-content:space-between}
+  .gnb-service-link{width:100%;height:40px;padding:0 12px;font-size:12px}
   .gnb-menu{position:static;min-width:0;padding:2px 0 4px 14px;border:0;box-shadow:none;opacity:1;visibility:visible;transform:none;display:block}
   .gnb-menu button{height:34px}
   .user-copy,.user-caret{display:none}
@@ -1532,49 +1536,13 @@ main{
       </a>
 
       <nav class="gnb" id="gnbNav" aria-label="주요 메뉴">
-        <a class="gnb-home active" data-section="home" href="javascript:void(0)" onclick="navigatePage('portalHome')">홈</a>
-
-        <div class="gnb-item" data-section="ehs">
-          <button class="gnb-trigger" type="button">EHS 업무</button>
-          <div class="gnb-menu">
-            <button type="button" onclick="location.href='/committee.html'">안전보건협의체</button>
-                  </div>
-        </div>
-
-        <div class="gnb-item" data-section="evaluation">
-          <button class="gnb-trigger" type="button">평가·교육</button>
-          <div class="gnb-menu">
-            <button type="button" onclick="openPortalService('ipass')">i-PaSS</button>
-            <button class="hidden" id="educationStatusNav" type="button" onclick="openPortalService('training')">교육 제출 현황</button>
-          </div>
-        </div>
-
-        <div class="gnb-item" data-section="communication">
-          <button class="gnb-trigger" type="button">소통</button>
-          <div class="gnb-menu">
-            <button type="button" onclick="openPortalService('voc')">VOC 건의</button>
-            <button type="button" onclick="openPortalService('notices')">공지사항</button>
-          </div>
-        </div>
-
-        <div class="gnb-item" data-section="support">
-          <button class="gnb-trigger" type="button">지원</button>
-          <div class="gnb-menu">
-            <button type="button" onclick="openPortalService('faq')">FAQ</button>
-            <button type="button" onclick="openPortalService('resources')">EHS 자료실</button>
-          </div>
-        </div>
-
-        <div class="gnb-item hidden" data-section="admin" id="adminNavGroup">
-          <button class="gnb-trigger" type="button">관리</button>
-          <div class="gnb-menu">
-            <button type="button" onclick="navigatePage('dashboard')">i-PaSS 관리</button>
-            <button type="button" onclick="navigatePage('approvals')">회원가입 승인</button>
-            <button type="button" onclick="navigatePage('accounts')">협력사 계정 관리</button>
-            <div class="menu-divider"></div>
-            <button type="button" onclick="location.href='/notices'">공지사항 관리</button>
-          </div>
-        </div>
+        <a class="gnb-service-link" href="/ipass">i-PaSS</a>
+        <a class="gnb-service-link" href="/committee">안전보건협의체</a>
+        <a class="gnb-service-link" href="/education">교육 제출</a>
+        <a class="gnb-service-link" href="/voc">VOC</a>
+        <a class="gnb-service-link" href="/notices">공지사항</a>
+        <a class="gnb-service-link" href="/faq">FAQ</a>
+        <a class="gnb-service-link" href="/resources">안전자료실</a>
       </nav>
 
       <div class="app-actions">
@@ -1596,7 +1564,9 @@ main{
           </button>
           <div class="user-dropdown">
             <div class="user-dropdown-head"><strong id="userDropdownName"></strong><span id="rolePill"></span></div>
-            <button type="button" onclick="navigatePage('portalHome')">포털 홈</button>
+            <button class="hidden home-admin-option" type="button" onclick="navigatePage('dashboard')">i-PaSS 관리</button>
+            <button class="hidden home-admin-option" type="button" onclick="navigatePage('approvals')">회원가입 승인</button>
+            <button class="hidden home-admin-option" type="button" onclick="navigatePage('accounts')">협력사 계정 관리</button>
             <button type="button" id="logoutBtn">로그아웃</button>
           </div>
         </div>
@@ -1638,7 +1608,6 @@ main{
         </section>
 
         <section class="home-section">
-          <div class="section-head"><h2>EHS 서비스</h2></div>
           <div class="service-panel">
             <button class="service-tile" type="button" onclick="openPortalService('ipass')">
               <span class="service-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10v4H7z"/><path d="M5 5v16h14V5"/><path d="M8 11h8M8 15h5"/></svg></span>
@@ -1919,6 +1888,8 @@ async function routeAfterLogin(me){
     return;
   }
   currentUser=me.user;
+  window.__EHS_PAGE_USER=currentUser;
+  document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:currentUser}));
   $("publicPortal").classList.add("hidden");
   $("app").classList.remove("hidden");
   const displayName=[currentUser.position,currentUser.name].filter(Boolean).join(" ")||currentUser.email||"사용자";
@@ -1931,8 +1902,7 @@ async function routeAfterLogin(me){
   $("userAvatar").textContent=displayName.trim().slice(0,1).toUpperCase();
   $("homeUserName").textContent=displayName;
   $("portalWelcome").textContent=`${company}의 EHS 업무를 한 화면에서 확인하세요.`;
-  $("adminNavGroup").classList.toggle("hidden",currentUser.role!=="admin");
-  $("educationStatusNav").classList.toggle("hidden",currentUser.role!=="admin");
+  document.querySelectorAll('.home-admin-option').forEach(item=>item.classList.toggle('hidden',currentUser.role!=="admin"));
   showPage("portalHome");
   loadPortalHome();
   showLatestNotice("after_login");
@@ -2379,7 +2349,7 @@ function openPortalService(service){
     return;
   }
   if(service==="notices"){location.href="/notices";return}
-  if(service==="faq"){navigatePage("faq");return}
+  if(service==="faq"){location.href="/faq";return}
   if(service==="resources"){location.href="/resources";return}
   if(service==="notifications"){navigatePage("notificationCenter");return}
   if(service==="committee"){location.href="/committee.html";return}

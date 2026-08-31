@@ -123,6 +123,16 @@ assert.equal(preview.response.status, 200);
 assert.equal(preview.response.headers.get('content-type'), 'image/jpeg');
 assert.equal((await preview.response.arrayBuffer()).byteLength, 12);
 
+await call(`/api/voc/${photoId}/submit`, { method: 'POST', body: '{}' });
+const adminDeletedPhotoCase = await call(`/api/admin/voc/${photoId}`, { method: 'DELETE', role: 'admin' });
+assert.equal(adminDeletedPhotoCase.response.status, 200);
+assert.equal(adminDeletedPhotoCase.data.deleted_images, 1);
+assert.equal(objects.size, 0, '관리자 VOC 삭제 시 R2 사진도 삭제되어야 함');
+assert.equal((await call(`/api/voc/${photoId}`)).response.status, 404);
+const adminDeletedAnsweredCase = await call(`/api/admin/voc/${noPhotoId}`, { method: 'DELETE', role: 'admin' });
+assert.equal(adminDeletedAnsweredCase.response.status, 200);
+assert.equal((await call('/api/voc', { role: 'admin' })).data.items.length, 0);
+
 console.log(JSON.stringify({
   success: true,
   no_photo_submission: true,
@@ -130,5 +140,6 @@ console.log(JSON.stringify({
   partner_isolation: true,
   admin_workflow: true,
   image_upload: true,
-  preview_ticket: true
+  preview_ticket: true,
+  admin_delete: true
 }));

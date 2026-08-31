@@ -11,10 +11,10 @@ import { handlePortalContent } from './portal-content.js';
 import { createRequestMetrics, finalizeRequestMetrics, handlePerformanceRum, instrumentEnvironment } from './performance.js';
 
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
-const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=5">';
+const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=6">';
 const COMMON_AUTH='<script src="/shared/auth.js?v=3"></script>';
 const COMMON_API='<script src="/shared/api.js?v=3"></script>';
-const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=10"></script>';
+const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=11"></script>';
 const COMMON_PREVIEW='<script src="/attachment-preview.js?v=3"></script>';
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{if(!window.EHSAuth||!window.EHSAuth.readSession())window.EHSAuth?window.EHSAuth.redirectToLogin("/home"):location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
 const SUBMISSION_ASSETS='<link rel="stylesheet" href="/evaluation-submit-enhance.css?v=3"><link rel="stylesheet" href="/evaluation-submit-redesign.css?v=1"><link rel="stylesheet" href="/evaluation-submit-progress.css?v=2"><script src="/evaluation-submit-enhance.js?v=10"></script>';
@@ -32,10 +32,10 @@ function injectBody(html,content,marker){if(html.includes(marker))return html;re
 async function htmlResponse(response,html){const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');headers.set('content-type','text/html;charset=utf-8');headers.set('cache-control','no-store');return new Response(html,{status:response.status,statusText:response.statusText,headers})}
 async function injectShared(response,{home=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=await response.text();
-  html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=5');
+  html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=6');
   html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=3');
   html=injectHead(html,COMMON_API,'/shared/api.js?v=3');
-  html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=10');
+  html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=11');
   html=injectHead(html,COMMON_PREVIEW,'/attachment-preview.js?v=3');
   if(home)html=injectHead(html,HOME_BOOT,'ehs-home-boot');
   if(root){html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v23');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v20');html=injectBody(html,IPASS_GRADE_SCRIPT,'ipass-grade-v21')}
@@ -63,6 +63,8 @@ async function core(request,env,ctx){
   if(request.method==='GET'&&path==='/voc')return serveAsset(request,env,'/voc.html');
   if(request.method==='GET'&&path==='/notices')return serveAsset(request,env,'/content-hub.html');
   if(request.method==='GET'&&path==='/resources')return serveAsset(request,env,'/content-hub.html');
+  if(request.method==='GET'&&path==='/faq.html'){const next=new URL(request.url);next.pathname='/faq';return Response.redirect(next.toString(),302)}
+  if(request.method==='GET'&&path==='/faq')return serveAsset(request,env,'/faq.html');
   if(request.method==='GET'&&path==='/home'){
     const rootReq=rewriteRequest(request,'/');let response=await handleEvaluationRuntime(rootReq,env,ctx,baseWorker);if(!response)response=await baseWorker.fetch(rootReq,env,ctx);return injectShared(response,{home:true,root:true});
   }

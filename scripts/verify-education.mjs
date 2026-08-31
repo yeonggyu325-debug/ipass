@@ -30,8 +30,8 @@ requireText(files.api, 'validateFileSignature', '파일 시그니처 검사 누�
 requireText(files.worker, "path==='/education'", '교육 페이지 Worker 경로 누락');
 requireText(files.worker, 'handleEducationSubmission', '교육 API Worker 연결 누락');
 requireText(files.config, '"/education"', '정적 자산 Worker 우선 경로 누락');
-requireText(files.home, 'id="educationStatusNav"', '관리자 현황 메뉴 누락');
-requireText(files.home, 'currentUser.role!=="admin"', '관리자 현황 메뉴 권한분기 누락');
+requireText(files.home, 'href="/education">교육 제출</a>', '공통 교육 제출 메뉴 누락');
+requireText(files.page, "currentUser.role==='admin'", '관리자 현황 화면 권한분기 누락');
 
 if (/department|유관부서/.test(files.api) || /department|유관부서/.test(files.page) || /department|유관부서/.test(files.migration)) {
   throw new Error('교육 제출 검증 실패: 유관부서 모델 또는 화면이 포함되어 있습니다.');

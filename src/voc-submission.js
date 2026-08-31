@@ -393,6 +393,24 @@ export async function handleVocSubmission(request, env, ctx, baseWorker) {
   }
 
   const adminMatch = path.match(/^\/api\/admin\/voc\/([^/]+)$/);
+  if (adminMatch && request.method === 'DELETE') {
+    if (user.role !== 'admin') return json({ success: false, error: '관리자 권한이 필요합니다.' }, 403);
+    const caseId = decodeURIComponent(adminMatch[1]);
+    const access = await accessCase(env, user, caseId);
+    if (!access.ok) return access.response;
+    const imageRows = await env.partner_evaluation_db.prepare(`
+      SELECT object_key FROM voc_images_v2 WHERE case_id = ?
+    `).bind(caseId).all();
+    const keys = (imageRows.results || []).map(image => image.object_key).filter(Boolean);
+    await env.partner_evaluation_db.batch([
+      env.partner_evaluation_db.prepare(`DELETE FROM voc_preview_tickets_v2 WHERE image_id IN (SELECT id FROM voc_images_v2 WHERE case_id = ?)`).bind(caseId),
+      env.partner_evaluation_db.prepare(`DELETE FROM voc_images_v2 WHERE case_id = ?`).bind(caseId),
+      env.partner_evaluation_db.prepare(`DELETE FROM voc_case_logs_v2 WHERE case_id = ?`).bind(caseId),
+      env.partner_evaluation_db.prepare(`DELETE FROM voc_cases_v2 WHERE id = ?`).bind(caseId)
+    ]);
+    if (env.EVIDENCE_FILES) await Promise.allSettled(keys.map(key => env.EVIDENCE_FILES.delete(key)));
+    return json({ success: true, deleted_images: keys.length });
+  }
   if (adminMatch && request.method === 'PATCH') {
     if (user.role !== 'admin') return json({ success: false, error: '관리자 권한이 필요합니다.' }, 403);
     const caseId = decodeURIComponent(adminMatch[1]);

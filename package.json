@@ -11,9 +11,11 @@
     "verify:content": "node scripts/verify-portal-content.mjs",
     "test:content-api": "node scripts/test-portal-content-api.mjs",
     "verify:preview": "node scripts/verify-attachment-preview.mjs",
+    "verify:navigation": "node scripts/verify-global-navigation.mjs",
+    "test:storage": "node scripts/test-storage-admin.mjs",
     "migrate:local": "wrangler d1 migrations apply partner-evaluation-db --local",
     "migrate:remote": "wrangler d1 migrations apply partner-evaluation-db --remote",
-    "deploy": "npm run verify:education && npm run verify:voc && npm run test:voc-api && npm run verify:content && npm run test:content-api && npm run verify:preview && npm run prepare:preview && npm run migrate:remote && wrangler deploy"
+    "deploy": "npm run verify:education && npm run verify:voc && npm run test:voc-api && npm run verify:content && npm run test:content-api && npm run verify:preview && npm run verify:navigation && npm run test:storage && npm run prepare:preview && npm run migrate:remote && wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.123.0"

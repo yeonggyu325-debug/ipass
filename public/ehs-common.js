@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   const path=location.pathname;
-  const PROTECTED=path==='/home'||path==='/committee'||path==='/committee.html'||path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html'||path==='/evaluation-scoring.html';
+  const PROTECTED=path==='/home'||path==='/committee'||path==='/committee.html'||path==='/education'||path==='/education.html'||path==='/voc'||path==='/voc.html'||path==='/notices'||path==='/resources'||path==='/faq'||path==='/faq.html'||path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html'||path==='/evaluation-scoring.html';
   const STANDALONE=PROTECTED&&path!=='/home'&&new URLSearchParams(location.search).get('embedded')!=='1';
 
   function readSession(){return window.EHSAuth?.readSession?.()||null}
@@ -123,19 +123,16 @@
   }
 
   function commonHeaderHtml(){
-    const committeeActive=path==='/committee'||path==='/committee.html';
-    const ipassActive=path==='/ipass'||path==='/ipass/'||path.startsWith('/ipass/')||path==='/evaluation-management.html'||path==='/evaluation-cycle.html'||path==='/evaluation-submit.html'||path==='/evaluation-scoring.html';
+    const servicePath=path==='/committee.html'?'/committee':path==='/education.html'?'/education':path==='/voc.html'?'/voc':path==='/faq.html'?'/faq':path;
+    const services=[['/ipass','i-PaSS'],['/committee','안전보건협의체'],['/education','교육 제출'],['/voc','VOC'],['/notices','공지사항'],['/faq','FAQ'],['/resources','안전자료실']];
+    const links=services.map(([href,label])=>`<a class="ehs-global-link ${(href==='/ipass'?servicePath.startsWith('/ipass')||servicePath.startsWith('/evaluation-'):servicePath===href)?'active':''}" href="${href}">${label}</a>`).join('');
     return `<header class="ehs-global-header" id="ehsGlobalHeader"><div class="ehs-global-inner">
       <a class="ehs-global-brand" href="/home" aria-label="EHS 포털 홈"><img src="/hniruja-logo.png" alt="Hniruja"><span>협력사 EHS 포털</span><em>EHS</em></a>
       <button class="ehs-global-mobile" id="ehsGlobalMobile" type="button" aria-label="메뉴 열기"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-      <nav class="ehs-global-nav" id="ehsGlobalNav" aria-label="주요 메뉴">
-        <a class="ehs-global-home" href="/home">홈</a>
-        <div class="ehs-global-nav-item ${committeeActive?'active':''}"><button type="button">EHS 업무</button><div class="ehs-global-menu"><a href="/committee">안전보건협의체</a></div></div>
-        <div class="ehs-global-nav-item ${ipassActive?'active':''}"><button type="button">평가·교육</button><div class="ehs-global-menu"><a href="/ipass">i-PaSS</a><a class="ehs-admin-only hidden" href="/ipass/templates">평가표 관리</a><a class="ehs-admin-only hidden" href="/ipass/cycles">평가회차 운영</a></div></div>
-      </nav>
+      <nav class="ehs-global-nav" id="ehsGlobalNav" aria-label="주요 메뉴">${links}</nav>
       <div class="ehs-global-actions">
         <button class="ehs-global-bell" id="ehsGlobalBell" type="button" aria-label="알림"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span id="ehsGlobalUnread">0</span></button>
-        <div class="ehs-global-user" id="ehsGlobalUser"><button class="ehs-global-user-btn" id="ehsGlobalUserBtn" type="button"><span class="ehs-global-avatar" id="ehsGlobalAvatar">U</span><span class="ehs-global-copy"><strong id="ehsGlobalName">사용자</strong><small id="ehsGlobalCompany">협력사</small></span><span class="ehs-global-caret">⌄</span></button><div class="ehs-global-user-menu"><div><strong id="ehsGlobalMenuName">사용자</strong><span id="ehsGlobalRole">계정</span></div><a href="/home">포털 홈</a><a href="/ipass">i-PaSS</a><button type="button" data-ehs-logout>로그아웃</button></div></div>
+        <div class="ehs-global-user" id="ehsGlobalUser"><button class="ehs-global-user-btn" id="ehsGlobalUserBtn" type="button"><span class="ehs-global-avatar" id="ehsGlobalAvatar">U</span><span class="ehs-global-copy"><strong id="ehsGlobalName">사용자</strong><small id="ehsGlobalCompany">협력사</small></span><span class="ehs-global-caret">⌄</span></button><div class="ehs-global-user-menu"><div><strong id="ehsGlobalMenuName">사용자</strong><span id="ehsGlobalRole">계정</span></div><button type="button" data-ehs-logout>로그아웃</button></div></div>
       </div>
     </div></header>`;
   }
@@ -159,6 +156,38 @@
     if(window.__EHS_PAGE_USER){applyCommonHeaderUser(window.__EHS_PAGE_USER);return}
     if(path==='/evaluation-submit.html'||!window.EHSAuth?.requireUser)return;
     window.EHSAuth.requireUser().then(applyCommonHeaderUser).catch(()=>{});
+  }
+
+  function storageText(bytes){
+    const value=Number(bytes||0);
+    if(value>=1073741824)return`${(value/1073741824).toFixed(value>=10737418240?1:2)} GB`;
+    if(value>=1048576)return`${(value/1048576).toFixed(value>=104857600?0:1)} MB`;
+    if(value>=1024)return`${Math.round(value/1024)} KB`;
+    return`${value} B`;
+  }
+
+  async function showAdminStorage(user){
+    if((!STANDALONE&&path!=='/home')||user?.role!=='admin'||document.getElementById('ehsStorageCapacity'))return;
+    const anchor=document.getElementById('ehsGlobalHeader')||document.querySelector('#app>.app-header,body>.app-header');
+    if(!anchor)return;
+    anchor.insertAdjacentHTML('afterend',`<section class="ehs-storage-capacity" id="ehsStorageCapacity" aria-label="Cloudflare R2 저장공간"><div class="ehs-storage-inner"><div class="ehs-storage-heading"><span class="ehs-storage-cloud">☁</span><div><strong>Cloudflare R2 저장공간</strong><small>포털 첨부파일 사용량 집계 중</small></div></div><div class="ehs-storage-meter"><div><strong id="ehsStorageUsed">확인 중</strong><span id="ehsStorageMeta"></span></div><div class="ehs-storage-track"><i id="ehsStorageBar"></i></div></div></div></section>`);
+    try{
+      const data=await window.EHSApi.request('/api/admin/storage-status');
+      const storage=data.storage||{},global=storage.global||{},percent=Math.max(0,Math.min(100,Number(global.percent||0)));
+      document.getElementById('ehsStorageUsed').textContent=`${storageText(global.used_bytes)} / ${Number(global.limit_gb||8.5)} GB`;
+      document.getElementById('ehsStorageMeta').textContent=`남음 ${storageText(global.remaining_bytes)} · 파일 ${Number(storage.file_count||0).toLocaleString('ko-KR')}개`;
+      const bar=document.getElementById('ehsStorageBar');bar.style.width=`${percent}%`;bar.classList.toggle('warning',percent>=75);bar.classList.toggle('danger',percent>=90);
+    }catch(error){
+      const used=document.getElementById('ehsStorageUsed'),meta=document.getElementById('ehsStorageMeta');
+      if(used)used.textContent='사용량 확인 불가';if(meta)meta.textContent=error?.message||'잠시 후 다시 확인하세요.';
+    }
+  }
+
+  function installAdminStorage(){
+    if(document.documentElement.dataset.ehsStorageListener==='1')return;
+    document.documentElement.dataset.ehsStorageListener='1';
+    document.addEventListener('ehs:user-ready',event=>showAdminStorage(event.detail));
+    if(window.__EHS_PAGE_USER)showAdminStorage(window.__EHS_PAGE_USER);
   }
 
   function installCommonHeader(){
@@ -210,6 +239,7 @@
   function install(){
     installPerformanceTelemetry();
     installCommonHeader();
+    installAdminStorage();
     installSkeletons();
     normalizeButtons();
     wireBrand();
