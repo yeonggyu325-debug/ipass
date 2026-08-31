@@ -41,11 +41,15 @@ function extensionOf(name) {
   return index > 0 ? value.slice(index + 1).toLowerCase() : '';
 }
 
-function normalizeDate(value) {
+function normalizeKstDate(value) {
   const text = clean(value, 40);
   if (!text) return null;
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+  const kstText = !hasZone && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(text)
+    ? `${text.length === 16 ? `${text}:00` : text}+09:00`
+    : text;
+  const date = new Date(kstText);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 async function account(request, env, ctx, baseWorker) {
@@ -156,8 +160,8 @@ async function publicNotices(request, env) {
       ON pf.owner_type = 'notice' AND pf.owner_id = n.id
       AND pf.file_role = 'popup_image' AND pf.deleted_at IS NULL
     WHERE n.is_active = 1 AND n.${column} = 1
-      AND (n.start_at IS NULL OR n.start_at <= CURRENT_TIMESTAMP)
-      AND (n.end_at IS NULL OR n.end_at >= CURRENT_TIMESTAMP)
+      AND (n.start_at IS NULL OR datetime(n.start_at) <= CURRENT_TIMESTAMP)
+      AND (n.end_at IS NULL OR datetime(n.end_at) >= CURRENT_TIMESTAMP)
     ORDER BY n.is_important DESC, n.created_at DESC
     LIMIT 50
   `).all();
@@ -178,8 +182,8 @@ async function publicPopupImage(env, noticeId) {
     WHERE f.owner_type = 'notice' AND f.owner_id = ? AND f.file_role = 'popup_image'
       AND f.deleted_at IS NULL AND n.is_active = 1
       AND (n.show_on_login = 1 OR n.show_after_login = 1)
-      AND (n.start_at IS NULL OR n.start_at <= CURRENT_TIMESTAMP)
-      AND (n.end_at IS NULL OR n.end_at >= CURRENT_TIMESTAMP)
+      AND (n.start_at IS NULL OR datetime(n.start_at) <= CURRENT_TIMESTAMP)
+      AND (n.end_at IS NULL OR datetime(n.end_at) >= CURRENT_TIMESTAMP)
     LIMIT 1
   `).bind(noticeId).first();
   if (!file) return json({ success: false, error: '팝업 이미지를 찾을 수 없습니다.' }, 404);
@@ -257,7 +261,7 @@ async function listResources(env, user, url) {
 async function createNotice(env, user, body) {
   const title = clean(body.title, 160);
   const content = clean(body.content, 12000);
-  if (!title || !content) return { error: '제목과 내용을 입력하세요.', status: 400 };
+  if (!title) return { error: '제목을 입력하세요.', status: 400 };
   const id = crypto.randomUUID();
   await env.partner_evaluation_db.batch([
     env.partner_evaluation_db.prepare(`
@@ -268,7 +272,7 @@ async function createNotice(env, user, body) {
     `).bind(
       id, title, content, bool(body.is_important), bool(body.show_on_login),
       bool(body.show_after_login, true), bool(body.is_active, true),
-      normalizeDate(body.start_at), normalizeDate(body.end_at), user.id || null
+      normalizeKstDate(body.start_at), normalizeKstDate(body.end_at), user.id || null
     ),
     logStatement(env, 'notice', id, 'created', { title }, user.id)
   ]);
@@ -280,7 +284,7 @@ async function updateNotice(env, user, noticeId, body) {
   if (!before) return { error: '공지사항을 찾을 수 없습니다.', status: 404 };
   const title = clean(body.title ?? before.title, 160);
   const content = clean(body.content ?? before.content, 12000);
-  if (!title || !content) return { error: '제목과 내용을 입력하세요.', status: 400 };
+  if (!title) return { error: '제목을 입력하세요.', status: 400 };
   await env.partner_evaluation_db.batch([
     env.partner_evaluation_db.prepare(`
       UPDATE portal_notices SET title = ?, content = ?, is_important = ?,
@@ -291,8 +295,8 @@ async function updateNotice(env, user, noticeId, body) {
       bool(body.show_on_login, Number(before.show_on_login) === 1),
       bool(body.show_after_login, Number(before.show_after_login) === 1),
       bool(body.is_active, Number(before.is_active) === 1),
-      body.start_at === undefined ? before.start_at : normalizeDate(body.start_at),
-      body.end_at === undefined ? before.end_at : normalizeDate(body.end_at), noticeId
+      body.start_at === undefined ? before.start_at : normalizeKstDate(body.start_at),
+      body.end_at === undefined ? before.end_at : normalizeKstDate(body.end_at), noticeId
     ),
     logStatement(env, 'notice', noticeId, 'updated', { title }, user.id)
   ]);

@@ -23,10 +23,14 @@ for (const extension of ['pdf', 'hwp', 'hwpx', 'xls', 'xlsx', 'doc', 'docx', 'pp
   requireText(files.api, `'${extension}'`, `${extension} 업로드 허용 누락`);
 }
 requireText(files.api, 'inspectFile(file', '파일 시그니처 검사 누락');
+requireText(files.api, 'normalizeKstDate', '한국시간 게시시간 변환 누락');
+requireText(files.api, "if (!title) return { error: '제목을 입력하세요.'", '공지 제목 단독 필수검증 누락');
 requireText(files.api, 'file.stream()', 'R2 스트리밍 업로드 누락');
 requireText(files.api, 'PREVIEW_TICKET_MINUTES = 5', '단기 미리보기 권한 누락');
 requireText(files.api, "user.role !== 'admin'", '관리자 쓰기 권한 누락');
 requireText(files.page, 'navigator.clipboard.read()', '클립보드 이미지 읽기 누락');
+requireText(files.page, '게시 시작 (한국시간)', '한국시간 게시 입력 표시 누락');
+requireText(files.page, '내용 없이 제목만으로도 등록할 수 있습니다.', '공지 내용 선택입력 누락');
 requireText(files.page, "document.addEventListener('paste'", 'Ctrl+V 이미지 처리 누락');
 requireText(files.page, 'object-fit:contain', '원본비율 이미지 표시 누락');
 requireText(files.page, 'window.AttachmentPreview.init', '공통 첨부 웹뷰어 누락');
@@ -34,6 +38,8 @@ requireText(files.home, '일주일 동안 보지 않기', '7일 숨김 UI 누락
 requireText(files.home, 'Date.now()+7*24*60*60*1000', '7일 숨김 만료 계산 누락');
 requireText(files.home, 'noticeImagePlus', '공지 이미지 확대 누락');
 requireText(files.home, 'noticeImageMinus', '공지 이미지 축소 누락');
+requireText(files.home, 'grid-auto-flow:column', '홈 서비스 한 줄 배치 누락');
+requireText(files.home, 'border-radius:22px', '홈 서비스 둥근 정사각형 누락');
 requireText(files.preview, "'webp'", 'WebP 미리보기 누락');
 requireText(files.worker, 'handlePortalContent', '콘텐츠 API Worker 연결 누락');
 requireText(files.worker, "path==='/notices'", '공지 페이지 라우팅 누락');

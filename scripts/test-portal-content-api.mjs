@@ -57,8 +57,10 @@ async function call(path, { method = 'GET', role = 'partner', body } = {}) {
 const denied = await call('/api/admin/content/notices', { method: 'POST', body: JSON.stringify({ title: 'x', content: 'x' }) });
 assert.equal(denied.response.status, 403);
 
-const noticeCreated = await call('/api/admin/content/notices', { method: 'POST', role: 'admin', body: JSON.stringify({ title: '중요 안전공지', content: '보호구를 착용하세요.', is_important: true, show_on_login: true, show_after_login: true }) });
+const noticeCreated = await call('/api/admin/content/notices', { method: 'POST', role: 'admin', body: JSON.stringify({ title: '중요 안전공지', is_important: true, show_on_login: true, show_after_login: true, start_at: '2020-01-02T09:30' }) });
 assert.equal(noticeCreated.response.status, 201);
+assert.equal(noticeCreated.data.notice.content, '', '공지 내용은 비워도 등록되어야 함');
+assert.equal(noticeCreated.data.notice.start_at, '2020-01-02 00:30:00', '한국시간 입력값을 UTC로 정확히 저장해야 함');
 const noticeId = noticeCreated.data.notice.id;
 
 const popupForm = new FormData();
@@ -100,4 +102,4 @@ forgedForm.append('file', new File([new TextEncoder().encode('not a pdf')], 'for
 const forged = await call(`/api/admin/content/resources/${resourceId}/files`, { method: 'POST', role: 'admin', body: forgedForm });
 assert.equal(forged.response.status, 400);
 
-console.log(JSON.stringify({ success: true, admin_write_guard: true, public_popup: true, resource_library: true, attachment_preview: true, signature_validation: true, r2_objects: objects.size }));
+console.log(JSON.stringify({ success: true, admin_write_guard: true, title_only_notice: true, kst_schedule: true, public_popup: true, resource_library: true, attachment_preview: true, signature_validation: true, r2_objects: objects.size }));

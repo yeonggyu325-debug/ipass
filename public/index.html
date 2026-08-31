@@ -250,7 +250,10 @@ button{cursor:pointer}
   font-weight:800;
   letter-spacing:.10em;
 }
-.notice-date{margin-top:6px;color:#9aa4ad;font-size:11px}
+.notice-date{display:none}
+#noticeModal{background:rgba(16,30,42,.24);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
+#noticeModal .modal-card{background:rgba(255,255,255,.97);box-shadow:0 24px 68px rgba(15,30,42,.24)}
+#noticePopupTitle{margin:0;color:#172d3a;font-size:26px;font-weight:900;line-height:1.25;letter-spacing:-.05em}
 .notice-foot{
   display:flex;
   justify-content:space-between;
@@ -969,7 +972,7 @@ main{
 .home-date{color:#9aa4ac;font-size:11px;white-space:nowrap}
 
 .important-banner{
-  display:none;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;
+  display:none;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;
   min-height:50px;padding:0 17px;margin-bottom:18px;background:#fffaf1;border:1px solid #f2e4c7;border-radius:11px;
   cursor:pointer;
 }
@@ -999,21 +1002,24 @@ main{
 .work-meta{margin-top:5px;color:#9aa3aa;font-size:10.5px}
 
 .service-panel{
-  background:#fff;border:1px solid #e7ebee;border-radius:14px;overflow:hidden;
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(138px,1fr);
+  gap:12px;overflow-x:auto;padding:3px 3px 12px;background:transparent;border:0;border-radius:0;
+  scrollbar-width:thin;scroll-snap-type:x proximity;
 }
 .service-tile{
-  min-height:112px;padding:19px 18px;border:0;background:#fff;display:flex;align-items:center;gap:14px;
-  text-align:left;border-right:1px solid #eef1f3;border-bottom:1px solid #eef1f3;cursor:pointer;
+  aspect-ratio:1;min-width:138px;min-height:0;padding:18px 12px;border:1px solid #e2e9ed;border-radius:22px;
+  background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;
+  text-align:center;cursor:pointer;scroll-snap-align:start;box-shadow:0 5px 18px rgba(31,53,68,.045);
 }
-.service-tile:nth-child(4n){border-right:0}.service-tile:nth-last-child(-n+4){border-bottom:0}
-.service-tile:hover{background:#f8fafb}
+.service-tile:nth-child(4n),.service-tile:nth-last-child(-n+4){border:1px solid #e2e9ed}
+.service-tile:hover{background:#f8fbfd;border-color:#b9ccd8;box-shadow:0 12px 28px rgba(31,61,80,.09);transform:translateY(-2px)}
 .service-icon{
-  width:42px;height:42px;border-radius:11px;background:#f0f5f8;color:#3976a4;display:grid;place-items:center;flex:0 0 42px;
+  width:62px;height:62px;border-radius:19px;background:#eaf3f8;color:#246f9f;display:grid;place-items:center;flex:0 0 62px;
+  box-shadow:inset 0 0 0 1px rgba(57,118,164,.08);
 }
-.service-icon svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.service-text strong{display:block;color:#34414a;font-size:13px;font-weight:700}
-.service-text span{display:block;margin-top:5px;color:#98a2a9;font-size:10.5px;line-height:1.35}
+.service-icon svg{width:32px;height:32px;stroke:currentColor;fill:none;stroke-width:2.05;stroke-linecap:round;stroke-linejoin:round}
+.service-text strong{display:block;color:#263e4b;font-size:14px;font-weight:820}
+.service-text span{display:block;margin-top:6px;color:#87969f;font-size:10px;line-height:1.35}
 .service-tile.coming .service-icon{background:#f5f6f7;color:#9ba4ab}
 .service-tile.coming .service-text strong{color:#6f7981}
 .service-mini-badge{display:inline-flex!important;width:max-content;margin-top:6px!important;padding:2px 5px;border-radius:5px;background:#f3f5f6;color:#9aa2a8!important;font-size:9px!important}
@@ -1025,14 +1031,14 @@ main{
 .home-panel-head button{border:0;background:none;color:#99a3aa;font-size:10.5px}
 .notice-home-list{min-height:174px}
 .notice-home-row{
-  min-height:44px;padding:0 17px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;
+  min-height:44px;padding:0 17px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;
   border-bottom:1px solid #f0f2f4;cursor:pointer;
 }
 .notice-home-row:last-child{border-bottom:0}
 .notice-home-row:hover{background:#fafbfc}
 .notice-type{font-size:9.5px;font-weight:700;color:#858f97}.notice-type.important{color:#b76530}
 .notice-home-title{font-size:11.5px;color:#505d67;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.notice-home-date{font-size:9.5px;color:#a7afb5}
+.notice-home-date,.important-date{display:none!important}
 .faq-home{padding:5px 0}
 .faq-home button{
   width:100%;min-height:43px;padding:0 17px;border:0;background:#fff;text-align:left;color:#596671;font-size:11.5px;
@@ -1062,11 +1068,7 @@ main{
   .app-header-inner{width:min(100% - 32px,1240px);gap:14px}
   .gnb-trigger,.gnb-home{padding:0 9px;font-size:12px}
   .work-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .service-panel{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .service-tile:nth-child(4n){border-right:1px solid #eef1f3}
-  .service-tile:nth-child(2n){border-right:0}
-  .service-tile:nth-last-child(-n+4){border-bottom:1px solid #eef1f3}
-  .service-tile:nth-last-child(-n+2){border-bottom:0}
+  .service-panel{grid-template-columns:none;grid-auto-columns:148px}
 }
 @media(max-width:820px){
   .app-header{height:64px}
@@ -1097,10 +1099,10 @@ main{
   .saas-home-head h1{font-size:24px}
   .important-banner{grid-template-columns:auto minmax(0,1fr);padding:9px 13px}.important-date{display:none}
   .work-grid{grid-template-columns:1fr 1fr;gap:8px}.work-card{min-height:112px;padding:15px}.work-value{font-size:17px}
-  .service-panel{grid-template-columns:1fr 1fr}
-  .service-tile{min-height:100px;padding:14px 12px;gap:10px;align-items:flex-start;flex-direction:column}
-  .service-icon{width:36px;height:36px;flex-basis:36px;border-radius:9px}.service-icon svg{width:18px;height:18px}
-  .service-text strong{font-size:12px}.service-text span{display:none}
+  .service-panel{grid-template-columns:none;grid-auto-columns:136px;gap:9px}
+  .service-tile{min-width:136px;padding:14px 10px;gap:10px;align-items:center;flex-direction:column}
+  .service-icon{width:54px;height:54px;flex-basis:54px;border-radius:17px}.service-icon svg{width:28px;height:28px}
+  .service-text strong{font-size:12.5px}.service-text span{display:none}
   .home-panel-head{height:48px}
 }
 
@@ -1479,7 +1481,7 @@ main{
 </div>
 
 <div id="noticeModal" class="modal hidden">
-  <div class="modal-card" style="width:min(570px,94vw)">
+  <div class="modal-card" style="width:min(650px,94vw)">
     <div class="modal-head">
       <div><span class="notice-label">NOTICE</span><h3 id="noticePopupTitle">공지사항</h3><div class="notice-date" id="noticePopupDate"></div></div>
       <button class="modal-close" id="closeNoticePopup">×</button>
@@ -1850,7 +1852,7 @@ function publicApiCached(path,ttl=30000){return cachedGet(`public:${path}`,()=>p
 function invalidateGetCache(prefix=""){for(const key of GET_CACHE.keys()){if(!prefix||key.includes(prefix))GET_CACHE.delete(key)}}
 
 function formatNoticeDate(v){if(!v)return"";const d=new Date(v);if(Number.isNaN(d.getTime()))return String(v).slice(0,10);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`}
-async function showLatestNotice(placement){try{const data=await publicApiCached(`/api/public/notices?placement=${encodeURIComponent(placement)}`,30000);const notice=(data.notices||[])[0];if(!notice)return;const key=`ipass.notice.hideUntil.${placement}.${notice.id}`;if(Number(localStorage.getItem(key)||0)>Date.now())return;activeNoticeKey=key;$("hideNoticeWeek").checked=false;$("noticePopupTitle").textContent=(notice.is_important?"[중요] ":"")+notice.title;$("noticePopupDate").textContent=formatNoticeDate(notice.created_at);$("noticePopupContent").innerHTML=`<div style="white-space:pre-wrap">${esc(notice.content||"")}</div>`;const image=$("noticePopupImage"),source=$("noticePopupImageSource");if(notice.popup_image_url){source.src=notice.popup_image_url;source.alt=`${notice.title} 팝업 이미지`;image.classList.remove("hidden");image.onclick=()=>openNoticeImage(notice.popup_image_url)}else{source.removeAttribute("src");image.classList.add("hidden")}$("noticeModal").classList.remove("hidden")}catch{}}
+async function showLatestNotice(placement){try{const data=await publicApiCached(`/api/public/notices?placement=${encodeURIComponent(placement)}`,30000);const notice=(data.notices||[])[0];if(!notice)return;const key=`ipass.notice.hideUntil.${placement}.${notice.id}`;if(Number(localStorage.getItem(key)||0)>Date.now())return;activeNoticeKey=key;$("hideNoticeWeek").checked=false;$("noticePopupTitle").textContent=(notice.is_important?"[중요] ":"")+notice.title;$("noticePopupDate").textContent="";$("noticePopupContent").innerHTML=notice.content?`<div style="white-space:pre-wrap">${esc(notice.content)}</div>`:"";const image=$("noticePopupImage"),source=$("noticePopupImageSource");if(notice.popup_image_url){source.src=notice.popup_image_url;source.alt=`${notice.title} 팝업 이미지`;image.classList.remove("hidden");image.onclick=()=>openNoticeImage(notice.popup_image_url)}else{source.removeAttribute("src");image.classList.add("hidden")}$("noticeModal").classList.remove("hidden")}catch{}}
 function closeNoticePopup(){if(activeNoticeKey&&$("hideNoticeWeek").checked)localStorage.setItem(activeNoticeKey,String(Date.now()+7*24*60*60*1000));$("noticeModal").classList.add("hidden");activeNoticeKey=null}
 $("closeNoticePopup").onclick=closeNoticePopup;$("closeNoticePopupBottom").onclick=closeNoticePopup;$("noticeModal").onclick=e=>{if(e.target===$("noticeModal"))closeNoticePopup()};
 function updateNoticeImage(){const image=$("noticeImageFull");$("noticeImagePercent").textContent=`${Math.round(noticeImageScale)}%`;if(image.naturalWidth)image.style.width=`${Math.max(1,Math.round(image.naturalWidth*noticeImageScale/100))}px`}

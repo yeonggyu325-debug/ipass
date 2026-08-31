@@ -149,15 +149,42 @@ button,input,select,textarea{font-family:inherit!important}
 #app .work-card{min-height:122px!important;padding:17px!important}
 #app .work-label,#app .kpi .label,#app .action-kpi .label{color:#6b7d88!important;font-weight:700!important}
 #app .work-value,#app .kpi .value,#app .action-kpi .value{color:#253b48!important;font-weight:800!important}
-#app .service-panel{overflow:hidden!important}
-#app .service-tile{min-height:106px!important;padding:17px!important;background:#fff!important}
-#app .service-tile:hover{background:#f7fafb!important}
-#app .service-icon{
-  width:40px!important;height:40px!important;flex-basis:40px!important;
-  border-radius:9px!important;background:#edf4f8!important;color:#34739b!important;
+#app .service-panel{
+  display:grid!important;
+  grid-template-columns:none!important;
+  grid-auto-flow:column!important;
+  grid-auto-columns:minmax(138px,1fr)!important;
+  gap:12px!important;
+  overflow-x:auto!important;
+  padding:3px 3px 12px!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
 }
-#app .service-text strong{color:#344853!important;font-size:12.5px!important;font-weight:750!important}
-#app .service-text span{color:#919ca4!important}
+#app .service-tile{
+  aspect-ratio:1!important;
+  min-width:138px!important;
+  min-height:0!important;
+  padding:18px 12px!important;
+  border:1px solid var(--ehs-line)!important;
+  border-radius:22px!important;
+  background:#fff!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:13px!important;
+  text-align:center!important;
+  box-shadow:var(--ehs-shadow)!important;
+}
+#app .service-tile:hover{background:#f7fafb!important;border-color:#b9ccd8!important;box-shadow:var(--ehs-shadow-hover)!important;transform:translateY(-2px)!important}
+#app .service-icon{
+  width:62px!important;height:62px!important;flex-basis:62px!important;
+  border-radius:19px!important;background:#eaf3f8!important;color:#246f9f!important;
+}
+#app .service-icon svg{width:32px!important;height:32px!important;stroke-width:2.05!important}
+#app .service-text strong{color:#263e4b!important;font-size:14px!important;font-weight:820!important}
+#app .service-text span{color:#87969f!important;font-size:10px!important;text-align:center!important}
 
 /* Section/card headers */
 .card-title,.panel-head,.board-head,.annual-head,.card-head{
