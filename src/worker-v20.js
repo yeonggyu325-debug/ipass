@@ -11,7 +11,7 @@ import { handlePortalContent } from './portal-content.js';
 import { createRequestMetrics, finalizeRequestMetrics, handlePerformanceRum, instrumentEnvironment } from './performance.js';
 
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
-const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=6">';
+const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=7">';
 const COMMON_AUTH='<script src="/shared/auth.js?v=3"></script>';
 const COMMON_API='<script src="/shared/api.js?v=3"></script>';
 const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=11"></script>';
@@ -32,7 +32,7 @@ function injectBody(html,content,marker){if(html.includes(marker))return html;re
 async function htmlResponse(response,html){const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');headers.set('content-type','text/html;charset=utf-8');headers.set('cache-control','no-store');return new Response(html,{status:response.status,statusText:response.statusText,headers})}
 async function injectShared(response,{home=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=await response.text();
-  html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=6');
+  html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=7');
   html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=3');
   html=injectHead(html,COMMON_API,'/shared/api.js?v=3');
   html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=11');

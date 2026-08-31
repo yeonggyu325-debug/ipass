@@ -156,7 +156,7 @@ button,input,select,textarea{font-family:inherit!important}
   grid-auto-columns:minmax(138px,1fr)!important;
   gap:12px!important;
   overflow-x:auto!important;
-  padding:3px 3px 12px!important;
+  padding:3px 3px 20px!important;
   background:transparent!important;
   border:0!important;
   border-radius:0!important;
@@ -167,7 +167,7 @@ button,input,select,textarea{font-family:inherit!important}
   min-width:138px!important;
   min-height:0!important;
   padding:18px 12px!important;
-  border:1px solid var(--ehs-line)!important;
+  border:0!important;
   border-radius:22px!important;
   background:#fff!important;
   flex-direction:column!important;
@@ -175,12 +175,13 @@ button,input,select,textarea{font-family:inherit!important}
   justify-content:center!important;
   gap:13px!important;
   text-align:center!important;
-  box-shadow:var(--ehs-shadow)!important;
+  box-shadow:0 15px 14px -16px rgba(27,52,68,.30),0 23px 26px -26px rgba(27,52,68,.24)!important;
 }
-#app .service-tile:hover{background:#f7fafb!important;border-color:#b9ccd8!important;box-shadow:var(--ehs-shadow-hover)!important;transform:translateY(-2px)!important}
+#app .service-tile:hover{background:#f7fafb!important;border:0!important;box-shadow:0 18px 16px -17px rgba(27,52,68,.36),0 27px 32px -29px rgba(27,52,68,.28)!important;transform:translateY(-2px)!important}
 #app .service-icon{
   width:62px!important;height:62px!important;flex-basis:62px!important;
   border-radius:19px!important;background:#eaf3f8!important;color:#246f9f!important;
+  box-shadow:none!important;
 }
 #app .service-icon svg{width:32px!important;height:32px!important;stroke-width:2.05!important}
 #app .service-text strong{color:#263e4b!important;font-size:14px!important;font-weight:820!important}
