@@ -28,7 +28,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -41,11 +41,11 @@ jobs:
         id: cloudflare
         shell: bash
         run: |
-          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Cloudflare deployment is prepared but repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are not configured yet."
+            echo "::warning::Cloudflare deployment is ready. Add repository secret CLOUDFLARE_API_TOKEN to enable automatic production deployment. CLOUDFLARE_ACCOUNT_ID is optional and can be added when the token can access multiple accounts."
           fi
 
       - name: Apply D1 migrations and deploy Worker
