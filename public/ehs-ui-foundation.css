@@ -1,0 +1,444 @@
+/* EHS UI Foundation v2
+   Shared visual language only. Business layouts and page-specific interactions stay intact. */
+:root {
+  color-scheme: light;
+
+  /* Brand and semantic colours */
+  --ehs-font-sans: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  --ehs-color-primary: #2876a6;
+  --ehs-color-primary-hover: #205f88;
+  --ehs-color-primary-soft: #edf5fa;
+  --ehs-color-ink: #21333f;
+  --ehs-color-text: #50626d;
+  --ehs-color-muted: #7d8c96;
+  --ehs-color-subtle: #98a3aa;
+  --ehs-color-page: #f4f7f9;
+  --ehs-color-surface: #fff;
+  --ehs-color-surface-soft: #f8fafb;
+  --ehs-color-line: #dce4e9;
+  --ehs-color-line-soft: #e9eef1;
+  --ehs-color-success: #237457;
+  --ehs-color-success-soft: #edf7f2;
+  --ehs-color-warning: #97651d;
+  --ehs-color-warning-soft: #fff6e8;
+  --ehs-color-danger: #b44c46;
+  --ehs-color-danger-soft: #fff0ef;
+
+  /* Type scale */
+  --ehs-font-page-title: 28px;
+  --ehs-font-section-title: 18px;
+  --ehs-font-card-title: 14px;
+  --ehs-font-body: 14px;
+  --ehs-font-label: 13px;
+  --ehs-font-meta: 12px;
+  --ehs-line-height-body: 1.55;
+
+  /* Spacing */
+  --ehs-space-1: 4px;
+  --ehs-space-2: 8px;
+  --ehs-space-3: 12px;
+  --ehs-space-4: 16px;
+  --ehs-space-5: 20px;
+  --ehs-space-6: 24px;
+  --ehs-space-8: 32px;
+
+  /* Components */
+  --ehs-control-height: 40px;
+  --ehs-control-height-small: 34px;
+  --ehs-control-height-touch: 44px;
+  --ehs-radius-control: 9px;
+  --ehs-radius-card: 14px;
+  --ehs-radius-modal: 16px;
+  --ehs-shadow-card: 0 3px 14px rgba(28, 47, 62, .065);
+  --ehs-shadow-hover: 0 6px 20px rgba(28, 47, 62, .09);
+  --ehs-shadow-modal: 0 24px 64px rgba(20, 34, 45, .20);
+  --ehs-focus-ring: 0 0 0 3px rgba(40, 118, 166, .16);
+
+  /* Existing page variables map to one shared language. */
+  --ehs-primary: var(--ehs-color-primary);
+  --ehs-primary-hover: var(--ehs-color-primary-hover);
+  --ehs-primary-soft: var(--ehs-color-primary-soft);
+  --ehs-ink: var(--ehs-color-ink);
+  --ehs-text: var(--ehs-color-text);
+  --ehs-muted: var(--ehs-color-muted);
+  --ehs-subtle: var(--ehs-color-subtle);
+  --ehs-line: var(--ehs-color-line);
+  --ehs-line-soft: var(--ehs-color-line-soft);
+  --ehs-page: var(--ehs-color-page);
+  --ehs-card: var(--ehs-color-surface);
+  --ehs-success: var(--ehs-color-success);
+  --ehs-success-soft: var(--ehs-color-success-soft);
+  --ehs-warning: var(--ehs-color-warning);
+  --ehs-warning-soft: var(--ehs-color-warning-soft);
+  --ehs-danger: var(--ehs-color-danger);
+  --ehs-danger-soft: var(--ehs-color-danger-soft);
+  --ehs-radius: var(--ehs-radius-control);
+  --ehs-radius-lg: var(--ehs-radius-card);
+  --ehs-shadow: var(--ehs-shadow-card);
+  --primary: var(--ehs-color-primary);
+  --primary-hover: var(--ehs-color-primary-hover);
+  --text-strong: var(--ehs-color-ink);
+  --bg: var(--ehs-color-page);
+  --danger: var(--ehs-color-danger);
+  --success: var(--ehs-color-success);
+  --line-strong: var(--ehs-color-line);
+  --radius: var(--ehs-radius-control);
+  --blue: var(--ehs-color-primary);
+  --blue2: var(--ehs-color-primary-hover);
+  --blue-dark: var(--ehs-color-primary-hover);
+  --blue-bg: var(--ehs-color-primary-soft);
+  --ink: var(--ehs-color-ink);
+  --text: var(--ehs-color-text);
+  --muted: var(--ehs-color-muted);
+  --page: var(--ehs-color-page);
+  --card: var(--ehs-color-surface);
+  --white: var(--ehs-color-surface);
+  --line: var(--ehs-color-line);
+  --soft: var(--ehs-color-surface-soft);
+  --green: var(--ehs-color-success);
+  --green-bg: var(--ehs-color-success-soft);
+  --greenbg: var(--ehs-color-success-soft);
+  --orange: var(--ehs-color-warning);
+  --orange-bg: var(--ehs-color-warning-soft);
+  --orangebg: var(--ehs-color-warning-soft);
+  --amber: var(--ehs-color-warning);
+  --amber-bg: var(--ehs-color-warning-soft);
+  --red: var(--ehs-color-danger);
+  --red-bg: var(--ehs-color-danger-soft);
+  --redbg: var(--ehs-color-danger-soft);
+  --gray-bg: #f1f4f6;
+  --gray-bg2: #f6f8f9;
+  --graybg: #f1f4f6;
+  --shadow: var(--ehs-shadow-card);
+}
+
+html,
+body {
+  background: var(--ehs-color-page) !important;
+  color: var(--ehs-color-ink) !important;
+  font-family: var(--ehs-font-sans) !important;
+  font-size: var(--ehs-font-body);
+  line-height: var(--ehs-line-height-body);
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit !important;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary,
+[tabindex] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ehs-color-primary) !important;
+  outline-offset: 2px !important;
+  box-shadow: var(--ehs-focus-ring) !important;
+}
+
+::selection {
+  background: rgba(40, 118, 166, .18);
+}
+
+/* Typography: page, section and metadata hierarchy */
+:where(.top, .hero, .page-head, .page-header) h1,
+#ipassShell .hero h1,
+#app .saas-home-head h1,
+#app .page h1 {
+  color: var(--ehs-color-ink) !important;
+  font-size: var(--ehs-font-page-title) !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -.04em !important;
+}
+
+:where(.eyebrow, .home-eyebrow, .portal-home-kicker) {
+  color: #607f93 !important;
+  font-size: var(--ehs-font-meta) !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+}
+
+:where(.top, .hero, .page-head, .page-header) > :first-child > p,
+:where(.top, .hero, .page-head, .page-header) .meta,
+:where(.panel-head, .card-head, .section-head) > span {
+  color: var(--ehs-color-muted) !important;
+  font-size: var(--ehs-font-meta) !important;
+  line-height: 1.55 !important;
+}
+
+:where(.panel-head, .card-head, .section-head, .people-card-head, .edit-section-head) > strong,
+:where(.panel-head, .card-head, .section-head) h2 {
+  color: var(--ehs-color-ink) !important;
+  font-size: var(--ehs-font-card-title) !important;
+  font-weight: 780 !important;
+}
+
+:where(.field, .policy-field) > label,
+:where(.input-label-row, .evidence-head) label,
+:where(.input-label-row, .evidence-head) strong {
+  color: #5f707b !important;
+  font-size: var(--ehs-font-label) !important;
+  font-weight: 720 !important;
+}
+
+:where(.file-size, .file-name span, .upload-note, .upload p, .busy, .save-state, .reason,
+  .cycle-meta, .tpl-meta, .item-category, .detail-date, .month-updated, .month-files,
+  .storage-copy, .storage-meter-text, .legend span, .count) {
+  font-size: var(--ehs-font-meta) !important;
+}
+
+/* Primary controls */
+:where(.btn, .head-btn, .header-btn, .logout-btn, .action-text) {
+  min-height: var(--ehs-control-height) !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--ehs-color-line) !important;
+  border-radius: var(--ehs-radius-control) !important;
+  background: var(--ehs-color-surface) !important;
+  color: #526570 !important;
+  font-size: var(--ehs-font-label) !important;
+  font-weight: 720 !important;
+  line-height: 1 !important;
+}
+
+:where(.btn, .head-btn, .header-btn, .logout-btn, .action-text):hover:not(:disabled) {
+  border-color: #bfd0da !important;
+  background: #f7fafb !important;
+  color: var(--ehs-color-primary) !important;
+}
+
+:where(.btn, .action-text).primary {
+  border-color: var(--ehs-color-primary) !important;
+  background: var(--ehs-color-primary) !important;
+  color: #fff !important;
+}
+
+:where(.btn, .action-text).primary:hover:not(:disabled) {
+  border-color: var(--ehs-color-primary-hover) !important;
+  background: var(--ehs-color-primary-hover) !important;
+  color: #fff !important;
+}
+
+:where(.btn, .action-text).danger,
+:where(.mini, .file-action).danger,
+.file-action.delete,
+.head-btn.logout,
+.logout-btn {
+  border-color: #efd6d3 !important;
+  background: #fff !important;
+  color: var(--ehs-color-danger) !important;
+}
+
+/* Dense tools stay compact so tables and admin editors do not expand. */
+:where(.small-btn, .file-action) {
+  min-height: var(--ehs-control-height-small) !important;
+  padding: 0 10px !important;
+  border-radius: 8px !important;
+  font-size: var(--ehs-font-meta) !important;
+  font-weight: 720 !important;
+}
+
+.mini {
+  border-radius: 8px !important;
+  font-size: var(--ehs-font-meta) !important;
+  font-weight: 720 !important;
+}
+
+:where(.icon-btn, .guide-btn, .modal-close, .close, .detail-close) {
+  width: var(--ehs-control-height) !important;
+  min-width: var(--ehs-control-height) !important;
+  height: var(--ehs-control-height) !important;
+  border-radius: var(--ehs-radius-control) !important;
+}
+
+:where(button, input, select, textarea):disabled {
+  cursor: not-allowed !important;
+  opacity: .5 !important;
+}
+
+:where(.field, .policy-field) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:where(.field, .policy-field) select,
+:where(.control, .filter, .search) {
+  min-height: var(--ehs-control-height) !important;
+  border: 1px solid var(--ehs-color-line) !important;
+  border-radius: var(--ehs-radius-control) !important;
+  background: #fff !important;
+  color: var(--ehs-color-ink) !important;
+  font-size: var(--ehs-font-body) !important;
+}
+
+:where(.field, .policy-field) textarea {
+  border: 1px solid var(--ehs-color-line) !important;
+  border-radius: var(--ehs-radius-control) !important;
+  background: #fff !important;
+  color: var(--ehs-color-ink) !important;
+  font-size: var(--ehs-font-body) !important;
+  line-height: 1.6 !important;
+}
+
+:where(input, select, textarea)::placeholder {
+  color: #98a3aa !important;
+  opacity: 1;
+}
+
+:where(input, select, textarea):focus {
+  border-color: #76a8c8 !important;
+}
+
+/* Top-level surfaces: no visible outline or coloured edge. */
+:where(.card, .panel, .board, .annual-card, .home-panel, .work-card, .service-tile,
+  .kpi, .action-kpi, .metric, .committee-score-card, .summary-card, .profile-card,
+  .item-card, .submit-card, .sidebar, .detail-block, .people-card, .storage-card,
+  .faq-list) {
+  border: 0 !important;
+  border-radius: var(--ehs-radius-card) !important;
+  background-color: var(--ehs-color-surface) !important;
+  box-shadow: var(--ehs-shadow-card) !important;
+}
+
+.month-card {
+  border: 0 !important;
+  border-radius: var(--ehs-radius-card) !important;
+  box-shadow: var(--ehs-shadow-card) !important;
+}
+
+.item-card.na,
+.review-box {
+  background: var(--ehs-color-surface-soft) !important;
+}
+
+.month-card.approved,
+.month-card.done {
+  background: #f3faf6 !important;
+}
+
+.month-card.under_review {
+  background: #f2f7fb !important;
+}
+
+.month-card.overdue_missing,
+.month-card.changes_requested,
+.month-card.absent {
+  background: #fff4f2 !important;
+}
+
+.month-card.draft,
+.month-card.edit {
+  background: #fff9ef !important;
+}
+
+:where(.work-card, .service-tile, .quick, .month-card):hover:not(:disabled) {
+  border: 0 !important;
+  box-shadow: var(--ehs-shadow-hover) !important;
+}
+
+/* Remove legacy blue strips, inset outlines and active-tab edge effects. */
+:where(.kpi, .summary-card, .metric)::before,
+#app .section-head h2::before {
+  content: none !important;
+  display: none !important;
+}
+
+:where(.ehs-global-link.active, #app .gnb-home.active, #app .gnb-item.active > .gnb-trigger,
+  #ipassShell .nav-btn.active, .month-card.active) {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+:where(.ehs-global-link.active, #app .gnb-home.active, #app .gnb-item.active > .gnb-trigger,
+  #ipassShell .nav-btn.active) {
+  background: var(--ehs-color-primary-soft) !important;
+  color: var(--ehs-color-primary) !important;
+}
+
+:where(.panel-head, .card-head, .item-head, .people-card-head, .modal-head, .modal-actions) {
+  border-color: var(--ehs-color-line-soft) !important;
+}
+
+/* Status language */
+:where(.badge, .status, .chip, .tag, .state, .score-badge, .role-badge, .month-status) {
+  min-height: 26px;
+  font-size: var(--ehs-font-meta) !important;
+  font-weight: 780 !important;
+}
+
+:where(.badge, .status, .chip, .tag, .state).green,
+:where(.badge, .status, .chip, .tag, .state).approved,
+:where(.badge, .status, .chip, .tag, .state).done {
+  background: var(--ehs-color-success-soft) !important;
+  color: var(--ehs-color-success) !important;
+}
+
+:where(.badge, .status, .chip, .tag, .state).red,
+:where(.badge, .status, .chip, .tag, .state).missing,
+:where(.badge, .status, .chip, .tag, .state).changes_requested {
+  background: var(--ehs-color-danger-soft) !important;
+  color: var(--ehs-color-danger) !important;
+}
+
+/* Dialogs */
+:where(.modal-box, .modal-card, .detail-modal-card) {
+  border: 0 !important;
+  border-radius: var(--ehs-radius-modal) !important;
+  box-shadow: var(--ehs-shadow-modal) !important;
+}
+
+:where(.modal, .detail-modal) {
+  background: rgba(25, 36, 46, .42) !important;
+}
+
+:where(.toast, #toast) {
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: #263740 !important;
+  color: #fff !important;
+  font-size: var(--ehs-font-label) !important;
+  box-shadow: 0 14px 34px rgba(20, 34, 45, .18) !important;
+}
+
+/* Tables */
+:where(table, .targets) th {
+  color: #627681 !important;
+  font-size: var(--ehs-font-meta) !important;
+  font-weight: 780 !important;
+}
+
+:where(table, .targets) td {
+  color: var(--ehs-color-text) !important;
+  font-size: var(--ehs-font-label) !important;
+}
+
+.status-cell {
+  width: 52px !important;
+  min-height: var(--ehs-control-height) !important;
+  font-size: var(--ehs-font-meta) !important;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --ehs-font-page-title: 24px;
+    --ehs-control-height: var(--ehs-control-height-touch);
+  }
+
+  :where(.btn, .head-btn, .header-btn, .logout-btn, .action-text) {
+    font-size: var(--ehs-font-body) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

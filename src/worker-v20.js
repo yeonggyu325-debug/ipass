@@ -12,6 +12,7 @@ import { createRequestMetrics, finalizeRequestMetrics, handlePerformanceRum, ins
 
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
 const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=10">';
+const UI_FOUNDATION='<link rel="stylesheet" href="/ehs-ui-foundation.css?v=2">';
 const COMMON_AUTH='<script src="/shared/auth.js?v=4"></script>';
 const COMMON_API='<script src="/shared/api.js?v=4"></script>';
 const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=12"></script>';
@@ -33,6 +34,7 @@ async function htmlResponse(response,html){const headers=new Headers(response.he
 async function injectShared(response,{home=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=await response.text();
   html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=10');
+  html=injectHead(html,UI_FOUNDATION,'/ehs-ui-foundation.css?v=2');
   html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=4');
   html=injectHead(html,COMMON_API,'/shared/api.js?v=4');
   html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=12');

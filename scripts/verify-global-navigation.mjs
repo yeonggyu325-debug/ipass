@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 const common = await readFile(new URL('../public/ehs-common.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../public/ehs-common.css', import.meta.url), 'utf8');
+const foundation = await readFile(new URL('../public/ehs-ui-foundation.css', import.meta.url), 'utf8');
 const home = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 const content = await readFile(new URL('../public/content-hub.html', import.meta.url), 'utf8');
 const worker = await readFile(new URL('../src/worker-v20.js', import.meta.url), 'utf8');
@@ -29,7 +30,18 @@ assert.ok(ipass.includes('id="ipassShell"') && ipass.includes('class="workspace-
 assert.ok(!ipass.includes('<aside class="side" id="sideNav">') && !ipass.includes('grid-template-columns:220px'), 'i-PaSS 외부 좌측 메뉴는 제거되어야 함');
 assert.ok(ipass.includes('aria-current="page"'), 'i-PaSS 현재 업무 탭에 접근성 상태가 필요');
 assert.ok(ipass.includes('renderPartnerOverview') && ipass.includes('renderPartnerEvaluations'), '협력사 점수 요약과 평가 이력은 별도 화면이어야 함');
+assert.ok(ipass.includes('<p id="heroMeta"></p></div><nav class="workspace-nav"'), '2단계에서는 i-PaSS 업무 탭을 페이지 제목 영역에 통합해야 함');
+assert.ok(!ipass.includes('id="roleBadge"') && !ipass.includes('INTEGRATED i-PaSS WORKSPACE'), '공통 상단바와 중복되는 역할·영문 안내는 제거되어야 함');
+assert.ok(ipass.includes('class="partner-overview"') && ipass.includes('지금 해야 할 평가'), '협력사 첫 화면은 연간 현황과 현재 업무를 함께 보여줘야 함');
+assert.ok(ipass.includes('scoreComponent') && !ipass.includes('상반기 40점 + 하반기 40점 + 협의체 10점'), '반복 수식 대신 실제 반영 항목을 간결하게 보여줘야 함');
+assert.ok(ipass.includes("[['overview','/ipass','요약'],['evaluations','/ipass/evaluations','평가 제출·이력']]") , '협력사 내부 메뉴는 역할이 명확한 두 단계로 정리되어야 함');
 assert.ok(css.includes('#ipassShell .workspace-nav') && css.includes('#ipassShell .nav-btn.active'), 'i-PaSS 탭 스타일은 다른 페이지와 충돌하지 않도록 범위가 지정되어야 함');
+assert.ok(foundation.includes('--ehs-font-page-title: 28px') && foundation.includes('--ehs-font-body: 14px') && foundation.includes('--ehs-font-meta: 12px'), '공통 글자 크기 토큰이 필요');
+assert.ok(foundation.includes('--ehs-control-height: 40px') && foundation.includes('--ehs-control-height-small: 34px') && foundation.includes('--ehs-control-height-touch: 44px'), '일반·소형·모바일 컨트롤 크기가 필요');
+assert.ok(foundation.includes('Top-level surfaces: no visible outline or coloured edge') && foundation.includes('border: 0 !important') && foundation.includes('--ehs-shadow-card'), '상위 카드는 장식 테두리 없이 공통 그림자로 구분해야 함');
+assert.ok(foundation.includes('Remove legacy blue strips') && foundation.includes('#app .section-head h2::before') && foundation.includes('#ipassShell .nav-btn.active'), '색 띠와 활성 탭 테두리 효과를 제거해야 함');
+assert.ok(foundation.includes(':focus-visible') && foundation.includes('--ehs-focus-ring'), '키보드 포커스 표시가 필요');
+assert.ok(worker.includes('/ehs-ui-foundation.css?v=2'), 'UI Foundation v2가 모든 보호 화면에 마지막으로 로드되어야 함');
 const inlineScripts = [...ipass.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match => match[1]).filter(source => source.trim());
 for (const source of inlineScripts) new Function(source);
 
