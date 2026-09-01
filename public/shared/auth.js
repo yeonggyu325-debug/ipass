@@ -131,4 +131,13 @@
   }
 
   global.EHSAuth={SESSION_KEY,readSession,writeSession,clearSession,signIn,refresh,token,requireUser,logout,loginUrl,redirectToLogin,currentPath};
+
+  // Keep the post-login portal refresh isolated from authentication logic.
+  if(!document.querySelector('link[data-portal-home-refresh]')){
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href='/portal-home-refresh.css?v=1';
+    link.dataset.portalHomeRefresh='true';
+    document.head.appendChild(link);
+  }
 })(window);
