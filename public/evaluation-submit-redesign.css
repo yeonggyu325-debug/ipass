@@ -73,8 +73,14 @@ body {
 .summary .metric:nth-child(4) { background: #fff; }
 
 .progressbar {
-  display: none;
+  height: 6px;
+  margin: 0 0 18px;
+  border-radius: 999px;
+  background: #e4eaee;
+  overflow: hidden;
 }
+
+.progressbar span { background: #2b75a6; }
 
 .layout { display: block; }
 .sidebar { display: none; }
