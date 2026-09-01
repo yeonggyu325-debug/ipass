@@ -159,15 +159,17 @@
     document.getElementById('submitProgressFloat')?.remove();
     const indicator=document.createElement('div');
     indicator.id='submitProgressFloat';indicator.className='submit-progress-float';
-    indicator.innerHTML='<div class="submit-progress-compact" role="status" aria-live="polite"><b id="submitProgressPercent">0%</b><div class="submit-progress-track" role="progressbar" aria-label="제출 처리 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="submit-progress-bar" id="submitProgressBar" style="width:0%"></span></div></div>';
+    indicator.innerHTML='<div class="submit-progress-compact" role="status" aria-live="polite"><div class="submit-progress-ring" id="submitProgressRing" role="progressbar" aria-label="제출 처리 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><svg viewBox="0 0 112 112" aria-hidden="true"><circle class="submit-ring-track" cx="56" cy="56" r="48"></circle><circle class="submit-ring-value" id="submitProgressCircle" cx="56" cy="56" r="48"></circle></svg><span class="submit-ring-orbit" aria-hidden="true"></span><b id="submitProgressPercent">0%</b></div><strong>평가자료 제출 중</strong></div>';
     document.body.appendChild(indicator);
+    document.documentElement.classList.add('submission-running');document.body.classList.add('submission-running');for(const el of [document.getElementById('app'),document.getElementById('ehsGlobalHeader')]){if(el){el.inert=true;el.setAttribute('aria-hidden','true')}}
     let value=0,stopped=false;
-    const paint=next=>{if(stopped)return;value=Math.max(value,Math.min(100,Number(next)||0));const rounded=Math.round(value),bar=document.getElementById('submitProgressBar'),track=bar?.parentElement,percent=document.getElementById('submitProgressPercent');if(bar)bar.style.width=rounded+'%';if(track)track.setAttribute('aria-valuenow',String(rounded));if(percent)percent.textContent=rounded+'%'};
+    const paint=next=>{if(stopped)return;value=Math.max(value,Math.min(100,Number(next)||0));const rounded=Math.round(value),circle=document.getElementById('submitProgressCircle'),ring=document.getElementById('submitProgressRing'),percent=document.getElementById('submitProgressPercent');if(circle)circle.style.strokeDashoffset=String(301.593*(1-rounded/100));if(ring)ring.setAttribute('aria-valuenow',String(rounded));if(percent)percent.textContent=rounded+'%'};
     const stop=()=>{stopped=true};
+    const restore=()=>{document.documentElement.classList.remove('submission-running');document.body.classList.remove('submission-running');for(const el of [document.getElementById('app'),document.getElementById('ehsGlobalHeader')]){if(el){el.inert=false;el.removeAttribute('aria-hidden')}}};
     return {
       update:paint,
       complete:async()=>{paint(100);await new Promise(resolve=>requestAnimationFrame(()=>resolve()));stop();indicator.remove()},
-      fail:(error,retry)=>{stop();submitting=false;indicator.remove();document.querySelectorAll('#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>el.disabled=false);modal('평가자료 제출 실패',`<div class="evidence-preview-error">${escapeHtml(window.EHSApi?.describe?window.EHSApi.describe(error):error?.message||'제출하지 못했습니다.')}</div>`,'<button class="btn" id="submitFailClose">닫기</button><button class="btn primary" id="submitFailRetry">다시 시도</button>');document.getElementById('submitFailClose').onclick=closeModal;document.getElementById('submitFailRetry').onclick=()=>{closeModal();retry()}}
+      fail:(error,retry)=>{stop();restore();submitting=false;indicator.remove();document.querySelectorAll('#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>el.disabled=false);modal('평가자료 제출 실패',`<div class="evidence-preview-error">${escapeHtml(window.EHSApi?.describe?window.EHSApi.describe(error):error?.message||'제출하지 못했습니다.')}</div>`,'<button class="btn" id="submitFailClose">닫기</button><button class="btn primary" id="submitFailRetry">다시 시도</button>');document.getElementById('submitFailClose').onclick=closeModal;document.getElementById('submitFailRetry').onclick=()=>{closeModal();retry()}}
     };
   }
   async function submissionStatus(requestId){
@@ -194,13 +196,13 @@
   function submitFast(existingRequestId=''){
     if(submitting)return;
     syncDirtyModel();recalcSummary();
-    const summary=data.workspace.summary,submittedBefore=Number(data.workspace.target.has_submission_record||0)>0;
+    const summary=data.workspace.summary;
     modal('평가자료 제출 확인',`현재 작성률은 <b>${summary.progress}%</b>이며 미작성 항목은 <b>${summary.blank}개</b>입니다.<br><br>자료가 없는 항목은 그대로 제출할 수 있으며 평가 시 감점될 수 있습니다. 제출하시겠습니까?`,'<button class="btn" id="cancelSubmit">취소</button><button class="btn primary" id="confirmSubmit">제출</button>');
     document.getElementById('cancelSubmit').onclick=closeModal;
     document.getElementById('confirmSubmit').onclick=async()=>{
-      if(submitting)return;submitting=true;const startedAt=performance.now(),requestId=existingRequestId||crypto.randomUUID(),button=document.getElementById('confirmSubmit');button.disabled=true;const items=syncDirtyModel();closeModal();document.querySelectorAll('#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>el.disabled=true);const progress=startSubmitProgress();
+      if(submitting)return;submitting=true;const requestId=existingRequestId||crypto.randomUUID(),button=document.getElementById('confirmSubmit');button.disabled=true;const items=syncDirtyModel();closeModal();document.querySelectorAll('#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>el.disabled=true);const progress=startSubmitProgress();
       try{
-        const result=await streamSubmission(items,requestId,progress),durationMs=Math.max(0,Math.round(performance.now()-startedAt));dirty.clear();try{sessionStorage.setItem('ipass.lastSubmissionTiming',JSON.stringify({duration_ms:durationMs,completed_at:new Date().toISOString(),resubmitted:submittedBefore,request_id:requestId}))}catch(_){}await progress.complete();const nextUrl=String(result.next_url||'/ipass/evaluations'),safeUrl=nextUrl.startsWith('/ipass')?nextUrl:'/ipass/evaluations',join=safeUrl.includes('?')?'&':'?';location.replace(`${safeUrl}${join}duration_ms=${durationMs}`);
+        const result=await streamSubmission(items,requestId,progress);dirty.clear();await progress.complete();const nextUrl=String(result.next_url||'/ipass/evaluations'),safeUrl=nextUrl.startsWith('/ipass')?nextUrl:'/ipass/evaluations';location.replace(safeUrl);
       }catch(e){progress.fail(e,()=>submitFast(requestId))}
     };
   }
