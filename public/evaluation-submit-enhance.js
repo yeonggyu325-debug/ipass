@@ -100,7 +100,7 @@
     if(hero&&!document.getElementById('periodStateBanner')){
       const open=editableNow(t),banner=document.createElement('div');banner.id='periodStateBanner';banner.className='period-banner'+(open?'':' closed');
       const reason=cap.edit_reason?` ${cap.edit_reason}`:'';
-      banner.innerHTML=open?`<span><strong>평가자료 수정 가능</strong> · 평가기간 내 저장·파일첨부·재제출이 가능합니다.</span><span>${String(t.start_at||'-').slice(0,10)} ~ ${String(t.end_at||'-').slice(0,10)}</span>`:`<span><strong>현재 수정할 수 없는 평가입니다.</strong>${reason}</span><span>${String(t.start_at||'-').slice(0,10)} ~ ${String(t.end_at||'-').slice(0,10)}</span>`;
+      banner.innerHTML=open?`<span><strong>평가자료 수정 가능</strong> · 평가기간 내 저장·파일첨부·제출이 가능합니다.</span><span>${String(t.start_at||'-').slice(0,10)} ~ ${String(t.end_at||'-').slice(0,10)}</span>`:`<span><strong>현재 수정할 수 없는 평가입니다.</strong>${reason}</span><span>${String(t.start_at||'-').slice(0,10)} ~ ${String(t.end_at||'-').slice(0,10)}</span>`;
       hero.insertAdjacentElement('afterend',banner);
     }
     if(!editableNow(t))document.querySelectorAll('input,textarea,button[data-save-item],label.file-pick,#saveProfileBtn,#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>{if(el.tagName==='LABEL'){el.classList.add('disabled');el.style.pointerEvents='none'}else el.disabled=true});
@@ -155,33 +155,53 @@
       updateStorageUsage(Number(result.file?.file_size||file.size||0));recalcSummary();render();toast('파일을 첨부했습니다.');
     }catch(e){modal('파일 첨부 실패',escapeHtml(window.EHSApi?.describe?window.EHSApi.describe(e):e.message),'<button class="btn" id="modalOk">확인</button>');setTimeout(()=>{const b=document.getElementById('modalOk');if(b)b.onclick=closeModal},0)}finally{input.value=''}
   }
-  function startSubmitProgress(resubmit,startedAt){
+  function startSubmitProgress(){
     document.getElementById('submitProgressFloat')?.remove();
     const indicator=document.createElement('div');
     indicator.id='submitProgressFloat';indicator.className='submit-progress-float';
-    indicator.innerHTML=`<div class="submit-progress-compact" role="status" aria-live="polite"><div class="submit-progress-heading"><div><strong>${resubmit?'재제출 중':'제출 중'}</strong><span id="submitElapsed">0.0초 경과</span></div><b id="submitProgressPercent">6%</b></div><div class="submit-progress-track" role="progressbar" aria-label="제출 처리 예상 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="6"><span class="submit-progress-buffer"></span><span class="submit-progress-bar" id="submitProgressBar" style="width:6%"></span></div><div class="submit-progress-note" id="submitProgressNote">서버 응답시간을 측정하고 있습니다.</div></div>`;
+    indicator.innerHTML='<div class="submit-progress-compact" role="status" aria-live="polite"><b id="submitProgressPercent">0%</b><div class="submit-progress-track" role="progressbar" aria-label="제출 처리 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="submit-progress-bar" id="submitProgressBar" style="width:0%"></span></div></div>';
     document.body.appendChild(indicator);
-    let value=6,stopped=false;
-    const paint=(next,elapsedMs)=>{if(stopped)return;value=Math.max(value,Math.min(100,next));const rounded=Math.round(value),bar=document.getElementById('submitProgressBar'),track=bar?.parentElement,percent=document.getElementById('submitProgressPercent'),elapsed=document.getElementById('submitElapsed');if(bar)bar.style.width=rounded+'%';if(track)track.setAttribute('aria-valuenow',String(rounded));if(percent)percent.textContent=rounded+'%';if(elapsed)elapsed.textContent=(elapsedMs/1000).toFixed(1)+'초 경과'};
-    const timer=setInterval(()=>{const elapsedMs=performance.now()-startedAt,estimated=6+86*(1-Math.exp(-elapsedMs/2800));paint(Math.min(92,estimated),elapsedMs)},100);
-    const stop=()=>{if(stopped)return;stopped=true;clearInterval(timer)};
+    let value=0,stopped=false;
+    const paint=next=>{if(stopped)return;value=Math.max(value,Math.min(100,Number(next)||0));const rounded=Math.round(value),bar=document.getElementById('submitProgressBar'),track=bar?.parentElement,percent=document.getElementById('submitProgressPercent');if(bar)bar.style.width=rounded+'%';if(track)track.setAttribute('aria-valuenow',String(rounded));if(percent)percent.textContent=rounded+'%'};
+    const stop=()=>{stopped=true};
     return {
-      complete:async durationMs=>{paint(100,durationMs);stop();const note=document.getElementById('submitProgressNote');if(note)note.textContent=`제출 완료 · 총 ${(durationMs/1000).toFixed(1)}초`;await new Promise(resolve=>setTimeout(resolve,180));indicator.remove()},
-      fail:error=>{stop();submitting=false;indicator.remove();modal('평가자료 제출 실패',`<div class="evidence-preview-error">${escapeHtml(window.EHSApi?.describe?window.EHSApi.describe(error):error?.message||'제출하지 못했습니다.')}</div>`,'<button class="btn" id="submitFailClose">닫기</button><button class="btn primary" id="submitFailRetry">다시 시도</button>');document.getElementById('submitFailClose').onclick=closeModal;document.getElementById('submitFailRetry').onclick=()=>{closeModal();submitFast()}}
+      update:paint,
+      complete:async()=>{paint(100);await new Promise(resolve=>requestAnimationFrame(()=>resolve()));stop();indicator.remove()},
+      fail:(error,retry)=>{stop();submitting=false;indicator.remove();document.querySelectorAll('#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>el.disabled=false);modal('평가자료 제출 실패',`<div class="evidence-preview-error">${escapeHtml(window.EHSApi?.describe?window.EHSApi.describe(error):error?.message||'제출하지 못했습니다.')}</div>`,'<button class="btn" id="submitFailClose">닫기</button><button class="btn primary" id="submitFailRetry">다시 시도</button>');document.getElementById('submitFailClose').onclick=closeModal;document.getElementById('submitFailRetry').onclick=()=>{closeModal();retry()}}
     };
   }
-  function submitFast(){
+  async function submissionStatus(requestId){
+    for(let attempt=0;attempt<5;attempt++){
+      const status=await apiClient().request(`/api/partner/submission/${encodeURIComponent(targetId)}/submit-status/${encodeURIComponent(requestId)}`,{timeoutMs:5000});
+      if(status.state==='completed'&&status.result)return status.result;
+      if(status.state==='failed')throw Object.assign(new Error('제출 처리가 완료되지 않았습니다.'),{code:status.error_code||'SUBMISSION_FAILED'});
+      if(attempt<4)await new Promise(resolve=>setTimeout(resolve,600));
+    }
+    throw Object.assign(new Error('제출 확인 시간이 초과되었습니다. 같은 요청으로 다시 확인해 주세요.'),{status:0,code:'SUBMISSION_STATUS_TIMEOUT'});
+  }
+  async function streamSubmission(items,requestId,progress){
+    const token=await window.EHSAuth.token();progress.update(20);
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000),url=(window.EHSApi?.ORIGIN||'')+`/api/partner/submission/${encodeURIComponent(targetId)}/submit`;
+    try{
+      const response=await fetch(url,{method:'POST',headers:{Accept:'application/x-ndjson','content-type':'application/json',Authorization:'Bearer '+token,'x-request-id':requestId},body:JSON.stringify({items,request_id:requestId}),signal:controller.signal});
+      if(!response.ok)throw Object.assign(new Error(`제출 요청이 거부되었습니다. (HTTP ${response.status})`),{status:response.status,requestId:response.headers.get('x-request-id')});
+      const reader=response.body?.getReader();if(!reader)throw new Error('제출 진행상태를 확인할 수 없습니다.');const decoder=new TextDecoder();let buffer='',result=null;
+      while(true){const {done,value}=await reader.read();buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(!line.trim())continue;const event=JSON.parse(line);if(event.error)throw Object.assign(new Error(event.error),{status:Number(event.status||0),code:event.code||null,requestId});if(Number.isFinite(Number(event.progress)))progress.update(Number(event.progress));if(event.result)result=event.result}if(done)break}
+      if(buffer.trim()){const event=JSON.parse(buffer);if(event.error)throw Object.assign(new Error(event.error),{status:Number(event.status||0),code:event.code||null,requestId});if(Number.isFinite(Number(event.progress)))progress.update(Number(event.progress));if(event.result)result=event.result}
+      if(result?.pending)return submissionStatus(requestId);if(!result)throw new Error('제출 결과가 반환되지 않았습니다.');return result;
+    }catch(error){if(error?.name==='AbortError')return submissionStatus(requestId);throw error}finally{clearTimeout(timer)}
+  }
+  function submitFast(existingRequestId=''){
     if(submitting)return;
     syncDirtyModel();recalcSummary();
-    const summary=data.workspace.summary,resubmit=!!data.workspace.target.submitted_at;
-    modal(resubmit?'변경사항 재제출':'평가자료 제출',`현재 작성률은 <b>${summary.progress}%</b>이며 미작성 항목은 <b>${summary.blank}개</b>입니다.<br><br>자료가 없는 항목은 그대로 제출할 수 있으며 평가 시 감점될 수 있습니다. 제출하시겠습니까?`,`<button class="btn" id="cancelSubmit">취소</button><button class="btn primary" id="confirmSubmit">${resubmit?'재제출':'제출완료'}</button>`);
+    const summary=data.workspace.summary,submittedBefore=Number(data.workspace.target.has_submission_record||0)>0;
+    modal('평가자료 제출 확인',`현재 작성률은 <b>${summary.progress}%</b>이며 미작성 항목은 <b>${summary.blank}개</b>입니다.<br><br>자료가 없는 항목은 그대로 제출할 수 있으며 평가 시 감점될 수 있습니다. 제출하시겠습니까?`,'<button class="btn" id="cancelSubmit">취소</button><button class="btn primary" id="confirmSubmit">제출</button>');
     document.getElementById('cancelSubmit').onclick=closeModal;
     document.getElementById('confirmSubmit').onclick=async()=>{
-      if(submitting)return;submitting=true;const startedAt=performance.now(),button=document.getElementById('confirmSubmit');button.disabled=true;const items=syncDirtyModel();closeModal();document.querySelectorAll('#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>el.disabled=true);const progress=startSubmitProgress(resubmit,startedAt);
+      if(submitting)return;submitting=true;const startedAt=performance.now(),requestId=existingRequestId||crypto.randomUUID(),button=document.getElementById('confirmSubmit');button.disabled=true;const items=syncDirtyModel();closeModal();document.querySelectorAll('#topSubmitBtn,#bottomSubmitBtn,#mobileSubmitBtn').forEach(el=>el.disabled=true);const progress=startSubmitProgress();
       try{
-        const result=await apiClient().request(`/api/partner/submission/${encodeURIComponent(targetId)}/submit`,{method:'POST',body:JSON.stringify({items})});
-        const durationMs=Math.max(0,Math.round(performance.now()-startedAt));dirty.clear();try{sessionStorage.setItem('ipass.lastSubmissionTiming',JSON.stringify({duration_ms:durationMs,completed_at:new Date().toISOString(),resubmitted:resubmit}))}catch(_){}await progress.complete(durationMs);const nextUrl=String(result.next_url||'/ipass/evaluations'),safeUrl=nextUrl.startsWith('/ipass')?nextUrl:'/ipass/evaluations',join=safeUrl.includes('?')?'&':'?';location.replace(`${safeUrl}${join}duration_ms=${durationMs}`);
-      }catch(e){progress.fail(e)}
+        const result=await streamSubmission(items,requestId,progress),durationMs=Math.max(0,Math.round(performance.now()-startedAt));dirty.clear();try{sessionStorage.setItem('ipass.lastSubmissionTiming',JSON.stringify({duration_ms:durationMs,completed_at:new Date().toISOString(),resubmitted:submittedBefore,request_id:requestId}))}catch(_){}await progress.complete();const nextUrl=String(result.next_url||'/ipass/evaluations'),safeUrl=nextUrl.startsWith('/ipass')?nextUrl:'/ipass/evaluations',join=safeUrl.includes('?')?'&':'?';location.replace(`${safeUrl}${join}duration_ms=${durationMs}`);
+      }catch(e){progress.fail(e,()=>submitFast(requestId))}
     };
   }
   async function confirmedDelete(id){
@@ -192,7 +212,7 @@
   }
   function installActionCapture(){
     document.addEventListener('click',e=>{const pv=e.target.closest?.('[data-preview-file]');if(pv){e.preventDefault();e.stopImmediatePropagation();previewFile(pv.dataset.previewFile,pv.dataset.fileName,Number(pv.dataset.fileSize||0),pv.dataset.contentType||'');return}const dl=e.target.closest?.('[data-download]');if(dl){e.preventDefault();e.stopImmediatePropagation();authenticatedDownload(dl.dataset.download);return}const del=e.target.closest?.('[data-delete-file]');if(del){e.preventDefault();e.stopImmediatePropagation();confirmedDelete(del.dataset.deleteFile)}},true);
-    const modalEl=document.getElementById('modal');if(modalEl)new MutationObserver(()=>{if(modalEl.classList.contains('hidden'))clearPreviewObjectUrl()}).observe(modalEl,{attributes:true,attributeFilter:['class']});
+    document.addEventListener('ehs:modal-closed',clearPreviewObjectUrl);
   }
   function patchFunctions(){
     try{

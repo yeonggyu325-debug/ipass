@@ -2,6 +2,15 @@
   'use strict';
   const ORIGIN=location.hostname==='ipass.i-pass-eval.workers.dev'?'':'https://ipass.i-pass-eval.workers.dev';
   const API_ORIGIN=new URL(ORIGIN||location.origin,location.origin).origin;
+  const DEFAULT_TIMEOUT_MS=15000;
+
+  async function timedFetch(url,options={},timeoutMs=DEFAULT_TIMEOUT_MS){
+    const controller=new AbortController(),external=options.signal,timer=setTimeout(()=>controller.abort(),Math.max(1000,Number(timeoutMs)||DEFAULT_TIMEOUT_MS));
+    const abort=()=>controller.abort();if(external){if(external.aborted)controller.abort();else external.addEventListener('abort',abort,{once:true})}
+    try{return await fetch(url,{...options,signal:controller.signal})}
+    catch(error){if(error?.name==='AbortError')throw makeError('요청 시간이 초과되었습니다. 처리 상태를 확인해 주세요.',0,'REQUEST_TIMEOUT',null,{cause:error});throw error}
+    finally{clearTimeout(timer);external?.removeEventListener?.('abort',abort)}
+  }
 
   function isTrustedApiUrl(url){try{return new URL(url,location.href).origin===API_ORIGIN}catch{return false}}
 
@@ -39,6 +48,7 @@
 
   async function request(path,options={},retry=true){
     const url=/^https?:\/\//.test(path)?path:ORIGIN+path;
+    const {timeoutMs,...fetchOptions}=options;
     const headers=new Headers(options.headers||{});
     headers.set('Accept',headers.get('Accept')||'application/json');
     const body=options.body;
@@ -54,8 +64,8 @@
     }
 
     let response;
-    try{response=await fetch(url,{...options,headers})}
-    catch(error){throw makeError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',0,'NETWORK_ERROR',null,{cause:error})}
+    try{response=await timedFetch(url,{...fetchOptions,headers},timeoutMs||(isForm?60000:DEFAULT_TIMEOUT_MS))}
+    catch(error){if(error?.code==='REQUEST_TIMEOUT')throw error;throw makeError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',0,'NETWORK_ERROR',null,{cause:error})}
 
     const data=await parse(response);
     const requestId=response.headers.get('x-request-id')||data.request_id||null;
@@ -87,8 +97,8 @@
       catch(error){authFailed(error);throw error}
     }
     let response;
-    try{response=await fetch(url,{headers})}
-    catch{throw makeError('파일 서버에 연결할 수 없습니다.',0,'NETWORK_ERROR')}
+    try{response=await timedFetch(url,{headers},30000)}
+    catch(error){if(error?.code==='REQUEST_TIMEOUT')throw error;throw makeError('파일 서버에 연결할 수 없습니다.',0,'NETWORK_ERROR')}
     if(response.status===401&&retry&&global.EHSAuth?.readSession()){
       try{await global.EHSAuth.refresh();return authorizedBlob(path,false)}catch(error){authFailed(error);throw error}
     }

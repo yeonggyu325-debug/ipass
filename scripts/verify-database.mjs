@@ -5,7 +5,8 @@ import { DatabaseSync } from 'node:sqlite';
 const db = new DatabaseSync(':memory:');
 const migrationFiles = [
   new URL('../migrations/0006_evaluation_runtime_baseline.sql', import.meta.url),
-  new URL('../migrations/0007_fast_database_hot_paths.sql', import.meta.url)
+  new URL('../migrations/0007_fast_database_hot_paths.sql', import.meta.url),
+  new URL('../migrations/0011_submission_requests.sql', import.meta.url)
 ];
 
 for (const file of migrationFiles) db.exec(await readFile(file, 'utf8'));
@@ -19,7 +20,8 @@ const expectedIndexes = [
   'idx_upload_reservations_v2_created',
   'idx_template_logs_v2_template_created',
   'idx_cycle_logs_v2_cycle_created',
-  'idx_system_request_audit_v2_path_created'
+  'idx_system_request_audit_v2_path_created',
+  'idx_submission_requests_v2_target_created'
 ];
 
 const indexes = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='index'").all().map(row => row.name));

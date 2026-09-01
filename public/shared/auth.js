@@ -2,7 +2,15 @@
   'use strict';
   const SESSION_KEY='ipass.session.v10';
   const FIREBASE_API_KEY='AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU';
+  const AUTH_TIMEOUT_MS=5000;
   let refreshPromise=null;
+
+  async function authFetch(url,options={}){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),AUTH_TIMEOUT_MS);
+    try{return await fetch(url,{...options,signal:controller.signal})}
+    catch(error){if(error?.name==='AbortError')throw Object.assign(new Error('인증 확인 시간이 초과되었습니다.'),{status:0,code:'AUTH_TIMEOUT'});throw error}
+    finally{clearTimeout(timer)}
+  }
 
   function readSession(){
     try{
@@ -41,12 +49,13 @@
   async function signIn(email,password){
     let response;
     try{
-      response=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{
+      response=await authFetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{
         method:'POST',
         headers:{'content-type':'application/json'},
         body:JSON.stringify({email:String(email||'').trim(),password:String(password||''),returnSecureToken:true})
       });
     }catch(error){
+      if(error?.code==='AUTH_TIMEOUT')throw error;
       throw Object.assign(new Error('인증 서버 연결에 실패했습니다.'),{status:0,code:'AUTH_NETWORK_ERROR',cause:error});
     }
     const data=await response.json().catch(()=>({}));
@@ -73,8 +82,8 @@
       const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:session.refreshToken});
       let response;
       try{
-        response=await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});
-      }catch(error){throw Object.assign(new Error('인증 서버 연결에 실패했습니다.'),{status:0,code:'AUTH_NETWORK_ERROR',cause:error})}
+        response=await authFetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});
+      }catch(error){if(error?.code==='AUTH_TIMEOUT')throw error;throw Object.assign(new Error('인증 서버 연결에 실패했습니다.'),{status:0,code:'AUTH_NETWORK_ERROR',cause:error})}
       const data=await response.json().catch(()=>({}));
       if(!response.ok){clearSession();throw Object.assign(new Error('로그인 세션이 만료되었습니다.'),{status:401,code:'AUTH_REFRESH_FAILED'})}
       const next={...session,idToken:data.id_token,refreshToken:data.refresh_token||session.refreshToken,expiresAt:Date.now()+Number(data.expires_in||3600)*1000};

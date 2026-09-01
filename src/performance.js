@@ -10,6 +10,7 @@ export function normalizeMetricPath(path){
     [/^\/api\/partner\/submission\/preview\/[^/]+(?:\/[^/]+)?$/,'/api/partner/submission/preview/:ticket/:file'],
     [/^\/api\/partner\/submission\/files\/[^/]+\/preview-ticket$/,'/api/partner/submission/files/:file/preview-ticket'],
     [/^\/api\/partner\/submission\/files\/[^/]+$/,'/api/partner/submission/files/:file'],
+    [/^\/api\/partner\/submission\/[^/]+\/submit-status\/[^/]+$/,'/api/partner/submission/:target/submit-status/:request'],
     [/^\/api\/partner\/submission\/[^/]+\/items\/bulk$/,'/api/partner/submission/:target/items/bulk'],
     [/^\/api\/partner\/submission\/[^/]+\/items\/[^/]+\/files$/,'/api/partner/submission/:target/items/:item/files'],
     [/^\/api\/partner\/submission\/[^/]+\/items\/[^/]+$/,'/api/partner/submission/:target/items/:item'],

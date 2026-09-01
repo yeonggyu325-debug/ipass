@@ -8,6 +8,9 @@ const FIREBASE_API_KEY = "AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
 const FIREBASE_LOOKUP_CACHE = new Map();
 const FIREBASE_LOOKUP_TTL_MS = 4 * 60 * 1000;
 const FIREBASE_LOOKUP_CACHE_MAX = 300;
+const FIREBASE_LOOKUP_INFLIGHT = new Map();
+const FIREBASE_SHARED_CACHE_SECONDS = 120;
+const FIREBASE_LOOKUP_TIMEOUT_MS = 4000;
 const APPROVED_ACCOUNT_CACHE = new Map();
 const APPROVED_ACCOUNT_TTL_MS = 30 * 1000;
 const APPROVED_ACCOUNT_CACHE_MAX = 500;
@@ -1257,6 +1260,20 @@ export default {
   }
 };
 
+async function tokenDigest(token){const bytes=new TextEncoder().encode(token),hash=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(hash)].map(value=>value.toString(16).padStart(2,'0')).join('')}
+async function sharedFirebaseUser(idToken){
+  const cache=globalThis.caches?.default;if(!cache)return null;
+  try{const digest=await tokenDigest(idToken),key=new Request(`https://firebase-auth-cache.invalid/token/${digest}`),response=await cache.match(key);if(!response)return null;const user=await response.json();return user?.localId&&!user.disabled?user:null}catch{return null}
+}
+async function rememberSharedFirebaseUser(idToken,user){
+  const cache=globalThis.caches?.default;if(!cache)return;
+  try{const digest=await tokenDigest(idToken),key=new Request(`https://firebase-auth-cache.invalid/token/${digest}`),safe={localId:user.localId,email:user.email||'',emailVerified:!!user.emailVerified,disabled:false};await cache.put(key,new Response(JSON.stringify(safe),{headers:{'content-type':'application/json','cache-control':`public, max-age=${FIREBASE_SHARED_CACHE_SECONDS}`}}))}catch(error){console.warn('firebase shared cache write failed',error)}
+}
+async function lookupFirebaseUser(idToken){
+  if(FIREBASE_LOOKUP_INFLIGHT.has(idToken))return FIREBASE_LOOKUP_INFLIGHT.get(idToken);
+  const pending=(async()=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),FIREBASE_LOOKUP_TIMEOUT_MS);try{const response=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({idToken}),signal:controller.signal});if(!response.ok)return {ok:false,status:401,error:'로그인이 만료되었거나 유효하지 않습니다.'};const data=await response.json(),user=data.users?.[0];if(!user?.localId||user.disabled)return {ok:false,status:401,error:'유효하지 않은 사용자입니다.'};return {ok:true,user}}catch(error){if(error?.name==='AbortError')return {ok:false,status:503,error:'인증 확인 시간이 초과되었습니다. 다시 시도해 주세요.',code:'AUTH_LOOKUP_TIMEOUT'};return {ok:false,status:503,error:'인증 서버에 연결할 수 없습니다. 다시 시도해 주세요.',code:'AUTH_LOOKUP_NETWORK'} }finally{clearTimeout(timer)}})().finally(()=>FIREBASE_LOOKUP_INFLIGHT.delete(idToken));
+  FIREBASE_LOOKUP_INFLIGHT.set(idToken,pending);return pending;
+}
 async function firebaseUserFromRequest(request) {
   const header = request.headers.get("Authorization") || "";
   const match = header.match(/^Bearer\s+(.+)$/i);
@@ -1266,21 +1283,8 @@ async function firebaseUserFromRequest(request) {
   const cached = FIREBASE_LOOKUP_CACHE.get(idToken);
   if (cached && cached.expiresAt > now) return { ok: true, user: cached.user };
   if (cached) FIREBASE_LOOKUP_CACHE.delete(idToken);
-
-  const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(FIREBASE_API_KEY)}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ idToken })
-    }
-  );
-
-  if (!response.ok) return { ok: false, status: 401, error: "로그인이 만료되었거나 유효하지 않습니다." };
-
-  const data = await response.json();
-  const user = data.users?.[0];
-  if (!user?.localId || user.disabled) return { ok: false, status: 401, error: "유효하지 않은 사용자입니다." };
+  let user=await sharedFirebaseUser(idToken);
+  if(!user){const lookup=await lookupFirebaseUser(idToken);if(!lookup.ok)return lookup;user=lookup.user;await rememberSharedFirebaseUser(idToken,user)}
 
   if (FIREBASE_LOOKUP_CACHE.size >= FIREBASE_LOOKUP_CACHE_MAX) {
     const oldestKey = FIREBASE_LOOKUP_CACHE.keys().next().value;
