@@ -126,4 +126,18 @@
   }
 
   global.EHSApi={ORIGIN,request,blob:authorizedBlob,download,describe,makeError};
+
+  if(!document.querySelector('link[data-portal-home-v3]')){
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href='/portal-home-v3.css?v=1';
+    link.dataset.portalHomeV3='true';
+    document.head.appendChild(link);
+  }
+  if(!document.querySelector('script[data-portal-home-v3]')){
+    const script=document.createElement('script');
+    script.src='/portal-home-v3.js?v=1';
+    script.dataset.portalHomeV3='true';
+    document.head.appendChild(script);
+  }
 })(window);
