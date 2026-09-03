@@ -16,11 +16,15 @@ concurrency:
 jobs:
   verify-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
       IPASS_ORIGIN: https://ipass.i-pass-eval.workers.dev
+      IPASS_ADMIN_EMAIL: ${{ secrets.IPASS_ADMIN_EMAIL }}
+      IPASS_ADMIN_PASSWORD: ${{ secrets.IPASS_ADMIN_PASSWORD }}
+      IPASS_PARTNER_EMAIL: ${{ secrets.IPASS_PARTNER_EMAIL }}
+      IPASS_PARTNER_PASSWORD: ${{ secrets.IPASS_PARTNER_PASSWORD }}
 
     steps:
       - name: Checkout repository
@@ -35,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run full verification
+        run: npm run verify:all
+
       - name: Verify Worker build
         run: npm run check
 
@@ -42,12 +49,23 @@ jobs:
         shell: bash
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::Cloudflare production deployment cannot run because no API token is available to GitHub Actions. Add a repository Actions secret named CLOUDFLARE_API_TOKEN (preferred), CF_API_TOKEN, or CLOUDFLARE_TOKEN."
+            echo "::error::Cloudflare production deployment cannot run because no API token is available to GitHub Actions."
             exit 1
           fi
 
+      - name: Apply D1 migrations
+        run: npm run migrate:remote
+
       - name: Deploy Worker
-        run: npm run deploy
+        run: npm run prepare:preview && npx wrangler deploy
 
       - name: Smoke test production
         run: npm run smoke:production
+
+      - name: Authenticated production smoke
+        if: env.IPASS_ADMIN_EMAIL != '' && env.IPASS_ADMIN_PASSWORD != '' && env.IPASS_PARTNER_EMAIL != '' && env.IPASS_PARTNER_PASSWORD != ''
+        run: npm run smoke:authenticated
+
+      - name: Report skipped authenticated smoke
+        if: env.IPASS_ADMIN_EMAIL == '' || env.IPASS_ADMIN_PASSWORD == '' || env.IPASS_PARTNER_EMAIL == '' || env.IPASS_PARTNER_PASSWORD == ''
+        run: echo "Authenticated production smoke skipped because IPASS test-account secrets are not configured."
