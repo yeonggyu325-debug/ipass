@@ -24,7 +24,8 @@
   }
   function identity(user){
     const isAdmin=user?.role==='admin';
-    let base=String(user?.name||'').trim();
+    const saved=isAdmin?String(localStorage.getItem('ehs.adminDisplayName')||'').trim():'';
+    let base=saved||String(user?.name||'').trim();
     if(!base||base.includes('@'))base=isAdmin?'관리자':'사용자';
     const name=[base,String(user?.position||'').trim()].filter(Boolean).join(' ');
     const company=isAdmin?'에이치앤이루자':(user?.company_name||'협력사');
@@ -48,7 +49,8 @@
   }
   async function setAdminName(){
     if(activeUser?.role!=='admin')return;const id=identity(activeUser),name=prompt('상단에 표시할 관리자 이름을 입력하세요.',id.base);if(!name||!name.trim())return;
-    try{const data=await window.EHSApi.request('/api/profile/display-name',{method:'PATCH',body:JSON.stringify({name:name.trim()})});activeUser={...activeUser,name:data.name};window.__EHS_PAGE_USER=activeUser;applyUser(activeUser)}catch(e){alert(e.message||'관리자 이름을 저장하지 못했습니다.')}
+    const value=name.trim();localStorage.setItem('ehs.adminDisplayName',value);activeUser={...activeUser,name:value};window.__EHS_PAGE_USER=activeUser;applyUser(activeUser);
+    try{await window.EHSApi.request('/api/profile/display-name',{method:'PATCH',body:JSON.stringify({name:value})})}catch(_){}
   }
   function bind(){
     const nav=document.getElementById('ehsGlobalNav'),mobile=document.getElementById('ehsGlobalMobile'),user=document.getElementById('ehsGlobalUser'),userBtn=document.getElementById('ehsGlobalUserBtn'),panel=document.getElementById('ehsNotificationPanel');
