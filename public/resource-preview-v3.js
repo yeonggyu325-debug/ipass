@@ -1,3 +1,4 @@
+/* Resource preview interaction layer: prewarm renderers, keyboard paging, wheel zoom. */
 (function(){
   'use strict';
   if(location.pathname!=='/resources')return;
