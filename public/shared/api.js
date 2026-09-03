@@ -130,13 +130,13 @@
   if(!document.querySelector('link[data-portal-home-v3]')){
     const link=document.createElement('link');
     link.rel='stylesheet';
-    link.href='/portal-home-v3.css?v=1';
+    link.href='/portal-home-v3.css?v=2';
     link.dataset.portalHomeV3='true';
     document.head.appendChild(link);
   }
   if(!document.querySelector('script[data-portal-home-v3]')){
     const script=document.createElement('script');
-    script.src='/portal-home-v3.js?v=1';
+    script.src='/portal-home-v3.js?v=2';
     script.dataset.portalHomeV3='true';
     document.head.appendChild(script);
   }
@@ -153,6 +153,22 @@
       const script=document.createElement('script');
       script.src='/ipass-ui-v2.js?v=1';
       script.dataset.ipassUiV2='true';
+      document.head.appendChild(script);
+    }
+  }
+
+  if(location.pathname==='/evaluation-submit.html'){
+    if(!document.querySelector('link[data-submission-nav-v2]')){
+      const link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href='/evaluation-submit-nav-v2.css?v=1';
+      link.dataset.submissionNavV2='true';
+      document.head.appendChild(link);
+    }
+    if(!document.querySelector('script[data-submission-nav-v2]')){
+      const script=document.createElement('script');
+      script.src='/evaluation-submit-nav-v2.js?v=1';
+      script.dataset.submissionNavV2='true';
       document.head.appendChild(script);
     }
   }
