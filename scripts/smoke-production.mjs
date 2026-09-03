@@ -52,7 +52,7 @@ async function checkAsset(asset) {
 }
 
 async function checkHtml(path) {
-  const response = await request(path);
+  const response = await request(path, { redirect: 'follow' });
   assert.ok(response.status >= 200 && response.status < 400, `${path}: HTTP ${response.status}`);
   const contentType = response.headers.get('content-type') || '';
   assert.ok(contentType.includes('text/html'), `${path}: expected HTML, got ${contentType}`);
@@ -66,7 +66,7 @@ async function checkHtml(path) {
     ...markup.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)
   ].map(match => sameOriginAsset(match[1])).filter(Boolean);
   for (const ref of refs) await checkAsset(ref);
-  results.push({ type: 'html', path, status: response.status, assets: refs.length });
+  results.push({ type: 'html', path, status: response.status, final_url: response.url, assets: refs.length });
 }
 
 const health = await request('/api/health');
