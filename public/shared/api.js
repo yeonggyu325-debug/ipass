@@ -140,4 +140,20 @@
     script.dataset.portalHomeV3='true';
     document.head.appendChild(script);
   }
+
+  if(location.pathname.startsWith('/ipass')){
+    if(!document.querySelector('link[data-ipass-ui-v2]')){
+      const link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href='/ipass-ui-v2.css?v=1';
+      link.dataset.ipassUiV2='true';
+      document.head.appendChild(link);
+    }
+    if(!document.querySelector('script[data-ipass-ui-v2]')){
+      const script=document.createElement('script');
+      script.src='/ipass-ui-v2.js?v=1';
+      script.dataset.ipassUiV2='true';
+      document.head.appendChild(script);
+    }
+  }
 })(window);
