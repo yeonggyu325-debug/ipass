@@ -1,0 +1,1 @@
+(async()=>{try{const user=await window.EHSAuth.requireUser();window.__EHS_PAGE_USER=user;document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:user}))}catch(error){if(error?.status!==401)console.error(error)}})();

@@ -12,11 +12,13 @@ const assets = [
   ['node_modules/@rhwp/core/rhwp_bg.wasm', 'rhwp_bg.wasm'],
   ['node_modules/jszip/dist/jszip.min.js', 'jszip.min.js'],
   ['node_modules/docx-preview/dist/docx-preview.min.js', 'docx-preview.min.js'],
+  ['vendor/xlsx/xlsx.full.min.js', 'xlsx.full.min.js'],
   ['node_modules/pdfjs-dist/LICENSE', 'LICENSE-pdfjs.txt'],
   ['node_modules/@aiden0z/pptx-renderer/LICENSE', 'LICENSE-pptx-renderer.txt'],
   ['node_modules/@rhwp/core/LICENSE', 'LICENSE-rhwp.txt'],
   ['node_modules/docx-preview/LICENSE', 'LICENSE-docx-preview.txt'],
-  ['node_modules/jszip/LICENSE.markdown', 'LICENSE-jszip.md']
+  ['node_modules/jszip/LICENSE.markdown', 'LICENSE-jszip.md'],
+  ['vendor/xlsx/LICENSE.txt', 'LICENSE-sheetjs.txt']
 ];
 
 await rm(output, { recursive: true, force: true });

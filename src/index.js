@@ -179,7 +179,7 @@ export default {
             CASE WHEN pa.role = 'admin' THEN (
               SELECT COUNT(*) FROM notifications n
               WHERE n.is_read = 0
-                AND n.recipient_user_id IN (SELECT id FROM users WHERE role = 'admin')
+                AND COALESCE(n.recipient_account_id,n.recipient_user_id) IN (SELECT id FROM portal_accounts WHERE role='admin' AND approval_status='approved')
             ) ELSE 0 END AS unread_notification_count
           FROM portal_accounts pa
           LEFT JOIN companies c ON c.id = pa.company_id
@@ -916,7 +916,7 @@ export default {
                 SELECT COUNT(*)
                 FROM notifications n
                 WHERE n.is_read = 0
-                  AND n.recipient_user_id IN (SELECT id FROM users WHERE role = 'admin')
+                  AND COALESCE(n.recipient_account_id,n.recipient_user_id) IN (SELECT id FROM portal_accounts WHERE role='admin' AND approval_status='approved')
               ) AS unread_notification_count
             FROM v_cycle_dashboard v
             JOIN evaluation_cycles ec ON ec.id = v.cycle_id
@@ -964,8 +964,8 @@ export default {
               (
                 SELECT COUNT(*)
                 FROM notifications n
-                JOIN users u ON u.id = n.recipient_user_id
-                WHERE n.is_read = 0 AND u.role = 'admin'
+                JOIN portal_accounts pa ON pa.id = COALESCE(n.recipient_account_id,n.recipient_user_id)
+                WHERE n.is_read = 0 AND pa.role = 'admin' AND pa.approval_status = 'approved'
               ) AS unread_notification_count
             FROM v_cycle_dashboard v
             WHERE v.cycle_id = ?
@@ -978,8 +978,8 @@ export default {
               (
                 SELECT COUNT(*)
                 FROM notifications n
-                JOIN users u ON u.id = n.recipient_user_id
-                WHERE n.is_read = 0 AND u.role = 'admin'
+                JOIN portal_accounts pa ON pa.id = COALESCE(n.recipient_account_id,n.recipient_user_id)
+                WHERE n.is_read = 0 AND pa.role = 'admin' AND pa.approval_status = 'approved'
               ) AS unread_notification_count
             FROM v_cycle_dashboard v
             JOIN evaluation_cycles ec ON ec.id = v.cycle_id

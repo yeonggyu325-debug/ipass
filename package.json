@@ -16,14 +16,20 @@
     "verify:architecture": "node scripts/verify-architecture.mjs",
     "verify:system": "node scripts/verify-system-stabilization.mjs",
     "test:storage": "node scripts/test-storage-admin.mjs",
-    "verify:all": "npm run verify:architecture && npm run verify:db && npm run verify:education && npm run verify:voc && npm run test:voc-api && npm run verify:content && npm run test:content-api && npm run verify:preview && npm run verify:navigation && npm run verify:submission && npm run verify:system && npm run test:storage",
+    "verify:all": "npm run verify:architecture && npm run verify:db && npm run verify:pages && npm run verify:education && npm run verify:voc && npm run test:voc-api && npm run verify:content && npm run test:content-api && npm run verify:preview && npm run verify:navigation && npm run verify:submission && npm run verify:system && npm run test:storage",
     "smoke:production": "node scripts/smoke-production.mjs",
     "smoke:authenticated": "node scripts/smoke-authenticated.mjs",
     "migrate:local": "wrangler d1 migrations apply partner-evaluation-db --local",
     "migrate:remote": "wrangler d1 migrations apply partner-evaluation-db --remote",
-    "deploy": "npm run verify:all && npm run prepare:preview && wrangler deploy"
+    "deploy": "npm run verify:all && npm run prepare:preview && wrangler deploy",
+    "extract:pages": "node scripts/extract-inline-assets.mjs",
+    "verify:pages": "node scripts/verify-page-assets.mjs",
+    "dev:test": "npm run prepare:preview && wrangler dev --local --ip 127.0.0.1 --port 8787",
+    "e2e": "playwright test --config=playwright.config.mjs",
+    "e2e:authenticated": "playwright test --config=playwright.authenticated.config.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "wrangler": "^4.123.0"
   },
   "dependencies": {
@@ -32,5 +38,6 @@
     "docx-preview": "0.4.0",
     "jszip": "3.10.1",
     "pdfjs-dist": "5.4.624"
-  }
+  },
+  "type": "module"
 }

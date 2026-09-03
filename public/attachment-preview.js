@@ -9,7 +9,7 @@
     rhwpWasm: '/vendor/attachment-preview/rhwp_bg.wasm',
     jszip: '/vendor/attachment-preview/jszip.min.js',
     docx: '/vendor/attachment-preview/docx-preview.min.js',
-    xlsx: 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'
+    xlsx: '/vendor/attachment-preview/xlsx.full.min.js'
   };
   const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
   const OFFICE_FALLBACK = new Set(['xls', 'xlsx', 'doc', 'docx', 'ppt', 'pptx']);

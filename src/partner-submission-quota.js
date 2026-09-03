@@ -101,9 +101,9 @@ async function notifyAdmins(env,targetId,kind){
   const bucket=Math.floor(Date.now()/300000),prefix=`${kind}:${targetId}:${bucket}`;
   await env.partner_evaluation_db.prepare(`
     INSERT OR IGNORE INTO notifications(
-      id,recipient_user_id,recipient_account_id,title,message,type,is_read,entity_type,entity_id,dedupe_key,created_at,updated_at
+      id,recipient_user_id,recipient_account_id,title,message,type,is_read,entity_type,entity_id,dedupe_key,created_at
     )
-    SELECT lower(hex(randomblob(16))),pa.id,pa.id,?,?,?,0,'evaluation_target',?,?||':'||pa.id,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+    SELECT lower(hex(randomblob(16))),COALESCE((SELECT u.id FROM users u WHERE LOWER(u.email)=LOWER(pa.email) LIMIT 1),(SELECT u.id FROM users u WHERE u.role='admin' LIMIT 1),pa.id),pa.id,?,?,?,0,'evaluation_target',?,?||':'||pa.id,CURRENT_TIMESTAMP
     FROM portal_accounts pa
     WHERE pa.role='admin' AND pa.approval_status='approved'
   `).bind(title,`${target.company_name}에서 ${target.cycle_name} ${changed}`,'evaluation_partner_activity',targetId,prefix).run();

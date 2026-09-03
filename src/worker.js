@@ -68,11 +68,11 @@ function contentSecurityPolicy(){return [
   "object-src 'none'",
   "frame-ancestors 'self'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.sheetjs.com",
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://cdn.sheetjs.com",
+  "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
   "frame-src 'self' blob: https://docs.google.com https://view.officeapps.live.com",
   "worker-src 'self' blob:",
   "media-src 'self' blob:"
@@ -83,6 +83,9 @@ function applySecurity(headers,type){
   headers.set('permissions-policy','camera=(), microphone=(), geolocation=(), payment=(), usb=()');
   headers.set('cross-origin-opener-policy','same-origin');
   if(type.includes('text/html'))headers.set('content-security-policy',contentSecurityPolicy());
+}
+function clearCorsHeaders(headers){
+  for(const name of ['access-control-allow-origin','access-control-allow-headers','access-control-allow-methods','access-control-allow-credentials','access-control-expose-headers'])headers.delete(name);
 }
 function applyCors(headers,request){
   const origin=request.headers.get('origin');
@@ -168,7 +171,7 @@ async function augmentSubmission(response,path,env){
   return new Response(JSON.stringify(data),{status:response.status,statusText:response.statusText,headers});
 }
 async function attach(response,id,path,request){
-  const headers=new Headers(response.headers);headers.set('x-request-id',id);
+  const headers=new Headers(response.headers);headers.set('x-request-id',id);clearCorsHeaders(headers);
   if(isApi(path))applyCors(headers,request);
   const type=headers.get('content-type')||'';applySecurity(headers,type);
   if(isApi(path)&&type.includes('application/json')){

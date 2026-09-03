@@ -1,7 +1,8 @@
 (function(global){
   'use strict';
 
-  const ORIGIN=location.hostname==='ipass.i-pass-eval.workers.dev'?'':'https://ipass.i-pass-eval.workers.dev';
+  const SAME_ORIGIN_API=location.hostname==='ipass.i-pass-eval.workers.dev'||location.hostname.endsWith('.workers.dev')||location.hostname==='localhost'||location.hostname==='127.0.0.1';
+  const ORIGIN=SAME_ORIGIN_API?'':'https://ipass.i-pass-eval.workers.dev';
   const API_ORIGIN=new URL(ORIGIN||location.origin,location.origin).origin;
   const DEFAULT_TIMEOUT_MS=15000;
   const CACHE_PREFIX='ehs.api.v3:';

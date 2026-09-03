@@ -1,0 +1,320 @@
+{
+  "version": 1,
+  "generated_at": "2026-09-03T08:49:37.357Z",
+  "pages": [
+    {
+      "page": "index.html",
+      "styles": [
+        "page-assets/index.style-1.300ffacc9b65.css"
+      ],
+      "scripts": [
+        "page-assets/index.script-1.9d1ff5573cda.js"
+      ],
+      "before_bytes": 130686,
+      "after_bytes": 26331,
+      "saved_bytes": 104355
+    },
+    {
+      "page": "committee.html",
+      "styles": [
+        "page-assets/committee.style-1.9672f54723dc.css"
+      ],
+      "scripts": [
+        "page-assets/committee.script-1.3562938b95f4.js"
+      ],
+      "before_bytes": 55660,
+      "after_bytes": 2486,
+      "saved_bytes": 53174
+    },
+    {
+      "page": "content-hub.html",
+      "styles": [
+        "page-assets/content-hub.style-1.e3da554f2cdf.css"
+      ],
+      "scripts": [
+        "page-assets/content-hub.script-1.008e804a21e6.js"
+      ],
+      "before_bytes": 31278,
+      "after_bytes": 2302,
+      "saved_bytes": 28976
+    },
+    {
+      "page": "education.html",
+      "styles": [
+        "page-assets/education.style-1.b89e1d77fac0.css"
+      ],
+      "scripts": [
+        "page-assets/education.script-1.cf2d57e72062.js"
+      ],
+      "before_bytes": 30645,
+      "after_bytes": 2949,
+      "saved_bytes": 27696
+    },
+    {
+      "page": "voc.html",
+      "styles": [
+        "page-assets/voc.style-1.f647a706a1a3.css"
+      ],
+      "scripts": [
+        "page-assets/voc.script-1.8f83c5f0ae5a.js"
+      ],
+      "before_bytes": 39950,
+      "after_bytes": 3782,
+      "saved_bytes": 36168
+    },
+    {
+      "page": "faq.html",
+      "styles": [
+        "page-assets/faq.style-1.9cdb00db4c6a.css"
+      ],
+      "scripts": [
+        "page-assets/faq.script-1.cf7c9ab8f367.js"
+      ],
+      "before_bytes": 4523,
+      "after_bytes": 2573,
+      "saved_bytes": 1950
+    },
+    {
+      "page": "ipass.html",
+      "styles": [
+        "page-assets/ipass.style-1.37ac51c0ff6e.css"
+      ],
+      "scripts": [
+        "page-assets/ipass.script-1.35862bae2554.js"
+      ],
+      "before_bytes": 23188,
+      "after_bytes": 1288,
+      "saved_bytes": 21900
+    },
+    {
+      "page": "evaluation-management.html",
+      "styles": [
+        "page-assets/evaluation-management.style-1.538fccda6c82.css"
+      ],
+      "scripts": [
+        "page-assets/evaluation-management.script-1.df6766331349.js"
+      ],
+      "before_bytes": 37926,
+      "after_bytes": 2035,
+      "saved_bytes": 35891
+    },
+    {
+      "page": "evaluation-cycle.html",
+      "styles": [
+        "page-assets/evaluation-cycle.style-1.9eaf5f2fd4c2.css"
+      ],
+      "scripts": [
+        "page-assets/evaluation-cycle.script-1.91fa03b5e313.js"
+      ],
+      "before_bytes": 23596,
+      "after_bytes": 2006,
+      "saved_bytes": 21590
+    },
+    {
+      "page": "evaluation-submit.html",
+      "styles": [
+        "page-assets/evaluation-submit.style-1.1599b5384c43.css"
+      ],
+      "scripts": [
+        "page-assets/evaluation-submit.script-1.5f537b36973c.js"
+      ],
+      "before_bytes": 27952,
+      "after_bytes": 1561,
+      "saved_bytes": 26391
+    },
+    {
+      "page": "evaluation-scoring.html",
+      "styles": [
+        "page-assets/evaluation-scoring.style-1.8232b31c5625.css"
+      ],
+      "scripts": [
+        "page-assets/evaluation-scoring.script-1.c7eef1a1fb7b.js"
+      ],
+      "before_bytes": 16837,
+      "after_bytes": 1444,
+      "saved_bytes": 15393
+    },
+    {
+      "page": "admin-accounts.html",
+      "styles": [
+        "page-assets/admin-accounts.style-1.249a0749c8d0.css"
+      ],
+      "scripts": [
+        "page-assets/admin-accounts.script-1.dd3de32a750b.js"
+      ],
+      "before_bytes": 9630,
+      "after_bytes": 1653,
+      "saved_bytes": 7977
+    },
+    {
+      "page": "admin-system.html",
+      "styles": [
+        "page-assets/admin-system.style-1.fb4e0cc51a8a.css"
+      ],
+      "scripts": [
+        "page-assets/admin-system.script-1.50777d4dc76a.js"
+      ],
+      "before_bytes": 12354,
+      "after_bytes": 2317,
+      "saved_bytes": 10037
+    }
+  ],
+  "assets": [
+    {
+      "page": "index.html",
+      "path": "page-assets/index.style-1.300ffacc9b65.css",
+      "type": "style",
+      "bytes": 49827
+    },
+    {
+      "page": "index.html",
+      "path": "page-assets/index.script-1.9d1ff5573cda.js",
+      "type": "script",
+      "bytes": 54631
+    },
+    {
+      "page": "committee.html",
+      "path": "page-assets/committee.style-1.9672f54723dc.css",
+      "type": "style",
+      "bytes": 22294
+    },
+    {
+      "page": "committee.html",
+      "path": "page-assets/committee.script-1.3562938b95f4.js",
+      "type": "script",
+      "bytes": 30995
+    },
+    {
+      "page": "content-hub.html",
+      "path": "page-assets/content-hub.style-1.e3da554f2cdf.css",
+      "type": "style",
+      "bytes": 9411
+    },
+    {
+      "page": "content-hub.html",
+      "path": "page-assets/content-hub.script-1.008e804a21e6.js",
+      "type": "script",
+      "bytes": 19684
+    },
+    {
+      "page": "education.html",
+      "path": "page-assets/education.style-1.b89e1d77fac0.css",
+      "type": "style",
+      "bytes": 10703
+    },
+    {
+      "page": "education.html",
+      "path": "page-assets/education.script-1.cf2d57e72062.js",
+      "type": "script",
+      "bytes": 17108
+    },
+    {
+      "page": "voc.html",
+      "path": "page-assets/voc.style-1.f647a706a1a3.css",
+      "type": "style",
+      "bytes": 11777
+    },
+    {
+      "page": "voc.html",
+      "path": "page-assets/voc.script-1.8f83c5f0ae5a.js",
+      "type": "script",
+      "bytes": 24494
+    },
+    {
+      "page": "faq.html",
+      "path": "page-assets/faq.style-1.9cdb00db4c6a.css",
+      "type": "style",
+      "bytes": 1829
+    },
+    {
+      "page": "faq.html",
+      "path": "page-assets/faq.script-1.cf7c9ab8f367.js",
+      "type": "script",
+      "bytes": 224
+    },
+    {
+      "page": "ipass.html",
+      "path": "page-assets/ipass.style-1.37ac51c0ff6e.css",
+      "type": "style",
+      "bytes": 8619
+    },
+    {
+      "page": "ipass.html",
+      "path": "page-assets/ipass.script-1.35862bae2554.js",
+      "type": "script",
+      "bytes": 13388
+    },
+    {
+      "page": "evaluation-management.html",
+      "path": "page-assets/evaluation-management.style-1.538fccda6c82.css",
+      "type": "style",
+      "bytes": 11681
+    },
+    {
+      "page": "evaluation-management.html",
+      "path": "page-assets/evaluation-management.script-1.df6766331349.js",
+      "type": "script",
+      "bytes": 24349
+    },
+    {
+      "page": "evaluation-cycle.html",
+      "path": "page-assets/evaluation-cycle.style-1.9eaf5f2fd4c2.css",
+      "type": "style",
+      "bytes": 7271
+    },
+    {
+      "page": "evaluation-cycle.html",
+      "path": "page-assets/evaluation-cycle.script-1.91fa03b5e313.js",
+      "type": "script",
+      "bytes": 14448
+    },
+    {
+      "page": "evaluation-submit.html",
+      "path": "page-assets/evaluation-submit.style-1.1599b5384c43.css",
+      "type": "style",
+      "bytes": 10627
+    },
+    {
+      "page": "evaluation-submit.html",
+      "path": "page-assets/evaluation-submit.script-1.5f537b36973c.js",
+      "type": "script",
+      "bytes": 15895
+    },
+    {
+      "page": "evaluation-scoring.html",
+      "path": "page-assets/evaluation-scoring.style-1.8232b31c5625.css",
+      "type": "style",
+      "bytes": 5061
+    },
+    {
+      "page": "evaluation-scoring.html",
+      "path": "page-assets/evaluation-scoring.script-1.c7eef1a1fb7b.js",
+      "type": "script",
+      "bytes": 10465
+    },
+    {
+      "page": "admin-accounts.html",
+      "path": "page-assets/admin-accounts.style-1.249a0749c8d0.css",
+      "type": "style",
+      "bytes": 3586
+    },
+    {
+      "page": "admin-accounts.html",
+      "path": "page-assets/admin-accounts.script-1.dd3de32a750b.js",
+      "type": "script",
+      "bytes": 4516
+    },
+    {
+      "page": "admin-system.html",
+      "path": "page-assets/admin-system.style-1.fb4e0cc51a8a.css",
+      "type": "style",
+      "bytes": 4451
+    },
+    {
+      "page": "admin-system.html",
+      "path": "page-assets/admin-system.script-1.50777d4dc76a.js",
+      "type": "script",
+      "bytes": 5707
+    }
+  ]
+}
