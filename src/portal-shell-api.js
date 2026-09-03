@@ -39,9 +39,29 @@ function recipientClause(){
   )`;
 }
 
+async function unreadCount(env,accountId){
+  const row=await env.partner_evaluation_db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM notifications
+    WHERE ${recipientClause()} AND is_read=0
+  `).bind(accountId,accountId).first();
+  return Number(row?.count||0);
+}
+
 export async function handlePortalShellApi(request,env,ctx,baseWorker){
   const fastEducation=await handleFastEducationOverview(request,env,ctx,baseWorker);if(fastEducation)return fastEducation;
   const url=new URL(request.url),path=url.pathname;
+
+  if(path==='/api/me'&&request.method==='GET'){
+    const response=await baseWorker.fetch(request,env,ctx);
+    if(!response.ok)return response;
+    const data=await response.json().catch(()=>null);
+    if(!data?.success||data.auth_state!=='approved'||!data.user?.id)return json(data||{success:false,error:'계정 정보를 불러오지 못했습니다.'},response.status);
+    try{data.user.unread_notification_count=await unreadCount(env,data.user.id)}
+    catch(error){console.error('unread count patch failed',error);data.user.unread_notification_count=Number(data.user.unread_notification_count||0)}
+    return json(data,response.status);
+  }
+
   if(path!=='/api/notifications'&&path!=='/api/profile/display-name')return null;
   const auth=await currentUser(request,env,ctx,baseWorker);if(!auth.ok)return auth.response;
   const user=auth.user;
@@ -57,12 +77,7 @@ export async function handlePortalShellApi(request,env,ctx,baseWorker){
         LIMIT ?
       `).bind(user.id,user.id,limit).all();
       const notifications=(result?.results||[]).map(normalizeNotification);
-      const unread=await env.partner_evaluation_db.prepare(`
-        SELECT COUNT(*) AS count
-        FROM notifications
-        WHERE ${recipientClause()} AND is_read=0
-      `).bind(user.id,user.id).first();
-      return json({success:true,notifications,unread_count:Number(unread?.count||0)});
+      return json({success:true,notifications,unread_count:await unreadCount(env,user.id)});
     }catch(error){
       console.error('notification list failed',error);
       return json({success:false,error:'알림 목록을 불러오지 못했습니다.'},500);
@@ -77,7 +92,7 @@ export async function handlePortalShellApi(request,env,ctx,baseWorker){
       }else if(body.id){
         await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND ${recipientClause()}`).bind(String(body.id),user.id,user.id).run();
       }else return json({success:false,error:'읽음 처리할 알림을 선택하세요.'},400);
-      return json({success:true});
+      return json({success:true,unread_count:await unreadCount(env,user.id)});
     }catch(error){
       console.error('notification update failed',error);
       return json({success:false,error:'알림 읽음 처리에 실패했습니다.'},500);
