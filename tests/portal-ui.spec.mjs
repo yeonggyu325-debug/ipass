@@ -36,6 +36,25 @@ async function mockPortal(page,role){
   });
 }
 
+async function gotoChecked(page,path){
+  const response=await page.goto(path);
+  const status=response?.status()||0;
+  if(status<200||status>=400){
+    console.log(JSON.stringify({path,status,url:page.url(),title:await page.title(),body:(await page.locator('body').innerText()).slice(0,1200)}));
+  }
+  expect(status,`${path} should return a successful document`).toBeGreaterThanOrEqual(200);
+  expect(status,`${path} should return a successful document`).toBeLessThan(400);
+  return response;
+}
+async function expectHeading(page,path,text=''){
+  const headings=page.locator('h1');
+  const count=await headings.count();
+  if(!count){
+    console.log(JSON.stringify({path,url:page.url(),title:await page.title(),body:(await page.locator('body').innerText()).slice(0,1800),html:(await page.locator('body').innerHTML()).slice(0,1800)}));
+  }
+  await expect(headings.first()).toBeVisible();
+  if(text)await expect(headings.first()).toContainText(text);
+}
 async function assertNoCodeLeak(page){
   const text=await page.locator('body').innerText();
   expect(text).not.toContain('function renderAdminDetail');
@@ -44,7 +63,7 @@ async function assertNoCodeLeak(page){
 }
 
 test('로그인 페이지는 앱 화면을 노출하지 않고 독립 운용된다',async({page})=>{
-  await page.goto('/');
+  await gotoChecked(page,'/');
   await expect(page.locator('#loginForm')).toBeVisible();
   await expect(page.locator('#loginEmail')).toBeVisible();
   await expect(page.locator('#loginPassword')).toBeVisible();
@@ -55,7 +74,7 @@ test('로그인 페이지는 앱 화면을 노출하지 않고 독립 운용된�
 test('관리자는 신규 홈과 모든 관리자 경로를 일관되게 사용한다',async({page})=>{
   await mockPortal(page,'admin');
   const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
-  await page.goto('/home');
+  await gotoChecked(page,'/home');
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.locator('.home-v3-shell')).toBeVisible();
   await expect(page.locator('#homeV3Title')).toContainText('관리자님 안녕하세요');
@@ -66,12 +85,12 @@ test('관리자는 신규 홈과 모든 관리자 경로를 일관되게 사용�
   await expect(page.getByRole('button',{name:'회원가입 승인'})).toBeVisible();
   await expect(page.getByRole('button',{name:'협력사 계정 관리'})).toBeVisible();
   await expect(page.getByRole('button',{name:'시스템 상태'})).toBeVisible();
-  await page.goto('/admin/approvals');await expect(page.locator('h1')).toContainText('회원가입 승인');
-  await page.goto('/admin/accounts');await expect(page.locator('h1')).toContainText('협력사 계정 관리');
-  await page.goto('/admin/system');await expect(page.locator('h1')).toContainText('시스템 상태');
-  await page.goto('/ipass');await expect(page.locator('#ipassShell')).toBeVisible();
-  await page.goto('/ipass/templates');await expect(page.locator('iframe')).toHaveCount(0);await expect(page.locator('h1').first()).toBeVisible();
-  await page.goto('/ipass/cycles');await expect(page.locator('iframe')).toHaveCount(0);await expect(page.locator('h1').first()).toBeVisible();
+  await gotoChecked(page,'/admin/approvals');await expectHeading(page,'/admin/approvals','회원가입 승인');
+  await gotoChecked(page,'/admin/accounts');await expectHeading(page,'/admin/accounts','협력사 계정 관리');
+  await gotoChecked(page,'/admin/system');await expectHeading(page,'/admin/system','시스템 상태');
+  await gotoChecked(page,'/ipass');await expect(page.locator('#ipassShell')).toBeVisible();
+  await gotoChecked(page,'/ipass/templates');await expect(page.locator('iframe')).toHaveCount(0);await expectHeading(page,'/ipass/templates');
+  await gotoChecked(page,'/ipass/cycles');await expect(page.locator('iframe')).toHaveCount(0);await expectHeading(page,'/ipass/cycles');
   await assertNoCodeLeak(page);
   expect(pageErrors).toEqual([]);
 });
@@ -79,15 +98,15 @@ test('관리자는 신규 홈과 모든 관리자 경로를 일관되게 사용�
 test('협력사는 이름 직급 순서와 제한된 메뉴를 사용한다',async({page})=>{
   await mockPortal(page,'partner');
   const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
-  await page.goto('/home');
+  await gotoChecked(page,'/home');
   await expect(page.locator('.home-v3-shell')).toBeVisible();
   await expect(page.locator('#ehsGlobalName')).toHaveText('홍길동 팀장');
   await expect(page.locator('#ehsGlobalCompany')).toHaveText('테스트협력사');
   await page.locator('#ehsGlobalUserBtn').click();
   await expect(page.getByRole('button',{name:'회원가입 승인'})).toHaveCount(0);
-  await page.goto('/ipass');await expect(page.locator('#ipassShell')).toBeVisible();
+  await gotoChecked(page,'/ipass');await expect(page.locator('#ipassShell')).toBeVisible();
   await expect(page.locator('#sideNav .nav-btn')).toHaveCount(2);
-  await page.goto('/ipass/evaluations');await expect(page.locator('#ipassShell')).toBeVisible();
+  await gotoChecked(page,'/ipass/evaluations');await expect(page.locator('#ipassShell')).toBeVisible();
   await assertNoCodeLeak(page);
   expect(pageErrors).toEqual([]);
 });
