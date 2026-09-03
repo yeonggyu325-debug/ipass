@@ -17,9 +17,26 @@ function normalizeNotification(row){
     title:row.title||row.notification_title||row.type||'업무 알림',
     message:row.message||row.content||row.body||'',
     type:row.type||row.notification_type||'general',
+    entity_type:row.entity_type||null,
+    entity_id:row.entity_id||null,
     is_read:Number(row.is_read||0)===1,
     created_at:row.created_at||row.updated_at||null
   };
+}
+
+function recipientClause(){
+  return `(
+    recipient_account_id = ?
+    OR (
+      recipient_account_id IS NULL
+      AND recipient_user_id IN (
+        SELECT u.id
+        FROM users u
+        JOIN portal_accounts pa ON LOWER(pa.email)=LOWER(u.email)
+        WHERE pa.id=?
+      )
+    )
+  )`;
 }
 
 export async function handlePortalShellApi(request,env,ctx,baseWorker){
@@ -31,34 +48,50 @@ export async function handlePortalShellApi(request,env,ctx,baseWorker){
 
   if(path==='/api/notifications'&&request.method==='GET'){
     try{
-      let result;
-      if(user.role==='admin')result=await env.partner_evaluation_db.prepare(`SELECT * FROM notifications WHERE recipient_user_id IN (SELECT id FROM users WHERE role='admin') ORDER BY created_at DESC LIMIT 100`).all();
-      else result=await env.partner_evaluation_db.prepare(`SELECT * FROM notifications WHERE recipient_user_id=? ORDER BY created_at DESC LIMIT 100`).bind(user.id).all();
+      const limit=Math.min(100,Math.max(1,Number(url.searchParams.get('limit')||50)));
+      const result=await env.partner_evaluation_db.prepare(`
+        SELECT id,title,message,type,is_read,created_at,updated_at,entity_type,entity_id
+        FROM notifications
+        WHERE ${recipientClause()}
+        ORDER BY created_at DESC
+        LIMIT ?
+      `).bind(user.id,user.id,limit).all();
       const notifications=(result?.results||[]).map(normalizeNotification);
-      return json({success:true,notifications,unread_count:notifications.filter(n=>!n.is_read).length});
-    }catch(error){return json({success:false,error:'알림 목록을 불러오지 못했습니다.'},500)}
+      const unread=await env.partner_evaluation_db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM notifications
+        WHERE ${recipientClause()} AND is_read=0
+      `).bind(user.id,user.id).first();
+      return json({success:true,notifications,unread_count:Number(unread?.count||0)});
+    }catch(error){
+      console.error('notification list failed',error);
+      return json({success:false,error:'알림 목록을 불러오지 못했습니다.'},500);
+    }
   }
 
   if(path==='/api/notifications'&&request.method==='PATCH'){
     const body=await request.json().catch(()=>({}));
     try{
-      if(user.role==='admin'){
-        if(body.all===true)await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1 WHERE recipient_user_id IN (SELECT id FROM users WHERE role='admin')`).run();
-        else if(body.id)await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1 WHERE id=? AND recipient_user_id IN (SELECT id FROM users WHERE role='admin')`).bind(String(body.id)).run();
-      }else{
-        if(body.all===true)await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1 WHERE recipient_user_id=?`).bind(user.id).run();
-        else if(body.id)await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1 WHERE id=? AND recipient_user_id=?`).bind(String(body.id),user.id).run();
-      }
+      if(body.all===true){
+        await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1,updated_at=CURRENT_TIMESTAMP WHERE ${recipientClause()}`).bind(user.id,user.id).run();
+      }else if(body.id){
+        await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND ${recipientClause()}`).bind(String(body.id),user.id,user.id).run();
+      }else return json({success:false,error:'읽음 처리할 알림을 선택하세요.'},400);
       return json({success:true});
-    }catch(error){return json({success:false,error:'알림 읽음 처리에 실패했습니다.'},500)}
+    }catch(error){
+      console.error('notification update failed',error);
+      return json({success:false,error:'알림 읽음 처리에 실패했습니다.'},500);
+    }
   }
 
   if(path==='/api/profile/display-name'&&request.method==='PATCH'){
     if(user.role!=='admin')return json({success:false,error:'관리자만 표시 이름을 변경할 수 있습니다.'},403);
     const body=await request.json().catch(()=>({}));const name=String(body.name||'').trim();
     if(!name||name.length>40)return json({success:false,error:'관리자 이름을 1~40자로 입력하세요.'},400);
-    try{await env.partner_evaluation_db.prepare(`UPDATE portal_accounts SET name=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND role='admin'`).bind(name,user.id).run();return json({success:true,name})}
-    catch(error){return json({success:false,error:'관리자 이름 저장에 실패했습니다.'},500)}
+    try{
+      await env.partner_evaluation_db.prepare(`UPDATE portal_accounts SET name=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND role='admin'`).bind(name,user.id).run();
+      return json({success:true,name});
+    }catch(error){return json({success:false,error:'관리자 이름 저장에 실패했습니다.'},500)}
   }
   return json({success:false,error:'지원하지 않는 요청입니다.'},405);
 }
