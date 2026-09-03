@@ -5,16 +5,6 @@
   const DEFAULT_TIMEOUT_MS=15000;
   const ROOT_PAGE=location.pathname==='/'||location.pathname==='/index.html';
 
-  if(ROOT_PAGE&&global.EHSAuth?.readSession?.()){
-    location.replace('/home');
-    return;
-  }
-  if(ROOT_PAGE&&global.EHSAuth?.signIn&&!global.EHSAuth.signIn.__homeRedirectWrapped){
-    const originalSignIn=global.EHSAuth.signIn.bind(global.EHSAuth);
-    const wrapped=async function(){const result=await originalSignIn(...arguments);location.replace('/home');return result};
-    wrapped.__homeRedirectWrapped=true;global.EHSAuth.signIn=wrapped;
-  }
-
   async function timedFetch(url,options={},timeoutMs=DEFAULT_TIMEOUT_MS){
     const controller=new AbortController(),external=options.signal,timer=setTimeout(()=>controller.abort(),Math.max(1000,Number(timeoutMs)||DEFAULT_TIMEOUT_MS));
     const abort=()=>controller.abort();if(external){if(external.aborted)controller.abort();else external.addEventListener('abort',abort,{once:true})}
@@ -50,10 +40,22 @@
   function describe(error){if(!error)return'알 수 없는 오류입니다.';const suffix=error.requestId?`\n요청 ID: ${error.requestId}`:'';if(error.status===0)return`서버 연결에 실패했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.${suffix}`;if(error.status===401)return`로그인 세션이 만료되었습니다. 다시 로그인해 주세요.${suffix}`;if(error.status===403)return`${error.message||'접근 권한이 없습니다.'}${suffix}`;if(error.status>=500)return`서버 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.${suffix}`;return`${error.message||'요청 처리 중 오류가 발생했습니다.'}${suffix}`}
   global.EHSApi={ORIGIN,request,blob:authorizedBlob,download,describe,makeError};
 
+  if(ROOT_PAGE&&global.EHSAuth?.signIn&&!global.EHSAuth.signIn.__homeRedirectWrapped){
+    const originalSignIn=global.EHSAuth.signIn.bind(global.EHSAuth);
+    const wrapped=async function(){
+      const result=await originalSignIn(...arguments);
+      try{const me=await request('/api/me');if(me?.auth_state==='approved')location.replace('/home')}catch(_){}
+      return result;
+    };
+    wrapped.__homeRedirectWrapped=true;global.EHSAuth.signIn=wrapped;
+  }
+  if(ROOT_PAGE&&global.EHSAuth?.readSession?.()){
+    setTimeout(()=>request('/api/me').then(me=>{if(me?.auth_state==='approved')location.replace('/home')}).catch(()=>{}),0);
+  }
+
   if(!document.querySelector('link[data-global-toolbar-v5]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/global-toolbar-v5.css?v=2';link.dataset.globalToolbarV5='true';document.head.appendChild(link)}
   if(!document.querySelector('link[data-portal-shell-v1]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-shell-v1.css?v=1';link.dataset.portalShellV1='true';document.head.appendChild(link)}
-  if(!document.querySelector('script[data-global-toolbar-v5]')){const script=document.createElement('script');script.src='/global-toolbar-v5.js?v=2';script.dataset.globalToolbarV5='true';document.head.appendChild(script)}
-
+  if(!document.querySelector('script[data-global-toolbar-v5]')){const script=document.createElement('script');script.src='/global-toolbar-v5.js?v=3';script.dataset.globalToolbarV5='true';document.head.appendChild(script)}
   if(!document.querySelector('link[data-portal-home-v3]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-home-v3.css?v=3';link.dataset.portalHomeV3='true';document.head.appendChild(link)}
   if(!document.querySelector('script[data-portal-home-v3]')){const script=document.createElement('script');script.src='/portal-home-v3.js?v=3';script.dataset.portalHomeV3='true';document.head.appendChild(script)}
 
