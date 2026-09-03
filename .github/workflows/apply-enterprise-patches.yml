@@ -1,0 +1,48 @@
+name: Apply Enterprise Patches
+
+on:
+  push:
+    branches:
+      - stabilize/enterprise-v3
+    paths:
+      - scripts/apply-enterprise-patches.mjs
+      - .github/workflows/apply-enterprise-patches.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-enterprise-patches
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: stabilize/enterprise-v3
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply deterministic source transformations
+        run: node scripts/apply-enterprise-patches.mjs
+
+      - name: Commit transformed sources
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/partner-submission.js public/evaluation-submit-enhance.js
+          git commit -m "feat: integrate edit leases and deterministic applicability"
+          git push origin HEAD:stabilize/enterprise-v3
