@@ -2,8 +2,8 @@
   'use strict';
   if(location.pathname!=='/home')return;
 
-  const ADMIN_VIEWS=new Set(['dashboard','approvals','accounts']);
-  const requestedView=new URLSearchParams(location.search).get('view');
+  let hydrated=false;
+  let refreshFrame=0;
 
   function shellMarkup(){
     return `<div class="home-v3-shell">
@@ -23,31 +23,47 @@
     </div>`;
   }
 
-  function identity(){const user=window.__EHS_PAGE_USER||null;if(!user)return null;const isAdmin=user.role==='admin';let base=String(user.name||'').trim();if(!base||base.includes('@'))base=isAdmin?'관리자':'사용자';return {isAdmin,base,company:isAdmin?'에이치앤이루자':(user.company_name||'협력사')}}
-  function applyIdentity(){const value=identity();if(!value)return;const name=document.getElementById('homeUserName'),title=document.getElementById('homeV3Title'),welcome=document.getElementById('portalWelcome');if(name)name.textContent=value.base;if(title)title.textContent=value.isAdmin?`${value.base}님 안녕하세요`:`안녕하세요, ${value.base}님`;if(welcome)welcome.textContent=value.isAdmin?'에이치앤이루자 EHS 업무를 한 화면에서 확인하세요.':`${value.company}의 EHS 업무를 한 화면에서 확인하세요.`}
-
-  function openRequestedAdminView(){
-    if(!ADMIN_VIEWS.has(requestedView))return false;
-    const user=window.__EHS_PAGE_USER;
-    if(!user)return false;
-    if(user.role!=='admin'){history.replaceState({},'', '/home');return false}
-    if(typeof window.navigatePage!=='function')return false;
-    window.navigatePage(requestedView);
-    return true;
+  function identity(){
+    const user=window.__EHS_PAGE_USER||null;if(!user)return null;
+    const isAdmin=user.role==='admin';let base=String(user.name||'').trim();
+    if(!base||base.includes('@'))base=isAdmin?'관리자':'사용자';
+    return{isAdmin,base,company:isAdmin?'에이치앤이루자':(user.company_name||'협력사')};
   }
-
-  function render(){
-    if(ADMIN_VIEWS.has(requestedView)&&openRequestedAdminView())return true;
-    const page=document.getElementById('page-portalHome');
-    if(!page)return false;
-    if(!page.querySelector('.home-v3-shell'))page.innerHTML=shellMarkup();
+  function applyIdentity(){
+    const value=identity();if(!value)return;
+    const name=document.getElementById('homeUserName'),title=document.getElementById('homeV3Title'),welcome=document.getElementById('portalWelcome');
+    if(name)name.textContent=value.base;
+    if(title)title.textContent=value.isAdmin?`${value.base}님 안녕하세요`:`안녕하세요, ${value.base}님`;
+    if(welcome)welcome.textContent=value.isAdmin?'에이치앤이루자 EHS 업무를 한 화면에서 확인하세요.':`${value.company}의 EHS 업무를 한 화면에서 확인하세요.`;
+  }
+  function ensureShell(){
+    const page=document.getElementById('page-portalHome');if(!page)return null;
+    if(!page.querySelector(':scope > .home-v3-shell'))page.innerHTML=shellMarkup();
     page.dataset.homeV3='1';
-    document.querySelectorAll('#app .page').forEach(el=>el.classList.toggle('active',el===page));
-    applyIdentity();
-    return true;
+    document.querySelectorAll('#app .page').forEach(element=>element.classList.toggle('active',element===page));
+    return page;
   }
-
-  function hydrate(){if(!render())return;if(!ADMIN_VIEWS.has(requestedView)&&typeof window.loadPortalHome==='function'){try{window.loadPortalHome()}catch(_){}}}
-  function boot(){hydrate();document.addEventListener('ehs:user-ready',()=>setTimeout(hydrate,0));window.addEventListener('pageshow',()=>setTimeout(hydrate,0));if(ADMIN_VIEWS.has(requestedView)){setTimeout(hydrate,60);setTimeout(hydrate,180)}}
+  function loadData(){
+    if(typeof window.loadPortalHome!=='function')return;
+    try{window.loadPortalHome()}catch(error){console.error('portal home hydration failed',error)}
+  }
+  function hydrate({reload=false}={}){
+    if(!ensureShell())return;
+    applyIdentity();
+    if(!hydrated||reload){hydrated=true;loadData()}
+  }
+  function scheduleReload(){
+    cancelAnimationFrame(refreshFrame);
+    refreshFrame=requestAnimationFrame(()=>hydrate({reload:true}));
+  }
+  function boot(){
+    hydrate();
+    document.addEventListener('ehs:user-ready',()=>hydrate());
+    document.addEventListener('ehs:api-revalidated',event=>{
+      const path=String(event.detail?.url||'');
+      if(['/api/me','/api/admin/dashboard-bundle','/api/my/evaluations','/api/annual-ipass','/api/content/notices'].includes(path))scheduleReload();
+    });
+    window.addEventListener('pageshow',event=>hydrate({reload:event.persisted}));
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
