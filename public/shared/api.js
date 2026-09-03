@@ -42,22 +42,16 @@
 
   if(ROOT_PAGE&&global.EHSAuth?.signIn&&!global.EHSAuth.signIn.__homeRedirectWrapped){
     const originalSignIn=global.EHSAuth.signIn.bind(global.EHSAuth);
-    const wrapped=async function(){
-      const result=await originalSignIn(...arguments);
-      try{const me=await request('/api/me');if(me?.auth_state==='approved')location.replace('/home')}catch(_){}
-      return result;
-    };
+    const wrapped=async function(){const result=await originalSignIn(...arguments);try{const me=await request('/api/me');if(me?.auth_state==='approved')location.replace('/home')}catch(_){}return result};
     wrapped.__homeRedirectWrapped=true;global.EHSAuth.signIn=wrapped;
   }
-  if(ROOT_PAGE&&global.EHSAuth?.readSession?.()){
-    setTimeout(()=>request('/api/me').then(me=>{if(me?.auth_state==='approved')location.replace('/home')}).catch(()=>{}),0);
-  }
+  if(ROOT_PAGE&&global.EHSAuth?.readSession?.())setTimeout(()=>request('/api/me').then(me=>{if(me?.auth_state==='approved')location.replace('/home')}).catch(()=>{}),0);
 
-  if(!document.querySelector('link[data-global-toolbar-v5]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/global-toolbar-v5.css?v=2';link.dataset.globalToolbarV5='true';document.head.appendChild(link)}
+  if(!document.querySelector('link[data-global-toolbar-v5]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/global-toolbar-v5.css?v=4';link.dataset.globalToolbarV5='true';document.head.appendChild(link)}
   if(!document.querySelector('link[data-portal-shell-v1]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-shell-v1.css?v=1';link.dataset.portalShellV1='true';document.head.appendChild(link)}
   if(!document.querySelector('script[data-global-toolbar-v5]')){const script=document.createElement('script');script.src='/global-toolbar-v5.js?v=3';script.dataset.globalToolbarV5='true';document.head.appendChild(script)}
   if(!document.querySelector('link[data-portal-home-v3]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-home-v3.css?v=3';link.dataset.portalHomeV3='true';document.head.appendChild(link)}
-  if(!document.querySelector('script[data-portal-home-v3]')){const script=document.createElement('script');script.src='/portal-home-v3.js?v=3';script.dataset.portalHomeV3='true';document.head.appendChild(script)}
+  if(!document.querySelector('script[data-portal-home-v3]')){const script=document.createElement('script');script.src='/portal-home-v3.js?v=4';script.dataset.portalHomeV3='true';document.head.appendChild(script)}
 
   if(location.pathname.startsWith('/ipass')){
     if(!document.querySelector('link[data-ipass-ui-v2]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/ipass-ui-v2.css?v=1';link.dataset.ipassUiV2='true';document.head.appendChild(link)}
