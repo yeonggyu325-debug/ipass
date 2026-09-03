@@ -30,6 +30,9 @@
   if(!document.querySelector('link[data-portal-shell-v1]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-shell-v1.css?v=1';link.dataset.portalShellV1='true';document.head.appendChild(link)}
   if(!document.querySelector('script[data-global-toolbar-v5]')){const script=document.createElement('script');script.src='/global-toolbar-v5.js?v=3';script.dataset.globalToolbarV5='true';document.head.appendChild(script)}
 
+  if(location.pathname==='/'||location.pathname==='/index.html'){
+    if(!document.querySelector('script[data-login-home-redirect]')){const script=document.createElement('script');script.src='/login-home-redirect.js?v=1';script.dataset.loginHomeRedirect='true';document.head.appendChild(script)}
+  }
   if(location.pathname==='/home'){
     if(!document.querySelector('link[data-portal-home-v3]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-home-v3.css?v=3';link.dataset.portalHomeV3='true';document.head.appendChild(link)}
     if(!document.querySelector('script[data-portal-home-v3]')){const script=document.createElement('script');script.src='/portal-home-v3.js?v=5';script.dataset.portalHomeV3='true';document.head.appendChild(script)}
