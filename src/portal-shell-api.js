@@ -20,7 +20,7 @@ function normalizeNotification(row){
     entity_type:row.entity_type||null,
     entity_id:row.entity_id||null,
     is_read:Number(row.is_read||0)===1,
-    created_at:row.created_at||row.updated_at||null
+    created_at:row.created_at||null
   };
 }
 
@@ -70,7 +70,7 @@ export async function handlePortalShellApi(request,env,ctx,baseWorker){
     try{
       const limit=Math.min(100,Math.max(1,Number(url.searchParams.get('limit')||50)));
       const result=await env.partner_evaluation_db.prepare(`
-        SELECT id,title,message,type,is_read,created_at,updated_at,entity_type,entity_id
+        SELECT id,title,message,type,is_read,created_at,entity_type,entity_id
         FROM notifications
         WHERE ${recipientClause()}
         ORDER BY created_at DESC
@@ -88,9 +88,9 @@ export async function handlePortalShellApi(request,env,ctx,baseWorker){
     const body=await request.json().catch(()=>({}));
     try{
       if(body.all===true){
-        await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1,updated_at=CURRENT_TIMESTAMP WHERE ${recipientClause()}`).bind(user.id,user.id).run();
+        await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1 WHERE ${recipientClause()}`).bind(user.id,user.id).run();
       }else if(body.id){
-        await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND ${recipientClause()}`).bind(String(body.id),user.id,user.id).run();
+        await env.partner_evaluation_db.prepare(`UPDATE notifications SET is_read=1 WHERE id=? AND ${recipientClause()}`).bind(String(body.id),user.id,user.id).run();
       }else return json({success:false,error:'읽음 처리할 알림을 선택하세요.'},400);
       return json({success:true,unread_count:await unreadCount(env,user.id)});
     }catch(error){
