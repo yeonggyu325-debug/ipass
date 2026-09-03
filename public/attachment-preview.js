@@ -26,6 +26,7 @@
     abortController: null,
     pdfDocument: null,
     pdfRenderTask: null,
+    pdfResizeObserver: null,
     pptxViewer: null,
     pptxObserver: null,
     hwpDocument: null,
@@ -134,11 +135,13 @@
     state.abortController = new AbortController();
     try { state.pdfRenderTask?.cancel(); } catch (_) { /* no-op */ }
     try { state.pdfDocument?.destroy(); } catch (_) { /* no-op */ }
+    try { state.pdfResizeObserver?.disconnect(); } catch (_) { /* no-op */ }
     try { state.pptxViewer?.destroy(); } catch (_) { /* no-op */ }
     try { state.pptxObserver?.disconnect(); } catch (_) { /* no-op */ }
     try { state.hwpDocument?.free(); } catch (_) { /* no-op */ }
     state.pdfRenderTask = null;
     state.pdfDocument = null;
+    state.pdfResizeObserver = null;
     state.pptxViewer = null;
     state.pptxObserver = null;
     state.hwpDocument = null;
@@ -321,47 +324,16 @@
   }
 
   async function renderPdf(ticket, requestNumber) {
-    const pdfjsLib = await loadModule(ASSETS.pdf);
-    if (requestNumber !== state.requestNumber) return;
-    pdfjsLib.GlobalWorkerOptions.workerSrc = ASSETS.pdfWorker;
-    const task = pdfjsLib.getDocument({ url: ticket.source_url });
-    const pdfDocument = await task.promise;
-    if (requestNumber !== state.requestNumber) return pdfDocument.destroy();
-    state.pdfDocument = pdfDocument;
-    let pageNumber = 1;
-    let scale = Math.min(1.45, Math.max(.7, (state.dom.body.clientWidth - 36) / 820));
-    const previous = button('◀ 이전', () => { if (pageNumber > 1) { pageNumber -= 1; draw(); } });
-    const counter = document.createElement('span');
-    counter.className = 'ap-counter';
-    const next = button('다음 ▶', () => { if (pageNumber < pdfDocument.numPages) { pageNumber += 1; draw(); } });
-    const zoomOut = button('－', () => { scale = Math.max(.5, scale - .15); draw(); }, '축소');
-    const zoomIn = button('＋', () => { scale = Math.min(3, scale + .15); draw(); }, '확대');
-    state.dom.toolbar.replaceChildren(previous, counter, next, document.createElement('span'), zoomOut, zoomIn);
-    state.dom.toolbar.children[3].className = 'ap-spacer';
-
-    async function draw() {
-      try { state.pdfRenderTask?.cancel(); } catch (_) { /* no-op */ }
-      const page = await pdfDocument.getPage(pageNumber);
-      if (requestNumber !== state.requestNumber) return;
-      const ratio = Math.min(global.devicePixelRatio || 1, 2);
-      const viewport = page.getViewport({ scale: scale * ratio });
-      const canvas = document.createElement('canvas');
-      canvas.className = 'ap-pdf-canvas';
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      canvas.style.width = `${Math.floor(viewport.width / ratio)}px`;
-      canvas.style.height = `${Math.floor(viewport.height / ratio)}px`;
-      const stage = document.createElement('div');
-      stage.className = 'ap-pdf-stage';
-      stage.appendChild(canvas);
-      state.dom.body.replaceChildren(stage);
-      previous.disabled = pageNumber <= 1;
-      next.disabled = pageNumber >= pdfDocument.numPages;
-      counter.textContent = `${pageNumber} / ${pdfDocument.numPages}`;
-      state.pdfRenderTask = page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport });
-      try { await state.pdfRenderTask.promise; } catch (error) { if (error?.name !== 'RenderingCancelledException') throw error; }
+    const pdfjsLib=await loadModule(ASSETS.pdf);if(requestNumber!==state.requestNumber)return;
+    pdfjsLib.GlobalWorkerOptions.workerSrc=ASSETS.pdfWorker;const task=pdfjsLib.getDocument({url:ticket.source_url});const pdfDocument=await task.promise;if(requestNumber!==state.requestNumber)return pdfDocument.destroy();state.pdfDocument=pdfDocument;
+    let pageNumber=1,scale=1,fitMode=true,resizeFrame=0;
+    const previous=button('◀ 이전',()=>{if(pageNumber>1){pageNumber-=1;draw()}}),counter=document.createElement('span'),next=button('다음 ▶',()=>{if(pageNumber<pdfDocument.numPages){pageNumber+=1;draw()}}),fitButton=button('화면 맞춤',()=>{fitMode=true;draw()},'가로·세로 맞춤'),actual=button('100%',()=>{fitMode=false;scale=1;draw()},'원본 크기'),zoomOut=button('－',()=>{fitMode=false;scale=Math.max(.25,scale-.15);draw()},'축소'),zoomCounter=document.createElement('span'),zoomIn=button('＋',()=>{fitMode=false;scale=Math.min(4,scale+.15);draw()},'확대'),spacer=document.createElement('span');
+    counter.className='ap-counter';zoomCounter.className='ap-counter';spacer.className='ap-spacer';state.dom.toolbar.replaceChildren(previous,counter,next,spacer,fitButton,actual,zoomOut,zoomCounter,zoomIn);
+    async function fittedScale(page){const base=page.getViewport({scale:1}),body=state.dom.body,styles=getComputedStyle(body),width=Math.max(120,body.clientWidth-parseFloat(styles.paddingLeft||0)-parseFloat(styles.paddingRight||0)-16),height=Math.max(120,body.clientHeight-parseFloat(styles.paddingTop||0)-parseFloat(styles.paddingBottom||0)-16);return Math.max(.2,Math.min(width/base.width,height/base.height))}
+    async function draw(){
+      try{state.pdfRenderTask?.cancel()}catch(_){}const page=await pdfDocument.getPage(pageNumber);if(requestNumber!==state.requestNumber)return;if(fitMode)scale=await fittedScale(page);const ratio=Math.min(global.devicePixelRatio||1,2),viewport=page.getViewport({scale:scale*ratio}),canvas=document.createElement('canvas');canvas.className='ap-pdf-canvas';canvas.width=Math.floor(viewport.width);canvas.height=Math.floor(viewport.height);canvas.style.width=Math.floor(viewport.width/ratio)+'px';canvas.style.height=Math.floor(viewport.height/ratio)+'px';const stage=document.createElement('div');stage.className='ap-pdf-stage';stage.appendChild(canvas);state.dom.body.replaceChildren(stage);previous.disabled=pageNumber<=1;next.disabled=pageNumber>=pdfDocument.numPages;counter.textContent=pageNumber+' / '+pdfDocument.numPages;zoomCounter.textContent=Math.round(scale*100)+'%';fitButton.classList.toggle('active',fitMode);state.pdfRenderTask=page.render({canvasContext:canvas.getContext('2d',{alpha:false}),viewport});try{await state.pdfRenderTask.promise}catch(error){if(error?.name!=='RenderingCancelledException')throw error}
     }
-    await draw();
+    state.pdfResizeObserver=new ResizeObserver(()=>{if(!fitMode)return;cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(()=>draw().catch(()=>{}))});state.pdfResizeObserver.observe(state.dom.body);await draw();
   }
 
   async function ensureXlsx() {
@@ -519,6 +491,7 @@
   }
 
   function renderWebViewer(ticket, extension, message) {
+    if(state.options?.allowExternalViewers===false){renderUnsupported(extension);return}
     const primaryOffice = OFFICE_FALLBACK.has(extension);
     const url = primaryOffice ? ticket.office_viewer_url : ticket.viewer_url;
     const alternate = primaryOffice ? ticket.viewer_url : ticket.office_viewer_url;
@@ -605,7 +578,8 @@
         getPreviewTicket: options.getPreviewTicket,
         download: typeof options.download === 'function' ? options.download : null,
         onError: typeof options.onError === 'function' ? options.onError : null,
-        maxPreviewBytes: Number(options.maxPreviewBytes || 25 * 1024 * 1024)
+        maxPreviewBytes: Number(options.maxPreviewBytes || 25 * 1024 * 1024),
+        allowExternalViewers: options.allowExternalViewers !== false
       };
       ensureModal();
       return this;

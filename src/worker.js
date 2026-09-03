@@ -1,6 +1,8 @@
 import baseWorker from './index.js';
 import { handleEvaluationManagement } from './evaluation-management.js';
 import { handleEvaluationRuntime } from './evaluation-runtime.js';
+import { handleFastCycleStart } from './evaluation-cycle-fast.js';
+import { reconcileTargetApplicability } from './applicability-engine.js';
 import { handlePartnerSubmissionWithQuota } from './partner-submission-quota.js';
 import { handleStorageAdmin } from './storage-admin.js';
 import { handleSystemAdmin, recordRequestAudit } from './system-admin.js';
@@ -211,6 +213,9 @@ async function core(request,env,ctx){
     return injectShared(response,{path,home:true,root:false});
   }
 
+  const fastCycleStart=await handleFastCycleStart(request,env,ctx,baseWorker);if(fastCycleStart)return fastCycleStart;
+  const scoringTarget=path.match(/^\/api\/admin\/evaluation-scoring\/([^/]+)/);if(scoringTarget)await reconcileTargetApplicability(env,decodeURIComponent(scoringTarget[1]));
+  const evaluationTarget=path.match(/^\/api\/evaluations\/([^/]+)$/);if(evaluationTarget&&request.method==='GET')await reconcileTargetApplicability(env,decodeURIComponent(evaluationTarget[1]));
   const system=await handleSystemAdmin(request,env,ctx,baseWorker);if(system)return system;
   const scoring=await handleEvaluationScoring(request,env,ctx,baseWorker);if(scoring)return scoring;
   const management=await handleEvaluationManagement(request,env,ctx,baseWorker);if(management)return management;

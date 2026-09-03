@@ -124,6 +124,16 @@
     });
   }
 
+  function installDialogAccessibility(){
+    if(document.documentElement.dataset.ehsDialogA11y==='1'||!document.body)return;document.documentElement.dataset.ehsDialogA11y='1';let active=null,opener=null;
+    const focusable=dialog=>[...dialog.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(el=>el.offsetParent!==null);
+    const activate=dialog=>{if(active===dialog)return;active=dialog;opener=document.activeElement;dialog.setAttribute('aria-modal','true');if(!dialog.hasAttribute('role'))dialog.setAttribute('role','dialog');requestAnimationFrame(()=>focusable(dialog)[0]?.focus())};
+    const deactivate=()=>{if(!active)return;active=null;if(opener?.isConnected)opener.focus();opener=null};
+    const scan=()=>{const dialog=[...document.querySelectorAll('[role="dialog"],.ap-overlay:not(.ap-hidden) .ap-modal,.modal:not(.hidden) .modal-card')].find(el=>el.offsetParent!==null);if(dialog)activate(dialog);else deactivate()};
+    document.addEventListener('keydown',event=>{if(!active||event.key!=='Tab')return;const nodes=focusable(active);if(!nodes.length){event.preventDefault();return}const first=nodes[0],last=nodes.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}});
+    new MutationObserver(scan).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','aria-hidden']});scan();
+  }
+
   function installPerformanceTelemetry(){
     if(document.documentElement.dataset.ehsPerformanceTelemetry==='1'||!window.performance)return;
     document.documentElement.dataset.ehsPerformanceTelemetry='1';
@@ -156,6 +166,7 @@
 
   function install(){
     installPerformanceTelemetry();
+    installDialogAccessibility();
     installAdminStorage();
     installSkeletonObserver();
     installDelegatedActions();

@@ -3,6 +3,8 @@
   function apiClient(){if(!window.EHSApi?.request)throw new Error('공통 API 인증 모듈이 초기화되지 않았습니다.');return window.EHSApi}
   function installLeaseAwareApi(){if(baseApiRequest||!window.EHSApi?.request)return;baseApiRequest=window.EHSApi.request.bind(window.EHSApi);window.EHSApi.request=function(path,options={}){const method=String(options.method||'GET').toUpperCase();if(editLeaseToken&&method!=='GET'&&String(path).startsWith('/api/partner/submission/')&&!String(path).endsWith('/edit-lease')){const headers=new Headers(options.headers||{});headers.set('x-edit-lease',editLeaseToken);options={...options,headers}}return baseApiRequest(path,options)}}
   async function ensureEditLease(){if(editLeaseToken&&Date.parse(editLeaseExpiresAt)>Date.now()+120000)return editLeaseToken;if(editLeasePromise)return editLeasePromise;if(!hasWorkspace()||!targetId||!baseApiRequest)return'';editLeasePromise=baseApiRequest(`/api/partner/submission/${encodeURIComponent(targetId)}/edit-lease`,{method:'POST',body:'{}',ehsNoCache:true}).then(result=>{editLeaseToken=String(result.lease_token||'');editLeaseExpiresAt=String(result.expires_at||'');const cap=capabilities();cap.can_edit=true;cap.can_submit=cap.submission_blocked_reason?false:true;cap.can_upload=true;cap.can_delete_file=true;cap.edit_lease_expires_at=editLeaseExpiresAt;const banner=document.getElementById('periodStateBanner');if(banner)banner.remove();if(typeof render==='function')queueMicrotask(()=>render());return editLeaseToken}).catch(error=>{if(error?.status!==409)console.warn('edit lease unavailable',error);return''}).finally(()=>{editLeasePromise=null});return editLeasePromise}
+  function installLeaseAwareApi(){if(baseApiRequest||!window.EHSApi?.request)return;baseApiRequest=window.EHSApi.request.bind(window.EHSApi);window.EHSApi.request=function(path,options={}){const method=String(options.method||'GET').toUpperCase();if(editLeaseToken&&method!=='GET'&&String(path).startsWith('/api/partner/submission/')&&!String(path).endsWith('/edit-lease')){const headers=new Headers(options.headers||{});headers.set('x-edit-lease',editLeaseToken);options={...options,headers}}return baseApiRequest(path,options)}}
+  async function ensureEditLease(){if(editLeaseToken&&Date.parse(editLeaseExpiresAt)>Date.now()+120000)return editLeaseToken;if(editLeasePromise)return editLeasePromise;if(!hasWorkspace()||!targetId||!baseApiRequest)return'';editLeasePromise=baseApiRequest(`/api/partner/submission/${encodeURIComponent(targetId)}/edit-lease`,{method:'POST',body:'{}',ehsNoCache:true}).then(result=>{editLeaseToken=String(result.lease_token||'');editLeaseExpiresAt=String(result.expires_at||'');const cap=capabilities();cap.can_edit=true;cap.can_submit=cap.submission_blocked_reason?false:true;cap.can_upload=true;cap.can_delete_file=true;cap.edit_lease_expires_at=editLeaseExpiresAt;const banner=document.getElementById('periodStateBanner');if(banner)banner.remove();if(typeof render==='function')queueMicrotask(()=>render());return editLeaseToken}).catch(error=>{if(error?.status!==409)console.warn('edit lease unavailable',error);return''}).finally(()=>{editLeasePromise=null});return editLeasePromise}
   function hasWorkspace(){try{return typeof data!=='undefined'&&data&&data.workspace&&data.workspace.target}catch(_){return false}}
   function currentData(){try{return data}catch(_){return null}}
   function currentTarget(){const d=currentData();return d?.workspace?.target||null}
@@ -38,6 +40,7 @@
         getPreviewTicket:file=>previewTicket(file.id),
         download:file=>authenticatedDownload(file.id),
         maxPreviewBytes:25*1024*1024,
+        allowExternalViewers:false,
         onError:error=>console.error('submission attachment preview failed',error)
       });
       return window.AttachmentPreview.open({id,file_name:name,file_size:size,content_type:contentType});
@@ -90,6 +93,7 @@
   }
   function enhanceLayout(){
     if(!hasWorkspace())return;
+    ensureEditLease().catch(()=>{});
     ensureEditLease().catch(()=>{});
     const d=currentData(),t=d.workspace.target,cap=d.capabilities||{},usage=cap.storage_usage;
     const layout=document.querySelector('.layout');installSectionNavigation();
