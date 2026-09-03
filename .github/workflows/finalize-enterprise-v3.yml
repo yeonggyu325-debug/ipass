@@ -1,0 +1,93 @@
+name: Finalize Enterprise V3
+
+on:
+  push:
+    branches:
+      - stabilize/enterprise-v3
+    paths:
+      - scripts/finalize-enterprise-source.mjs
+      - scripts/extract-inline-assets.mjs
+      - scripts/verify-page-assets.mjs
+      - tests/**
+      - playwright*.config.mjs
+      - .github/workflows/finalize-enterprise-v3.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finalize-enterprise-v3
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout stabilization branch
+        uses: actions/checkout@v6
+        with:
+          ref: stabilize/enterprise-v3
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Vendor pinned SheetJS Community Edition
+        shell: bash
+        run: |
+          mkdir -p vendor/xlsx
+          curl -fsSL https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js -o vendor/xlsx/xlsx.full.min.js
+          curl -fsSL https://cdn.sheetjs.com/xlsx-0.20.3/package/LICENSE -o vendor/xlsx/LICENSE.txt
+          test -s vendor/xlsx/xlsx.full.min.js
+          test -s vendor/xlsx/LICENSE.txt
+
+      - name: Install browser test dependency
+        run: npm install --save-dev @playwright/test@1.55.0
+
+      - name: Register enterprise build and browser test commands
+        shell: bash
+        run: |
+          npm pkg set type=module
+          npm pkg set "scripts.extract:pages=node scripts/extract-inline-assets.mjs"
+          npm pkg set "scripts.verify:pages=node scripts/verify-page-assets.mjs"
+          npm pkg set "scripts.dev:test=npm run prepare:preview && wrangler dev --local --ip 127.0.0.1 --port 8787"
+          npm pkg set "scripts.e2e=playwright test --config=playwright.config.mjs"
+          npm pkg set "scripts.e2e:authenticated=playwright test --config=playwright.authenticated.config.mjs"
+          npm pkg set "scripts.verify:all=npm run verify:architecture && npm run verify:db && npm run verify:pages && npm run verify:education && npm run verify:voc && npm run test:voc-api && npm run verify:content && npm run test:content-api && npm run verify:preview && npm run verify:navigation && npm run verify:submission && npm run verify:system && npm run test:storage"
+
+      - name: Apply final source consolidation
+        run: node scripts/finalize-enterprise-source.mjs
+
+      - name: Extract large inline page assets
+        run: node scripts/extract-inline-assets.mjs
+
+      - name: Run full source and database verification
+        run: npm run verify:all
+
+      - name: Build Worker dry run
+        run: npm run check
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run local mocked admin and partner UI trial
+        run: npm run e2e
+
+      - name: Commit finalized enterprise source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No finalized source changes to commit."
+            exit 0
+          fi
+          git commit -m "feat: finalize enterprise portal architecture and UI trial"
+          git push origin HEAD:stabilize/enterprise-v3
