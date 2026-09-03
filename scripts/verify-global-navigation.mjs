@@ -5,6 +5,8 @@ const common = await readFile(new URL('../public/ehs-common.js', import.meta.url
 const css = await readFile(new URL('../public/ehs-common.css', import.meta.url), 'utf8');
 const foundation = await readFile(new URL('../public/ehs-ui-foundation.css', import.meta.url), 'utf8');
 const home = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+const homeV3 = await readFile(new URL('../public/portal-home-v3.js', import.meta.url), 'utf8');
+const toolbarV5 = await readFile(new URL('../public/global-toolbar-v5.js', import.meta.url), 'utf8');
 const content = await readFile(new URL('../public/content-hub.html', import.meta.url), 'utf8');
 const worker = await readFile(new URL('../src/worker-v20.js', import.meta.url), 'utf8');
 const faq = await readFile(new URL('../public/faq.html', import.meta.url), 'utf8');
@@ -18,6 +20,10 @@ for (const [href, label] of services) {
   assert.ok(common.includes(`['${href}','${label}']`), `공통 툴바에 ${label} 필요`);
   assert.ok(home.includes(`href="${href}"`), `홈 툴바에 ${label} 필요`);
 }
+assert.ok(toolbarV5.includes('회원가입 승인') && toolbarV5.includes('/home?view=approvals'), '관리자 메뉴에서 회원가입 승인 화면에 접근할 수 있어야 함');
+assert.ok(toolbarV5.includes('협력사 계정 관리') && toolbarV5.includes('/home?view=accounts'), '관리자 메뉴에서 협력사 계정 관리 화면에 접근할 수 있어야 함');
+assert.ok(toolbarV5.includes('i-PaSS 관리') && toolbarV5.includes('data-admin-route="/ipass"'), '관리자 메뉴에 i-PaSS 관리 진입점이 필요');
+assert.ok(homeV3.includes("new Set(['dashboard','approvals','accounts'])") && homeV3.includes('window.navigatePage(requestedView)'), '신규 홈은 관리자 내부 화면 deep-link를 보존해야 함');
 assert.ok(!content.includes('id="noticeTab"') && !content.includes('id="resourceTab"'), '게시판 내부 교차 탭은 제거되어야 함');
 assert.ok(!home.includes('<h2>EHS 서비스</h2>'), 'EHS 서비스 문구는 제거되어야 함');
 assert.ok(home.includes('box-shadow:0 15px 14px -16px') && css.includes('border:0!important'), '기능 타일은 테두리 없이 하단 띠 그림자만 사용해야 함');
@@ -45,4 +51,4 @@ assert.ok(worker.includes('/ehs-ui-foundation.css?v=2'), 'UI Foundation v2가 �
 const inlineScripts = [...ipass.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match => match[1]).filter(source => source.trim());
 for (const source of inlineScripts) new Function(source);
 
-console.log(JSON.stringify({success:true,services:services.length,single_board_pages:true,admin_storage_ui:true,faq_route:true,ipass_full_width:true,ipass_partner_views:true}));
+console.log(JSON.stringify({success:true,services:services.length,single_board_pages:true,admin_storage_ui:true,admin_routes:true,faq_route:true,ipass_full_width:true,ipass_partner_views:true}));
