@@ -27,6 +27,24 @@ await patch('src/index.js',source=>{
   return source;
 });
 
+await patch('public/shared/api.js',source=>{
+  source=source.replace(
+    "const ORIGIN=location.hostname==='ipass.i-pass-eval.workers.dev'?'':'https://ipass.i-pass-eval.workers.dev';",
+    "const SAME_ORIGIN_API=location.hostname==='ipass.i-pass-eval.workers.dev'||location.hostname.endsWith('.workers.dev')||location.hostname==='localhost'||location.hostname==='127.0.0.1';\n  const ORIGIN=SAME_ORIGIN_API?'':'https://ipass.i-pass-eval.workers.dev';"
+  );
+  if(!source.includes('const SAME_ORIGIN_API='))throw new Error('same-origin local API routing patch failed');
+  return source;
+});
+
+await patch('public/index.html',source=>{
+  source=source.replace(
+    'const API_BASE=(location.hostname==="ipass.i-pass-eval.workers.dev")?"":PRODUCTION_API_ORIGIN;',
+    'const SAME_ORIGIN_API=location.hostname==="ipass.i-pass-eval.workers.dev"||location.hostname.endsWith(".workers.dev")||location.hostname==="localhost"||location.hostname==="127.0.0.1";\nconst API_BASE=SAME_ORIGIN_API?"":PRODUCTION_API_ORIGIN;'
+  );
+  if(!source.includes('const SAME_ORIGIN_API='))throw new Error('root local API routing patch failed');
+  return source;
+});
+
 await patch('public/attachment-preview.js',source=>{
   source=source.replace("xlsx: 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'","xlsx: '/vendor/attachment-preview/xlsx.full.min.js'");
   if(source.includes('cdn.sheetjs.com'))throw new Error('external SheetJS runtime remains');
@@ -49,7 +67,8 @@ await patch('scripts/verify-attachment-preview.mjs',source=>{
 
 await patch('scripts/verify-system-stabilization.mjs',source=>{
   if(!source.includes("external SheetJS runtime must be removed"))source=source.replace("assert.ok(worker.includes('content-security-policy')&&worker.includes('strict-origin-when-cross-origin'),'security response policy missing');","assert.ok(worker.includes('content-security-policy')&&worker.includes('strict-origin-when-cross-origin'),'security response policy missing');assert.ok(!worker.includes('cdn.sheetjs.com')&&!preview.includes('cdn.sheetjs.com'),'external SheetJS runtime must be removed');assert.ok(worker.includes('clearCorsHeaders(headers)'),'upstream wildcard CORS headers must be normalized');");
+  if(!source.includes('SAME_ORIGIN_API'))source=source.replace("assert.ok(api.includes('ehs.api.v3:')&&api.includes('function invalidate('),'tagged cache generation missing');","assert.ok(api.includes('ehs.api.v3:')&&api.includes('function invalidate('),'tagged cache generation missing');assert.ok(api.includes('SAME_ORIGIN_API'),'local and Worker API calls must stay same-origin');");
   return source;
 });
 
-console.log(JSON.stringify({success:true,cors_normalized:true,canonical_notification_queries:true,local_sheetjs:true}));
+console.log(JSON.stringify({success:true,cors_normalized:true,canonical_notification_queries:true,local_sheetjs:true,same_origin_local_runtime:true}));
