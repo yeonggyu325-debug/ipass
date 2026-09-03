@@ -8,6 +8,7 @@
   let frame=0;
   let resizeObserver=null;
   let mutationObserver=null;
+  let wasVisible=false;
 
   function visibleModal(){
     const overlay=document.querySelector('.ap-overlay:not(.ap-hidden)');
@@ -82,9 +83,11 @@
     installFitControl();scheduleFit();
   }
   const pageObserver=new MutationObserver(()=>{
-    const modal=visibleModal();if(!modal)return;
+    const modal=visibleModal();
+    if(!modal){wasVisible=false;return}
+    if(!wasVisible){mode='fit';wasVisible=true;body()?.classList.remove('ap-manual-zoom')}
     if(modal.dataset.resourcePreviewObserved==='1'){installFitControl();scheduleFit();return}
-    modal.dataset.resourcePreviewObserved='1';mode='fit';observeModal(modal);
+    modal.dataset.resourcePreviewObserved='1';observeModal(modal);
   });
   pageObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
   window.addEventListener('resize',scheduleFit,{passive:true});
