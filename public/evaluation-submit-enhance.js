@@ -1,6 +1,8 @@
 (function(){
-  let previewObjectUrl=null,previewRequest=0,submitting=false;
+  let previewObjectUrl=null,previewRequest=0,submitting=false,editLeaseToken='',editLeaseExpiresAt='',editLeasePromise=null,baseApiRequest=null;
   function apiClient(){if(!window.EHSApi?.request)throw new Error('공통 API 인증 모듈이 초기화되지 않았습니다.');return window.EHSApi}
+  function installLeaseAwareApi(){if(baseApiRequest||!window.EHSApi?.request)return;baseApiRequest=window.EHSApi.request.bind(window.EHSApi);window.EHSApi.request=function(path,options={}){const method=String(options.method||'GET').toUpperCase();if(editLeaseToken&&method!=='GET'&&String(path).startsWith('/api/partner/submission/')&&!String(path).endsWith('/edit-lease')){const headers=new Headers(options.headers||{});headers.set('x-edit-lease',editLeaseToken);options={...options,headers}}return baseApiRequest(path,options)}}
+  async function ensureEditLease(){if(editLeaseToken&&Date.parse(editLeaseExpiresAt)>Date.now()+120000)return editLeaseToken;if(editLeasePromise)return editLeasePromise;if(!hasWorkspace()||!targetId||!baseApiRequest)return'';editLeasePromise=baseApiRequest(`/api/partner/submission/${encodeURIComponent(targetId)}/edit-lease`,{method:'POST',body:'{}',ehsNoCache:true}).then(result=>{editLeaseToken=String(result.lease_token||'');editLeaseExpiresAt=String(result.expires_at||'');const cap=capabilities();cap.can_edit=true;cap.can_submit=cap.submission_blocked_reason?false:true;cap.can_upload=true;cap.can_delete_file=true;cap.edit_lease_expires_at=editLeaseExpiresAt;const banner=document.getElementById('periodStateBanner');if(banner)banner.remove();if(typeof render==='function')queueMicrotask(()=>render());return editLeaseToken}).catch(error=>{if(error?.status!==409)console.warn('edit lease unavailable',error);return''}).finally(()=>{editLeasePromise=null});return editLeasePromise}
   function hasWorkspace(){try{return typeof data!=='undefined'&&data&&data.workspace&&data.workspace.target}catch(_){return false}}
   function currentData(){try{return data}catch(_){return null}}
   function currentTarget(){const d=currentData();return d?.workspace?.target||null}
@@ -88,6 +90,7 @@
   }
   function enhanceLayout(){
     if(!hasWorkspace())return;
+    ensureEditLease().catch(()=>{});
     const d=currentData(),t=d.workspace.target,cap=d.capabilities||{},usage=cap.storage_usage;
     const layout=document.querySelector('.layout');installSectionNavigation();
     if(layout&&!document.getElementById('storageQuotaCard')&&usage){
@@ -185,7 +188,7 @@
     const token=await window.EHSAuth.token();progress.update(20);
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000),url=(window.EHSApi?.ORIGIN||'')+`/api/partner/submission/${encodeURIComponent(targetId)}/submit`;
     try{
-      const response=await fetch(url,{method:'POST',headers:{Accept:'application/x-ndjson','content-type':'application/json',Authorization:'Bearer '+token,'x-request-id':requestId},body:JSON.stringify({items,request_id:requestId}),signal:controller.signal});
+      const response=await fetch(url,{method:'POST',headers:{Accept:'application/x-ndjson','content-type':'application/json',Authorization:'Bearer '+token,'x-request-id':requestId,'x-edit-lease':editLeaseToken},body:JSON.stringify({items,request_id:requestId}),signal:controller.signal});
       if(!response.ok)throw Object.assign(new Error(`제출 요청이 거부되었습니다. (HTTP ${response.status})`),{status:response.status,requestId:response.headers.get('x-request-id')});
       const reader=response.body?.getReader();if(!reader)throw new Error('제출 진행상태를 확인할 수 없습니다.');const decoder=new TextDecoder();let buffer='',result=null;
       while(true){const {done,value}=await reader.read();buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(!line.trim())continue;const event=JSON.parse(line);if(event.error)throw Object.assign(new Error(event.error),{status:Number(event.status||0),code:event.code||null,requestId});if(Number.isFinite(Number(event.progress)))progress.update(Number(event.progress));if(event.result)result=event.result}if(done)break}
@@ -227,6 +230,6 @@
       if(typeof deleteFile==='function')deleteFile=confirmedDelete;
     }catch(e){console.warn('submission enhancement patch',e)}
   }
-  function boot(){patchFunctions();installActionCapture();enhanceLayout()}
+  function boot(){installLeaseAwareApi();patchFunctions();installActionCapture();enhanceLayout();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')ensureEditLease().catch(()=>{})})}
   boot();
 })();
