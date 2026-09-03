@@ -127,6 +127,20 @@
 
   global.EHSApi={ORIGIN,request,blob:authorizedBlob,download,describe,makeError};
 
+  if(!document.querySelector('link[data-global-toolbar-v4]')){
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href='/global-toolbar-v4.css?v=1';
+    link.dataset.globalToolbarV4='true';
+    document.head.appendChild(link);
+  }
+  if(!document.querySelector('script[data-global-toolbar-v4]')){
+    const script=document.createElement('script');
+    script.src='/global-toolbar-v4.js?v=1';
+    script.dataset.globalToolbarV4='true';
+    document.head.appendChild(script);
+  }
+
   if(!document.querySelector('link[data-portal-home-v3]')){
     const link=document.createElement('link');
     link.rel='stylesheet';
