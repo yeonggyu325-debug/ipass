@@ -1,0 +1,48 @@
+/* Evaluation submission navigation v2 */
+:root{
+  --blue:#2b6f9f;
+  --blue2:#225d86;
+  --ink:#22313b;
+  --text:#55656f;
+  --muted:#87949d;
+  --line:#e3e8ec;
+  --page:#f6f8fa;
+  --card:#fff;
+  --shadow:none;
+}
+body *{background-image:none!important}
+.header{box-shadow:none!important;border-bottom-color:var(--line)!important}
+.shell{max-width:1320px}
+.metric,.sidebar,.profile-card,.item-card,.submit-card{box-shadow:none!important;border-color:var(--line)!important}
+.sidebar{border-radius:11px}
+.nav-item{border-radius:7px}
+.nav-item.active{background:#eef5f9!important;color:var(--blue)!important;position:relative}
+.nav-item.active:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:999px;background:var(--blue)}
+.btn.primary{background:var(--blue)!important;border-color:var(--blue)!important}
+.btn.primary:hover{background:var(--blue2)!important;border-color:var(--blue2)!important}
+.score-badge,.chip{background:#eef5f9;color:var(--blue)}
+.progressbar span{background:var(--blue)!important}
+.metric.progress b{color:var(--blue)!important}
+.field input:focus,.field textarea:focus{border-color:#8eb4ce;box-shadow:0 0 0 3px rgba(43,111,159,.08)}
+
+.submission-breadcrumb{display:flex;align-items:center;gap:6px;margin:0 0 10px;color:#98a2aa;font-size:9.5px}
+.submission-breadcrumb a{color:#7c8b95;text-decoration:none}
+.submission-breadcrumb a:hover{color:var(--blue)}
+.submission-breadcrumb strong{color:#63747e;font-weight:700}
+
+.submission-mobile-nav{display:none;margin:0 0 14px}
+.submission-mobile-nav label{display:block;margin-bottom:6px;color:#77858e;font-size:10px;font-weight:760}
+.submission-mobile-nav select{width:100%;height:44px;padding:0 38px 0 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#334651;font-size:12px;font-weight:700;outline:none}
+.submission-mobile-nav select:focus{border-color:#8eb4ce;box-shadow:0 0 0 3px rgba(43,111,159,.08)}
+
+@media(max-width:980px){
+  .layout{grid-template-columns:1fr!important}
+  .sidebar{display:none!important}
+  .submission-mobile-nav{display:block}
+  .summary{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:640px){
+  .shell{padding-top:18px}
+  .summary{gap:8px}
+  .sticky-submit{backdrop-filter:none!important;background:#fff!important}
+}
