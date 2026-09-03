@@ -5,9 +5,7 @@ on:
     branches:
       - stabilize/enterprise-v3
     paths:
-      - scripts/finalize-enterprise-source.mjs
-      - scripts/extract-inline-assets.mjs
-      - scripts/verify-page-assets.mjs
+      - scripts/**
       - tests/**
       - playwright*.config.mjs
       - .github/workflows/finalize-enterprise-v3.yml
