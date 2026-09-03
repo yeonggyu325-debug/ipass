@@ -2,6 +2,9 @@
   'use strict';
   if(location.pathname!=='/home')return;
 
+  const ADMIN_VIEWS=new Set(['dashboard','approvals','accounts']);
+  const requestedView=new URLSearchParams(location.search).get('view');
+
   function shellMarkup(){
     return `<div class="home-v3-shell">
       <section class="home-v3-welcome" aria-labelledby="homeV3Title"><div class="home-v3-welcome-copy"><div class="home-eyebrow">EHS WORKSPACE</div><h1 id="homeV3Title">안녕하세요, <span id="homeUserName">사용자</span>님</h1><div class="home-greeting" id="portalWelcome"></div></div><div class="home-date" id="homeDate"></div></section>
@@ -20,24 +23,21 @@
     </div>`;
   }
 
-  function identity(){
-    const user=window.__EHS_PAGE_USER||null;
-    if(!user)return null;
-    const isAdmin=user.role==='admin';
-    let base=String(user.name||'').trim();
-    if(!base||base.includes('@'))base=isAdmin?'관리자':'사용자';
-    return {isAdmin,base,company:isAdmin?'에이치앤이루자':(user.company_name||'협력사')};
-  }
+  function identity(){const user=window.__EHS_PAGE_USER||null;if(!user)return null;const isAdmin=user.role==='admin';let base=String(user.name||'').trim();if(!base||base.includes('@'))base=isAdmin?'관리자':'사용자';return {isAdmin,base,company:isAdmin?'에이치앤이루자':(user.company_name||'협력사')}}
+  function applyIdentity(){const value=identity();if(!value)return;const name=document.getElementById('homeUserName'),title=document.getElementById('homeV3Title'),welcome=document.getElementById('portalWelcome');if(name)name.textContent=value.base;if(title)title.textContent=value.isAdmin?`${value.base}님 안녕하세요`:`안녕하세요, ${value.base}님`;if(welcome)welcome.textContent=value.isAdmin?'에이치앤이루자 EHS 업무를 한 화면에서 확인하세요.':`${value.company}의 EHS 업무를 한 화면에서 확인하세요.`}
 
-  function applyIdentity(){
-    const value=identity();if(!value)return;
-    const name=document.getElementById('homeUserName'),title=document.getElementById('homeV3Title'),welcome=document.getElementById('portalWelcome');
-    if(name)name.textContent=value.base;
-    if(title)title.textContent=value.isAdmin?`${value.base}님 안녕하세요`:`안녕하세요, ${value.base}님`;
-    if(welcome)welcome.textContent=value.isAdmin?'에이치앤이루자 EHS 업무를 한 화면에서 확인하세요.':`${value.company}의 EHS 업무를 한 화면에서 확인하세요.`;
+  function openRequestedAdminView(){
+    if(!ADMIN_VIEWS.has(requestedView))return false;
+    const user=window.__EHS_PAGE_USER;
+    if(!user)return false;
+    if(user.role!=='admin'){history.replaceState({},'', '/home');return false}
+    if(typeof window.navigatePage!=='function')return false;
+    window.navigatePage(requestedView);
+    return true;
   }
 
   function render(){
+    if(ADMIN_VIEWS.has(requestedView)&&openRequestedAdminView())return true;
     const page=document.getElementById('page-portalHome');
     if(!page)return false;
     if(!page.querySelector('.home-v3-shell'))page.innerHTML=shellMarkup();
@@ -47,18 +47,7 @@
     return true;
   }
 
-  function hydrate(){
-    if(!render())return;
-    if(typeof window.loadPortalHome==='function'){
-      try{window.loadPortalHome()}catch(_){}
-    }
-  }
-
-  function boot(){
-    hydrate();
-    document.addEventListener('ehs:user-ready',()=>setTimeout(hydrate,0));
-    window.addEventListener('pageshow',()=>setTimeout(hydrate,0));
-  }
-
+  function hydrate(){if(!render())return;if(!ADMIN_VIEWS.has(requestedView)&&typeof window.loadPortalHome==='function'){try{window.loadPortalHome()}catch(_){}}}
+  function boot(){hydrate();document.addEventListener('ehs:user-ready',()=>setTimeout(hydrate,0));window.addEventListener('pageshow',()=>setTimeout(hydrate,0));if(ADMIN_VIEWS.has(requestedView)){setTimeout(hydrate,60);setTimeout(hydrate,180)}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
