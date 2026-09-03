@@ -23,37 +23,6 @@
           <span class="important-date" id="homeImportantDate"></span>
         </div>
 
-        <section class="home-v3-section home-v3-actions" aria-labelledby="homeActionTitle">
-          <div class="home-v3-section-head">
-            <div>
-              <h2 id="homeActionTitle">해야 할 일</h2>
-              <p>지금 확인해야 할 주요 업무로 바로 이동합니다.</p>
-            </div>
-          </div>
-          <div class="home-action-grid">
-            <button class="home-action-card" type="button" onclick="openPortalService('ipass')">
-              <span class="home-action-index">01</span>
-              <span class="home-action-copy"><strong>평가자료 확인</strong><small>i-PaSS 제출 현황과 평가자료를 확인합니다.</small></span>
-              <span class="home-action-arrow">›</span>
-            </button>
-            <button class="home-action-card" type="button" onclick="location.href='/committee.html'">
-              <span class="home-action-index">02</span>
-              <span class="home-action-copy"><strong>협의체 확인</strong><small>협의체 일정과 관련 자료를 확인합니다.</small></span>
-              <span class="home-action-arrow">›</span>
-            </button>
-            <button class="home-action-card" type="button" onclick="location.href='/education.html'">
-              <span class="home-action-index">03</span>
-              <span class="home-action-copy"><strong>교육자료 확인</strong><small>교육 제출과 진행 현황을 확인합니다.</small></span>
-              <span class="home-action-arrow">›</span>
-            </button>
-            <button class="home-action-card home-admin-option hidden" type="button" onclick="navigatePage('dashboard')">
-              <span class="home-action-index">04</span>
-              <span class="home-action-copy"><strong>관리자 현황</strong><small>평가대상과 진행상태를 한 번에 확인합니다.</small></span>
-              <span class="home-action-arrow">›</span>
-            </button>
-          </div>
-        </section>
-
         <section class="home-v3-section" aria-labelledby="homeIpassTitle">
           <div class="home-v3-section-head">
             <div>
