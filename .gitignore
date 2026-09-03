@@ -1,3 +1,6 @@
 node_modules/
 .wrangler/
 public/vendor/attachment-preview/
+playwright-report/
+test-results/
+blob-report/
