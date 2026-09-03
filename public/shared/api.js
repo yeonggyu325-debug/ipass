@@ -17,70 +17,29 @@
 
   async function networkRequest(path,options={},retry=true){const url=/^https?:\/\//.test(path)?path:ORIGIN+path;const {timeoutMs,ehsNoCache,ehsCacheTtl,...fetchOptions}=options;const headers=new Headers(options.headers||{});headers.set('Accept',headers.get('Accept')||'application/json');const body=options.body;const isForm=typeof FormData!=='undefined'&&body instanceof FormData;if(body&&!isForm&&!headers.has('content-type'))headers.set('content-type','application/json');if(global.EHSAuth&&isTrustedApiUrl(url)){const session=global.EHSAuth.readSession();if(session){try{headers.set('Authorization','Bearer '+await global.EHSAuth.token())}catch(error){authFailed(error);throw error}}}let response;try{response=await timedFetch(url,{...fetchOptions,headers},timeoutMs||(isForm?60000:DEFAULT_TIMEOUT_MS))}catch(error){if(error?.code==='REQUEST_TIMEOUT')throw error;throw makeError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',0,'NETWORK_ERROR',null,{cause:error})}const data=await parse(response);const requestId=response.headers.get('x-request-id')||data.request_id||null;if(response.status===401&&retry&&global.EHSAuth?.readSession()){try{await global.EHSAuth.refresh();return networkRequest(path,options,false)}catch(refreshError){authFailed(refreshError);throw refreshError}}if(!response.ok){const message=data.error||data.message||`요청 처리 중 오류가 발생했습니다. (HTTP ${response.status})`;const error=makeError(message,response.status,data.code||data.error_code,requestId,data);authFailed(error);throw error}return data}
 
-  function cacheTtl(url){
-    let u;try{u=new URL(url,location.href)}catch{return 0}
-    if(u.origin!==API_ORIGIN)return 0;
-    const p=u.pathname;
-    if(p==='/api/me')return 60000;
-    if(p==='/api/admin/dashboard-bundle'||p==='/api/my/evaluations'||p==='/api/annual-ipass')return 30000;
-    if(p==='/api/committee'||p==='/api/education'||p==='/api/voc')return 25000;
-    if(p==='/api/content/notices'||p==='/api/content/resources')return 30000;
-    return 0;
-  }
-  function cacheKey(url){return CACHE_PREFIX+(sessionUid()||'anon')+':'+new URL(url,location.href).pathname+new URL(url,location.href).search}
-  function readCache(url,ttl){
-    if(!ttl)return null;const key=cacheKey(url),now=Date.now();
-    const mem=memoryCache.get(key);if(mem&&now-mem.ts<=ttl)return mem.data;
-    try{const raw=sessionStorage.getItem(key);if(!raw)return null;const saved=JSON.parse(raw);if(!saved||now-Number(saved.ts||0)>ttl){sessionStorage.removeItem(key);return null}memoryCache.set(key,saved);return saved.data}catch{return null}
-  }
-  function writeCache(url,data){
-    const ttl=cacheTtl(url);if(!ttl)return;const key=cacheKey(url),saved={ts:Date.now(),data};memoryCache.set(key,saved);
-    try{const raw=JSON.stringify(saved);if(raw.length<=MAX_CACHE_CHARS)sessionStorage.setItem(key,raw)}catch(_){}
-  }
-  function clearResponseCache(){
-    memoryCache.clear();inflight.clear();
-    try{for(let i=sessionStorage.length-1;i>=0;i--){const key=sessionStorage.key(i);if(key?.startsWith(CACHE_PREFIX))sessionStorage.removeItem(key)}}catch(_){}
-  }
-  function emitUser(data){
-    if(data?.auth_state!=='approved'||!data.user)return;
-    global.__EHS_PAGE_USER=data.user;
-    try{document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:data.user}))}catch(_){}
-  }
-  async function request(path,options={},retry=true){
-    const url=/^https?:\/\//.test(path)?path:ORIGIN+path;
-    const method=String(options.method||'GET').toUpperCase();
-    const ttl=Number(options.ehsCacheTtl??cacheTtl(url));
-    const useCache=method==='GET'&&!options.ehsNoCache&&ttl>0&&isTrustedApiUrl(url);
-    if(useCache){const cached=readCache(url,ttl);if(cached){if(new URL(url,location.href).pathname==='/api/me')emitUser(cached);return cached}}
-    const key=useCache?`${method}:${cacheKey(url)}`:null;
-    if(key&&inflight.has(key))return inflight.get(key);
-    const run=networkRequest(path,options,retry).then(data=>{if(method==='GET'){if(useCache)writeCache(url,data);if(new URL(url,location.href).pathname==='/api/me')emitUser(data)}else clearResponseCache();return data}).finally(()=>{if(key)inflight.delete(key)});
-    if(key)inflight.set(key,run);
-    return run;
-  }
-  function prefetch(path,options={}){const url=/^https?:\/\//.test(path)?path:ORIGIN+path;if(!cacheTtl(url)||!global.EHSAuth?.readSession?.())return Promise.resolve(null);return networkRequest(path,{...options,ehsNoCache:true}).then(data=>{writeCache(url,data);if(new URL(url,location.href).pathname==='/api/me')emitUser(data);return data}).catch(()=>null)}
+  function cacheTtl(url){let u;try{u=new URL(url,location.href)}catch{return 0}if(u.origin!==API_ORIGIN)return 0;const p=u.pathname;if(p==='/api/me')return 60000;if(p==='/api/admin/dashboard-bundle'||p==='/api/my/evaluations'||p==='/api/annual-ipass')return 30000;if(p==='/api/committee'||p==='/api/education'||p==='/api/voc')return 25000;if(p==='/api/content/notices'||p==='/api/content/resources')return 30000;return 0}
+  function cacheKey(url){const u=new URL(url,location.href);return CACHE_PREFIX+(sessionUid()||'anon')+':'+u.pathname+u.search}
+  function readCache(url,ttl){if(!ttl)return null;const key=cacheKey(url),now=Date.now();const mem=memoryCache.get(key);if(mem&&now-mem.ts<=ttl)return mem.data;try{const raw=sessionStorage.getItem(key);if(!raw)return null;const saved=JSON.parse(raw);if(!saved||now-Number(saved.ts||0)>ttl){sessionStorage.removeItem(key);return null}memoryCache.set(key,saved);return saved.data}catch{return null}}
+  function writeCache(url,data){const ttl=cacheTtl(url);if(!ttl)return;const key=cacheKey(url),saved={ts:Date.now(),data};memoryCache.set(key,saved);try{const raw=JSON.stringify(saved);if(raw.length<=MAX_CACHE_CHARS)sessionStorage.setItem(key,raw)}catch(_){}}
+  function clearResponseCache(){memoryCache.clear();inflight.clear();try{for(let i=sessionStorage.length-1;i>=0;i--){const key=sessionStorage.key(i);if(key?.startsWith(CACHE_PREFIX))sessionStorage.removeItem(key)}}catch(_){}}
+  function emitUser(data){if(data?.auth_state!=='approved'||!data.user)return;global.__EHS_PAGE_USER=data.user;try{document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:data.user}))}catch(_){}}
+  async function request(path,options={},retry=true){const url=/^https?:\/\//.test(path)?path:ORIGIN+path;const method=String(options.method||'GET').toUpperCase();const ttl=Number(options.ehsCacheTtl??cacheTtl(url));const useCache=method==='GET'&&!options.ehsNoCache&&ttl>0&&isTrustedApiUrl(url);if(useCache){const cached=readCache(url,ttl);if(cached){if(new URL(url,location.href).pathname==='/api/me')emitUser(cached);return cached}}const key=useCache?`${method}:${cacheKey(url)}`:null;if(key&&inflight.has(key))return inflight.get(key);const run=networkRequest(path,options,retry).then(data=>{if(method==='GET'){if(useCache)writeCache(url,data);if(new URL(url,location.href).pathname==='/api/me')emitUser(data)}else clearResponseCache();return data}).finally(()=>{if(key)inflight.delete(key)});if(key)inflight.set(key,run);return run}
+  function prefetch(path,options={}){const url=/^https?:\/\//.test(path)?path:ORIGIN+path;if(!cacheTtl(url)||!global.EHSAuth?.readSession?.())return Promise.resolve(null);const ttl=cacheTtl(url),cached=readCache(url,ttl);if(cached)return Promise.resolve(cached);const key=`GET:${cacheKey(url)}`;if(inflight.has(key))return inflight.get(key);const run=networkRequest(path,{...options,ehsNoCache:true}).then(data=>{writeCache(url,data);if(new URL(url,location.href).pathname==='/api/me')emitUser(data);return data}).catch(()=>null).finally(()=>inflight.delete(key));inflight.set(key,run);return run}
+
+  function warmCurrentPage(){if(!global.EHSAuth?.readSession?.())return;const p=location.pathname,year=new Date().getFullYear();if(p==='/committee'||p==='/committee.html')prefetch(`/api/committee?year=${year}`);else if(p==='/education'||p==='/education.html')prefetch(`/api/education?year=${year}`);else if(p==='/voc'||p==='/voc.html')prefetch('/api/voc')}
 
   async function authorizedBlob(path,retry=true){const url=/^https?:\/\//.test(path)?path:ORIGIN+path;const headers=new Headers();if(global.EHSAuth?.readSession()&&isTrustedApiUrl(url)){try{headers.set('Authorization','Bearer '+await global.EHSAuth.token())}catch(error){authFailed(error);throw error}}let response;try{response=await timedFetch(url,{headers},30000)}catch(error){if(error?.code==='REQUEST_TIMEOUT')throw error;throw makeError('파일 서버에 연결할 수 없습니다.',0,'NETWORK_ERROR')}if(response.status===401&&retry&&global.EHSAuth?.readSession()){try{await global.EHSAuth.refresh();return authorizedBlob(path,false)}catch(error){authFailed(error);throw error}}if(!response.ok){const data=await parse(response);const error=makeError(data.error||'파일을 다운로드할 수 없습니다.',response.status,data.code,response.headers.get('x-request-id'),data);authFailed(error);throw error}return response.blob()}
   async function download(path,filename){const blob=await authorizedBlob(path);const objectUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=objectUrl;a.download=filename||'download';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),30000)}
   function describe(error){if(!error)return'알 수 없는 오류입니다.';const suffix=error.requestId?`\n요청 ID: ${error.requestId}`:'';if(error.status===0)return`서버 연결에 실패했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.${suffix}`;if(error.status===401)return`로그인 세션이 만료되었습니다. 다시 로그인해 주세요.${suffix}`;if(error.status===403)return`${error.message||'접근 권한이 없습니다.'}${suffix}`;if(error.status>=500)return`서버 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.${suffix}`;return`${error.message||'요청 처리 중 오류가 발생했습니다.'}${suffix}`}
   global.EHSApi={ORIGIN,request,prefetch,clearCache:clearResponseCache,blob:authorizedBlob,download,describe,makeError};
 
-  if(global.EHSAuth?.readSession?.())request('/api/me').catch(()=>{});
+  if(global.EHSAuth?.readSession?.()){request('/api/me').catch(()=>{});warmCurrentPage()}
 
   if(!document.querySelector('link[data-global-toolbar-v5]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/global-toolbar-v5.css?v=4';link.dataset.globalToolbarV5='true';document.head.appendChild(link)}
   if(!document.querySelector('link[data-portal-shell-v1]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-shell-v1.css?v=1';link.dataset.portalShellV1='true';document.head.appendChild(link)}
-  if(!document.querySelector('script[data-global-toolbar-v5]')){const script=document.createElement('script');script.src='/global-toolbar-v5.js?v=4';script.dataset.globalToolbarV5='true';document.head.appendChild(script)}
+  if(!document.querySelector('script[data-global-toolbar-v5]')){const script=document.createElement('script');script.src='/global-toolbar-v5.js?v=5';script.dataset.globalToolbarV5='true';document.head.appendChild(script)}
   if(location.pathname==='/'||location.pathname==='/index.html'){if(!document.querySelector('script[data-login-home-redirect]')){const script=document.createElement('script');script.src='/login-home-redirect.js?v=2';script.dataset.loginHomeRedirect='true';document.head.appendChild(script)}}
-  if(location.pathname==='/home'){
-    if(!document.querySelector('link[data-portal-home-v3]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-home-v3.css?v=3';link.dataset.portalHomeV3='true';document.head.appendChild(link)}
-    if(!document.querySelector('script[data-portal-home-v3]')){const script=document.createElement('script');script.src='/portal-home-v3.js?v=5';script.dataset.portalHomeV3='true';document.head.appendChild(script)}
-  }
-  if(location.pathname.startsWith('/ipass')){
-    if(!document.querySelector('link[data-ipass-ui-v2]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/ipass-ui-v2.css?v=1';link.dataset.ipassUiV2='true';document.head.appendChild(link)}
-    if(!document.querySelector('script[data-ipass-ui-v2]')){const script=document.createElement('script');script.src='/ipass-ui-v2.js?v=1';script.dataset.ipassUiV2='true';document.head.appendChild(script)}
-  }
-  if(location.pathname==='/evaluation-submit.html'){
-    if(!document.querySelector('link[data-submission-nav-v2]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/evaluation-submit-nav-v2.css?v=1';link.dataset.submissionNavV2='true';document.head.appendChild(link)}
-    if(!document.querySelector('script[data-submission-nav-v2]')){const script=document.createElement('script');script.src='/evaluation-submit-nav-v2.js?v=1';script.dataset.submissionNavV2='true';document.head.appendChild(script)}
-  }
+  if(location.pathname==='/home'){if(!document.querySelector('link[data-portal-home-v3]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/portal-home-v3.css?v=3';link.dataset.portalHomeV3='true';document.head.appendChild(link)}if(!document.querySelector('script[data-portal-home-v3]')){const script=document.createElement('script');script.src='/portal-home-v3.js?v=5';script.dataset.portalHomeV3='true';document.head.appendChild(script)}}
+  if(location.pathname.startsWith('/ipass')){if(!document.querySelector('link[data-ipass-ui-v2]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/ipass-ui-v2.css?v=1';link.dataset.ipassUiV2='true';document.head.appendChild(link)}if(!document.querySelector('script[data-ipass-ui-v2]')){const script=document.createElement('script');script.src='/ipass-ui-v2.js?v=1';script.dataset.ipassUiV2='true';document.head.appendChild(script)}}
+  if(location.pathname==='/evaluation-submit.html'){if(!document.querySelector('link[data-submission-nav-v2]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/evaluation-submit-nav-v2.css?v=1';link.dataset.submissionNavV2='true';document.head.appendChild(link)}if(!document.querySelector('script[data-submission-nav-v2]')){const script=document.createElement('script');script.src='/evaluation-submit-nav-v2.js?v=1';script.dataset.submissionNavV2='true';document.head.appendChild(script)}}
 })(window);
