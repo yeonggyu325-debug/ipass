@@ -9,7 +9,8 @@ const BODY_SCRIPT_PATTERNS = [
   /<script\b[^>]*\bsrc=["']\/portal-home-v3\.js\?[^"']*["'][^>]*><\/script>/gi,
   /<script\b[^>]*\bsrc=["']\/ipass-ui-v2\.js\?[^"']*["'][^>]*><\/script>/gi,
   /<script\b[^>]*\bsrc=["']\/evaluation-submit-enhance\.js\?[^"']*["'][^>]*><\/script>/gi,
-  /<script\b[^>]*\bsrc=["']\/evaluation-submit-nav-v2\.js\?[^"']*["'][^>]*><\/script>/gi
+  /<script\b[^>]*\bsrc=["']\/evaluation-submit-nav-v2\.js\?[^"']*["'][^>]*><\/script>/gi,
+  /<script\b[^>]*\bsrc=["']\/resource-preview-v2\.js\?[^"']*["'][^>]*><\/script>/gi
 ];
 
 export function normalizeInjectedBodyScripts(html) {
@@ -39,17 +40,28 @@ export function normalizeInjectedBodyScripts(html) {
   return output.slice(0, closeBody) + payload + output.slice(closeBody);
 }
 
-async function normalizeHtmlResponse(response) {
+function injectBeforeLast(html, marker, content, closingTag) {
+  if (html.includes(marker)) return html;
+  const index = html.toLowerCase().lastIndexOf(closingTag);
+  if (index < 0) return html + content;
+  return html.slice(0, index) + content + html.slice(index);
+}
+
+function injectResourcePreview(html, path) {
+  if (path !== '/resources') return html;
+  let output = html;
+  output = injectBeforeLast(output, '/resource-preview-v2.css?v=1', '<link rel="stylesheet" href="/resource-preview-v2.css?v=1" data-resource-preview-v2="true">', '</head>');
+  output = injectBeforeLast(output, '/resource-preview-v2.js?v=1', '<script src="/resource-preview-v2.js?v=1" data-resource-preview-v2="true"></script>', '</body>');
+  return output;
+}
+
+async function normalizeHtmlResponse(response, path) {
   const type = response.headers.get('content-type') || '';
   if (!type.includes('text/html')) return response;
 
   const html = await response.text();
-  const normalized = normalizeInjectedBodyScripts(html);
-  if (normalized === html) return new Response(html, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers
-  });
+  let normalized = normalizeInjectedBodyScripts(html);
+  normalized = injectResourcePreview(normalized, path);
 
   const headers = new Headers(response.headers);
   headers.delete('content-length');
@@ -66,6 +78,6 @@ async function normalizeHtmlResponse(response) {
 export default {
   async fetch(request, env, ctx) {
     const response = await worker.fetch(request, env, ctx);
-    return normalizeHtmlResponse(response);
+    return normalizeHtmlResponse(response, new URL(request.url).pathname);
   }
 };
