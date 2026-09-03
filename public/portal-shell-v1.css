@@ -1,0 +1,34 @@
+/* Portal shell spacing + notifications */
+.ehs-notification-wrap{position:relative}
+.ehs-notification-panel{display:none;position:absolute;right:0;top:42px;width:340px;max-height:430px;overflow:hidden;background:#fff;border:1px solid #e3e8eb;border-radius:12px;box-shadow:0 16px 40px rgba(27,44,57,.14);z-index:620}
+.ehs-notification-panel.open{display:block}
+.ehs-notification-head{height:46px;padding:0 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #edf0f2}
+.ehs-notification-head strong{font-size:13px;color:#28353e}
+.ehs-notification-head button{border:0;background:none;color:#4b7798;font-size:10.5px;font-weight:700;cursor:pointer}
+.ehs-notification-list{max-height:382px;overflow:auto}
+.ehs-notification-item{width:100%;padding:12px 13px;border:0;border-bottom:1px solid #f0f2f3;background:#fff;text-align:left;display:flex;flex-direction:column;gap:4px;cursor:pointer}
+.ehs-notification-item:hover{background:#f8fafb}
+.ehs-notification-item.unread{background:#f2f8fb}
+.ehs-notification-item.unread strong:before{content:'';display:inline-block;width:6px;height:6px;margin-right:7px;border-radius:50%;background:#2b75a6;vertical-align:1px}
+.ehs-notification-item strong{font-size:11.5px;color:#32414a;font-weight:760}
+.ehs-notification-item span{font-size:10.5px;color:#697780;line-height:1.45}
+.ehs-notification-item small{font-size:9.5px;color:#9aa4aa}
+.ehs-notification-empty{padding:26px 16px;text-align:center;color:#929da4;font-size:10.5px}
+.ehs-admin-name-setting.hidden{display:none!important}
+
+#app main{width:min(1180px,calc(100% - 36px))!important;margin:0 auto!important;padding:24px 0 54px!important}
+#page-portalHome .home-v3-shell{gap:24px!important}
+#page-portalHome .home-v3-section{margin:0!important}
+#page-portalHome .home-v3-section-head{margin-bottom:12px!important}
+#page-portalHome .home-v3-welcome{margin:0!important}
+#page-portalHome .ipass-score-shell{width:100%;overflow:hidden!important}
+#page-portalHome .ipass-score-top{display:grid!important;grid-template-columns:minmax(210px,.72fr) minmax(0,1.28fr)!important;align-items:stretch!important;gap:16px!important;padding:18px!important}
+#page-portalHome .ipass-formula{min-width:0!important;margin:0!important}
+#page-portalHome .ipass-projection-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;padding:12px 18px!important}
+#page-portalHome .ipass-metric-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:10px!important;padding:0 18px 18px!important;background:#fff!important}
+#page-portalHome .ipass-metric{min-width:0!important;margin:0!important;border:1px solid #e8ecef!important;border-radius:10px!important}
+#page-portalHome .service-panel{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+#page-portalHome .service-tile{margin:0!important;min-height:80px!important}
+#page-portalHome .home-v3-notice-panel{margin:0!important}
+@media(max-width:1050px){#page-portalHome .ipass-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}#page-portalHome .service-panel{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:760px){#app main{width:calc(100% - 22px)!important;padding-top:18px!important}#page-portalHome .home-v3-shell{gap:18px!important}#page-portalHome .ipass-score-top{grid-template-columns:1fr!important;padding:14px!important}#page-portalHome .ipass-projection-grid,#page-portalHome .ipass-metric-grid{grid-template-columns:1fr!important;padding:10px 14px 14px!important}#page-portalHome .service-panel{grid-template-columns:1fr!important;gap:8px!important}.ehs-notification-panel{position:fixed;left:12px;right:12px;top:58px;width:auto;max-height:calc(100vh - 76px)}}
