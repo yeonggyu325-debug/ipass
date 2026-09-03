@@ -16,7 +16,7 @@
     "test:storage": "node scripts/test-storage-admin.mjs",
     "migrate:local": "wrangler d1 migrations apply partner-evaluation-db --local",
     "migrate:remote": "wrangler d1 migrations apply partner-evaluation-db --remote",
-    "deploy": "npm run verify:education && npm run verify:voc && npm run test:voc-api && npm run verify:content && npm run test:content-api && npm run verify:preview && npm run verify:navigation && npm run verify:submission && npm run test:storage && npm run prepare:preview && npm run migrate:remote && wrangler deploy"
+    "deploy": "npm run verify:education && npm run verify:voc && npm run test:voc-api && npm run verify:content && npm run test:content-api && npm run verify:preview && npm run verify:navigation && npm run verify:submission && npm run test:storage && npm run prepare:preview && wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.123.0"
