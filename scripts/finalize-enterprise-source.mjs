@@ -27,6 +27,19 @@ await patch('src/index.js',source=>{
   return source;
 });
 
+await patch('src/partner-submission-quota.js',source=>{
+  source=source.replace(
+    'id,recipient_user_id,recipient_account_id,title,message,type,is_read,entity_type,entity_id,dedupe_key,created_at,updated_at',
+    'id,recipient_user_id,recipient_account_id,title,message,type,is_read,entity_type,entity_id,dedupe_key,created_at'
+  );
+  source=source.replace(
+    "SELECT lower(hex(randomblob(16))),pa.id,pa.id,?,?,?,0,'evaluation_target',?,?||':'||pa.id,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP",
+    "SELECT lower(hex(randomblob(16))),COALESCE((SELECT u.id FROM users u WHERE LOWER(u.email)=LOWER(pa.email) LIMIT 1),(SELECT u.id FROM users u WHERE u.role='admin' LIMIT 1),pa.id),pa.id,?,?,?,0,'evaluation_target',?,?||':'||pa.id,CURRENT_TIMESTAMP"
+  );
+  if(source.includes('dedupe_key,created_at,updated_at'))throw new Error('notification write still requires unknown updated_at column');
+  return source;
+});
+
 await patch('public/shared/api.js',source=>{
   source=source.replace(
     "const ORIGIN=location.hostname==='ipass.i-pass-eval.workers.dev'?'':'https://ipass.i-pass-eval.workers.dev';",
@@ -71,4 +84,4 @@ await patch('scripts/verify-system-stabilization.mjs',source=>{
   return source;
 });
 
-console.log(JSON.stringify({success:true,cors_normalized:true,canonical_notification_queries:true,local_sheetjs:true,same_origin_local_runtime:true}));
+console.log(JSON.stringify({success:true,cors_normalized:true,canonical_notification_queries:true,notification_writes_compatible:true,local_sheetjs:true,same_origin_local_runtime:true}));
