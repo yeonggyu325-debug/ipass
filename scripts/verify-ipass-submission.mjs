@@ -1,19 +1,18 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [client, submitPage, api, sharedApi, auth, migration, redesign, progress, common, ipass, runtime, worker] = await Promise.all([
+const [client, submitPage, api, sharedApi, auth, migration, submitCss, common, ipass, runtime, worker] = await Promise.all([
   readFile(new URL('../public/evaluation-submit-enhance.js', import.meta.url), 'utf8'),
   readFile(new URL('../public/evaluation-submit.html', import.meta.url), 'utf8'),
   readFile(new URL('../src/partner-submission.js', import.meta.url), 'utf8'),
   readFile(new URL('../public/shared/api.js', import.meta.url), 'utf8'),
   readFile(new URL('../public/shared/auth.js', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0011_submission_requests.sql', import.meta.url), 'utf8'),
-  readFile(new URL('../public/evaluation-submit-redesign.css', import.meta.url), 'utf8'),
-  readFile(new URL('../public/evaluation-submit-progress.css', import.meta.url), 'utf8'),
+  readFile(new URL('../public/evaluation-submit.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/ehs-common.js', import.meta.url), 'utf8'),
   readFile(new URL('../public/ipass.html', import.meta.url), 'utf8'),
   readFile(new URL('../src/evaluation-runtime.js', import.meta.url), 'utf8'),
-  readFile(new URL('../src/worker-v20.js', import.meta.url), 'utf8')
+  readFile(new URL('../src/worker.js', import.meta.url), 'utf8')
 ]);
 
 new Function(client);
@@ -38,25 +37,11 @@ assert.ok(ipass.includes('effectiveEvaluationStatus') && ipass.includes('has_sub
 assert.ok(api.includes("postSubmit&&!changed.length") && api.includes("unchanged:true"), '변경 없는 재제출은 빠른 경로를 사용해야 함');
 assert.ok(!api.includes('summaryStatement('), '제출 응답을 위해 전체 작성률을 다시 집계하면 안 됨');
 assert.ok(api.includes("next_url:'/ipass/evaluations?submitted=1'"), '제출 API가 다음 화면을 명시해야 함');
-assert.ok(redesign.includes('background: #fff;') && !redesign.includes('linear-gradient(135deg'), '제출 화면의 색상 띠를 제거해야 함');
-assert.match(redesign, /\.progressbar\s*\{[\s\S]*?height:\s*6px;/, '작성률 퍼센트 막대가 보여야 함');
-assert.ok(progress.includes('submit-progress-ring') && progress.includes('@keyframes submit-ring-spin') && !progress.includes('submit-progress-track'), '제출 중에는 화면 전환형 원형 진행률을 표시해야 함');
+assert.ok(submitCss.includes('background:#fff') && !submitCss.includes('linear-gradient(135deg'), '제출 화면의 장식성 색상 띠를 제거해야 함');
+assert.match(submitCss, /\.progressbar\{[\s\S]*?height:6px/, '작성률 퍼센트 막대가 보여야 함');
+assert.ok(submitCss.includes('submit-progress-ring') && submitCss.includes('@keyframes submit-ring-spin'), '제출 중에는 화면 전환형 원형 진행률을 표시해야 함');
 assert.ok(common.includes("if(path!=='/evaluation-submit.html')"), '제출 화면에서 공통 반복 DOM 스캔을 중지해야 함');
 assert.ok(ipass.includes('submissionReturnNotice') && !ipass.includes('처리시간') && ipass.includes('route-notice'), '제출 후 완료 피드백에서 처리시간을 표시하면 안 됨');
-assert.ok(worker.includes('evaluation-submit-enhance.js?v=16') && worker.includes('evaluation-submit-progress.css?v=6') && worker.includes('/shared/auth.js?v=4') && worker.includes('/shared/api.js?v=4'), '새 제출·인증 자산의 캐시 버전이 필요');
+assert.ok(worker.includes('evaluation-submit.css?v=1') && worker.includes('evaluation-submit-enhance.js?v=16') && worker.includes('/shared/auth.js?v=4') && worker.includes('/shared/api.js?v=6'), '통합 제출·인증 자산의 캐시 버전이 필요');
 
-console.log(JSON.stringify({
-  success: true,
-  immediate_redirect: true,
-  duplicate_submit_guard: true,
-  unchanged_resubmit_fast_path: true,
-  repeated_dom_polling: false,
-  elapsed_time_visible: false,
-  exact_stage_progress: true,
-  request_timeout: true,
-  idempotent_retry: true,
-  neutral_submit_confirmation: true,
-  submission_history_verified: true,
-  idle_confirmation_isolated: true,
-  circular_submission_progress: true
-}));
+console.log(JSON.stringify({success:true,immediate_redirect:true,duplicate_submit_guard:true,unchanged_resubmit_fast_path:true,repeated_dom_polling:false,elapsed_time_visible:false,exact_stage_progress:true,request_timeout:true,idempotent_retry:true,neutral_submit_confirmation:true,submission_history_verified:true,idle_confirmation_isolated:true,circular_submission_progress:true,consolidated_submission_css:true}));
