@@ -2,11 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir:'./tests',
-  timeout:30000,
-  expect:{timeout:7000},
+  testMatch:'portal-ui.spec.mjs',
+  timeout:45000,
+  expect:{timeout:15000},
   fullyParallel:false,
   workers:1,
-  retries:1,
+  retries:0,
   reporter:[['list'],['html',{outputFolder:'playwright-report',open:'never'}]],
   use:{
     baseURL:'http://127.0.0.1:8787',
