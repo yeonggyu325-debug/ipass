@@ -1,3 +1,5 @@
+import { handleFastEducationOverview } from './education-overview-fast.js';
+
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=utf-8'}})}
 
 async function currentUser(request,env,ctx,baseWorker){
@@ -21,6 +23,7 @@ function normalizeNotification(row){
 }
 
 export async function handlePortalShellApi(request,env,ctx,baseWorker){
+  const fastEducation=await handleFastEducationOverview(request,env,ctx,baseWorker);if(fastEducation)return fastEducation;
   const url=new URL(request.url),path=url.pathname;
   if(path!=='/api/notifications'&&path!=='/api/profile/display-name')return null;
   const auth=await currentUser(request,env,ctx,baseWorker);if(!auth.ok)return auth.response;
