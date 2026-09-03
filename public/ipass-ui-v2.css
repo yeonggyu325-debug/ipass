@@ -1,0 +1,150 @@
+/* i-PaSS navigation and visual system v2
+   Pattern: desktop LNB + mobile dropdown, flat surfaces, restrained corporate blue. */
+:root{
+  --blue:#2b6f9f;
+  --blue2:#225d86;
+  --blue-bg:#eef5f9;
+  --ink:#22313b;
+  --text:#55656f;
+  --muted:#87949d;
+  --line:#e3e8ec;
+  --page:#f6f8fa;
+  --card:#fff;
+  --green:#28745a;
+  --greenbg:#edf7f2;
+  --orange:#9b681f;
+  --orangebg:#fff6e9;
+  --red:#b24f49;
+  --redbg:#fff0ef;
+  --shadow:none;
+}
+
+html,body{background:var(--page)!important;color:var(--ink)}
+body *{background-image:none!important}
+.header{height:64px;border-bottom-color:var(--line);box-shadow:none}
+.header-inner{width:min(1280px,calc(100% - 40px));gap:18px}
+.brand img{height:28px}
+.brand-chip{background:var(--blue-bg);color:var(--blue);border-radius:6px}
+.header-btn{height:36px;border-color:var(--line);border-radius:8px;color:#5b6b75}
+.header-btn:hover{background:#f7f9fa}
+
+.shell{
+  width:min(1280px,calc(100% - 40px));
+  margin:0 auto;
+  padding:24px 0 56px;
+  display:grid;
+  grid-template-columns:224px minmax(0,1fr);
+  grid-template-rows:auto 1fr;
+  column-gap:24px;
+  align-items:start;
+}
+.hero{display:contents}
+.hero>div:first-child{grid-column:2;grid-row:1;margin:0 0 16px;min-width:0}
+.hero h1{font-size:27px;color:var(--ink)}
+.hero p{color:var(--muted);font-size:11px}
+.layout{grid-column:2;grid-row:2;min-width:0;display:block}
+
+.ipass-breadcrumb{
+  display:flex;align-items:center;gap:6px;margin:0 0 9px;
+  color:#98a2aa;font-size:9.5px;white-space:nowrap;overflow:hidden;
+}
+.ipass-breadcrumb a{color:#7c8b95;text-decoration:none}
+.ipass-breadcrumb a:hover{color:var(--blue)}
+.ipass-breadcrumb strong{color:#667680;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+
+.workspace-nav{
+  grid-column:1;
+  grid-row:1 / span 2;
+  align-self:start;
+  position:sticky;
+  top:88px;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:2px;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:none;
+}
+.workspace-nav::before{
+  content:'i-PaSS';
+  display:block;
+  padding:5px 9px 10px;
+  color:#76858f;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+.nav-btn{
+  position:relative;
+  width:100%;
+  min-width:0;
+  height:42px;
+  justify-content:flex-start;
+  padding:0 11px 0 13px;
+  border:0;
+  border-radius:8px;
+  background:#fff;
+  color:#5b6c76;
+  font-size:11.5px;
+  font-weight:680;
+  text-align:left;
+}
+.nav-btn:hover{background:#f7f9fa;color:#345f7d}
+.nav-btn.active{background:var(--blue-bg);color:var(--blue);font-weight:760}
+.nav-btn.active::before{
+  content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:999px;background:var(--blue)
+}
+
+.ipass-mobile-nav{display:none;margin:0 0 14px}
+.ipass-mobile-nav label{display:block;margin-bottom:6px;color:#77858e;font-size:10px;font-weight:760}
+.ipass-mobile-nav select{
+  width:100%;height:44px;padding:0 38px 0 12px;border:1px solid var(--line);border-radius:9px;
+  background:#fff;color:#334651;font-size:12px;font-weight:700;outline:none
+}
+.ipass-mobile-nav select:focus{border-color:#8eb4ce;box-shadow:0 0 0 3px rgba(43,111,159,.08)}
+
+.panel,.partner-overview-card,.iframe-wrap,.kpi,.quick{
+  border-color:var(--line)!important;
+  box-shadow:none!important;
+}
+.panel,.iframe-wrap{border-radius:11px}
+.partner-overview-card{border:1px solid var(--line)!important;border-radius:11px}
+.kpi{border-radius:10px;padding:15px}
+.kpi:before{height:2px;background:#dbe5ea}
+.quick{border-radius:10px;min-height:104px}
+.quick:hover{transform:none;box-shadow:none;background:#fbfcfd;border-color:#cfd9df}
+.quick em,.partner-history-link{color:var(--blue)}
+.score-grade,.status.blue{background:var(--blue-bg);color:var(--blue)}
+.formula,.partner-score-component{background:#f7f9fa}
+th{background:#f5f7f9;color:#637681}
+.eval-row:hover td{background:#fafbfc}
+
+.btn.primary,.header-btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover,.header-btn.primary:hover{background:var(--blue2);border-color:var(--blue2)}
+
+@media(max-width:900px){
+  .header-inner{width:calc(100% - 28px)}
+  .shell{display:block;width:calc(100% - 28px);padding-top:18px}
+  .hero{display:block;margin-bottom:0}
+  .hero>div:first-child{margin-bottom:12px}
+  .workspace-nav{display:none!important}
+  .ipass-mobile-nav{display:block}
+  .layout{display:block}
+  .partner-overview{grid-template-columns:1fr}
+}
+
+@media(max-width:640px){
+  .header-inner,.shell{width:calc(100% - 22px)}
+  .shell{padding-bottom:40px}
+  .hero h1{font-size:23px}
+  .brand-title{display:none}
+  .user{display:none}
+  .kpis{grid-template-columns:1fr 1fr;gap:8px}
+  .quick-grid{grid-template-columns:1fr}
+  .partner-score-summary{align-items:stretch;flex-direction:column}
+  .partner-score-components{grid-template-columns:1fr 1fr}
+}
