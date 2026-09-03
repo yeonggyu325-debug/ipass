@@ -31,18 +31,45 @@ jobs:
         with:
           node-version: 22
 
+      - name: Repair generated PDF patch literals
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/apply-enterprise-patches.mjs')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              "canvas.style.width=\\`${Math.floor(viewport.width/ratio)}px\\`;": "canvas.style.width=Math.floor(viewport.width/ratio)+'px';",
+              "canvas.style.height=\\`${Math.floor(viewport.height/ratio)}px\\`;": "canvas.style.height=Math.floor(viewport.height/ratio)+'px';",
+              "counter.textContent=\\`${pageNumber} / ${pdfDocument.numPages}\\`;": "counter.textContent=pageNumber+' / '+pdfDocument.numPages;",
+              "zoomCounter.textContent=\\`${Math.round(scale*100)}%\\`;": "zoomCounter.textContent=Math.round(scale*100)+'%';",
+          }
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8')
+          PY
+
       - name: Apply deterministic source transformations
         run: node scripts/apply-enterprise-patches.mjs
 
       - name: Commit transformed sources
         shell: bash
         run: |
-          if git diff --quiet; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/partner-submission.js \
+            public/evaluation-submit-enhance.js \
+            src/worker.js \
+            src/evaluation-management.js \
+            public/ipass.html \
+            src/evaluation-scoring.js \
+            public/evaluation-scoring.html \
+            public/attachment-preview.js \
+            public/ehs-common.js
+          if git diff --cached --quiet; then
             echo "No source changes to commit."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/partner-submission.js public/evaluation-submit-enhance.js
-          git commit -m "feat: integrate edit leases and deterministic applicability"
+          git commit -m "feat: complete enterprise i-PaSS stabilization"
           git push origin HEAD:stabilize/enterprise-v3
