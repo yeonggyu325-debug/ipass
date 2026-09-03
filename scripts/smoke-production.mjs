@@ -37,7 +37,7 @@ async function request(path, options = {}) {
 }
 
 function sameOriginAsset(value) {
-  if (!value || value.startsWith('data:') || value.startsWith('blob:') || value.startsWith('#')) return null;
+  if (!value || value.includes('${') || value.startsWith('data:') || value.startsWith('blob:') || value.startsWith('#')) return null;
   const url = new URL(value, ORIGIN);
   if (url.origin !== new URL(ORIGIN).origin) return null;
   return url.pathname + url.search;
@@ -59,10 +59,11 @@ async function checkHtml(path) {
   const body = await response.text();
   assert.ok(!body.includes('서비스 처리 중 오류가 발생했습니다.'), `${path}: worker error body detected`);
   assert.ok(!body.includes('worker-v17.js') && !body.includes('worker-v18.js') && !body.includes('worker-v19.js') && !body.includes('worker-v20.js') && !body.includes('worker-v21.js'), `${path}: legacy worker reference detected`);
+  const markup = body.replace(/<script\b(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/gi, '');
   const refs = [
-    ...body.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi),
-    ...body.matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi),
-    ...body.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)
+    ...markup.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi),
+    ...markup.matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi),
+    ...markup.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)
   ].map(match => sameOriginAsset(match[1])).filter(Boolean);
   for (const ref of refs) await checkAsset(ref);
   results.push({ type: 'html', path, status: response.status, assets: refs.length });
