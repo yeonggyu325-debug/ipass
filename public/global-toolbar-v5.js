@@ -21,8 +21,8 @@
     if(href==='/committee')calls=[`/api/committee?year=${year}`];
     else if(href==='/education')calls=[`/api/education?year=${year}`];
     else if(href==='/voc')calls=['/api/voc'];
-    else if(href==='/notices')calls=[`/api/content/notices${admin?'?include_inactive=1':''}`];
-    else if(href==='/resources')calls=[`/api/content/resources${admin?'?include_inactive=1':''}`];
+    else if(href==='/notices')calls=[`/api/content/notices?q=${admin?'&include_inactive=1':''}`];
+    else if(href==='/resources')calls=[`/api/content/resources?q=&category=${admin?'&include_inactive=1':''}`];
     else if(href==='/ipass')calls=admin?['/api/admin/dashboard-bundle']:[`/api/annual-ipass?year=${year}`,'/api/my/evaluations'];
     for(const call of calls)window.EHSApi.prefetch(call);
   }
