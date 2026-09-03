@@ -1,13 +1,12 @@
 (function(){
   'use strict';
-  const IS_HOME=location.pathname==='/home';
-  let rebuilding=false;
+  if(location.pathname!=='/home')return;
 
   function shellMarkup(){
     return `<div class="home-v3-shell">
       <section class="home-v3-welcome" aria-labelledby="homeV3Title"><div class="home-v3-welcome-copy"><div class="home-eyebrow">EHS WORKSPACE</div><h1 id="homeV3Title">안녕하세요, <span id="homeUserName">사용자</span>님</h1><div class="home-greeting" id="portalWelcome"></div></div><div class="home-date" id="homeDate"></div></section>
-      <div class="important-banner" id="homeImportantBanner" onclick="openPortalService('notices')"><span class="important-badge">중요공지</span><span class="important-title" id="homeImportantTitle"></span><span class="important-date" id="homeImportantDate"></span></div>
-      <section class="home-v3-section home-v3-ipass" aria-labelledby="homeIpassTitle"><div class="home-v3-section-head"><div><h2 id="homeIpassTitle">i-PaSS 현황</h2><p>연간 안전보건 종합점수와 평가 진행상태입니다.</p></div><button class="home-v3-text-link" type="button" onclick="openPortalService('ipass')">평가 상세 ›</button></div><div id="portalIpassOverview" class="ipass-score-shell"><div class="loading">i-PaSS 점수를 불러오는 중...</div></div></section>
+      <div class="important-banner" id="homeImportantBanner" onclick="location.href='/notices'"><span class="important-badge">중요공지</span><span class="important-title" id="homeImportantTitle"></span><span class="important-date" id="homeImportantDate"></span></div>
+      <section class="home-v3-section home-v3-ipass" aria-labelledby="homeIpassTitle"><div class="home-v3-section-head"><div><h2 id="homeIpassTitle">i-PaSS 현황</h2><p>연간 안전보건 종합점수와 평가 진행상태입니다.</p></div><button class="home-v3-text-link" type="button" onclick="location.href='/ipass'">평가 상세 ›</button></div><div id="portalIpassOverview" class="ipass-score-shell"><div class="loading">i-PaSS 점수를 불러오는 중...</div></div></section>
       <section class="home-v3-section" aria-labelledby="homeServiceTitle"><div class="home-v3-section-head"><div><h2 id="homeServiceTitle">업무메뉴</h2><p>자주 사용하는 EHS 업무를 빠르게 실행합니다.</p></div></div><div class="service-panel">
         <button class="service-tile" type="button" onclick="location.href='/notices'"><span class="service-icon"><svg viewBox="0 0 24 24"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span><span class="service-text"><strong>공지사항</strong><span>주요 안내 및 공지</span></span></button>
         <button class="service-tile" type="button" onclick="location.href='/committee'"><span class="service-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 3v4M16 3v4M7 11h10M7 15h6"/></svg></span><span class="service-text"><strong>안전보건협의체</strong><span>회의 일정 및 참석 현황</span></span></button>
@@ -21,46 +20,45 @@
     </div>`;
   }
 
-  function applyIdentity(){
-    const user=window.__EHS_PAGE_USER;if(!user)return;
+  function identity(){
+    const user=window.__EHS_PAGE_USER||null;
+    if(!user)return null;
     const isAdmin=user.role==='admin';
-    let base=String(user.name||'').trim();if(!base||base.includes('@'))base=isAdmin?'관리자':'사용자';
-    const company=isAdmin?'에이치앤이루자':(user.company_name||'협력사');
-    const name=document.getElementById('homeUserName'),title=document.getElementById('homeV3Title'),welcome=document.getElementById('portalWelcome');
-    if(name)name.textContent=base;
-    if(title&&isAdmin)title.textContent=`${base}님 안녕하세요`;
-    if(welcome)welcome.textContent=isAdmin?'에이치앤이루자 EHS 업무를 한 화면에서 확인하세요.':`${company}의 EHS 업무를 한 화면에서 확인하세요.`;
+    let base=String(user.name||'').trim();
+    if(!base||base.includes('@'))base=isAdmin?'관리자':'사용자';
+    return {isAdmin,base,company:isAdmin?'에이치앤이루자':(user.company_name||'협력사')};
   }
 
-  function buildPortalHome(force=false){
-    const page=document.getElementById('page-portalHome');if(!page||rebuilding)return false;
-    const mounted=!!page.querySelector(':scope > .home-v3-shell');
-    if(mounted&&!force){page.dataset.homeV3='1';page.dataset.homeV3Ready='1';applyIdentity();return true}
-    rebuilding=true;
-    page.innerHTML=shellMarkup();
-    page.dataset.homeV3='1';page.dataset.homeV3Ready='1';
+  function applyIdentity(){
+    const value=identity();if(!value)return;
+    const name=document.getElementById('homeUserName'),title=document.getElementById('homeV3Title'),welcome=document.getElementById('portalWelcome');
+    if(name)name.textContent=value.base;
+    if(title)title.textContent=value.isAdmin?`${value.base}님 안녕하세요`:`안녕하세요, ${value.base}님`;
+    if(welcome)welcome.textContent=value.isAdmin?'에이치앤이루자 EHS 업무를 한 화면에서 확인하세요.':`${value.company}의 EHS 업무를 한 화면에서 확인하세요.`;
+  }
+
+  function render(){
+    const page=document.getElementById('page-portalHome');
+    if(!page)return false;
+    if(!page.querySelector('.home-v3-shell'))page.innerHTML=shellMarkup();
+    page.dataset.homeV3='1';
+    document.querySelectorAll('#app .page').forEach(el=>el.classList.toggle('active',el===page));
     applyIdentity();
-    rebuilding=false;
-    if(typeof window.loadPortalHome==='function')setTimeout(()=>window.loadPortalHome(),0);
     return true;
   }
 
-  function lockCanonicalHome(){
-    if(!IS_HOME)return;
-    const page=document.getElementById('page-portalHome');if(!page)return;
-    const observer=new MutationObserver(()=>{if(!rebuilding&&!page.querySelector(':scope > .home-v3-shell'))buildPortalHome(true)});
-    observer.observe(page,{childList:true,subtree:false});
-    let tries=0;
-    const timer=setInterval(()=>{
-      if(typeof window.navigatePage==='function'&&!window.navigatePage.__canonicalHome){
-        const original=window.navigatePage;
-        const wrapped=function(name){if(name==='portalHome'){location.href='/home';return}return original.apply(this,arguments)};
-        wrapped.__canonicalHome=true;window.navigatePage=wrapped;clearInterval(timer);
-      }else if(++tries>40)clearInterval(timer);
-    },100);
-    window.addEventListener('pageshow',()=>buildPortalHome(false));
+  function hydrate(){
+    if(!render())return;
+    if(typeof window.loadPortalHome==='function'){
+      try{window.loadPortalHome()}catch(_){}
+    }
   }
 
-  function boot(){buildPortalHome(false);lockCanonicalHome();document.addEventListener('ehs:user-ready',()=>{applyIdentity();buildPortalHome(false)})}
+  function boot(){
+    hydrate();
+    document.addEventListener('ehs:user-ready',()=>setTimeout(hydrate,0));
+    window.addEventListener('pageshow',()=>setTimeout(hydrate,0));
+  }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
