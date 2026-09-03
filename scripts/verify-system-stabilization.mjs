@@ -1,53 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { readPageBundle } from './page-bundle.mjs';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
-const [worker,auth,api,common,toolbar,systemApi,systemPage,migration,workflow,packageJson,ipass,cycleFast,applicability,scoring,submission,preview]=await Promise.all([
-  read('src/worker.js'),read('public/shared/auth.js'),read('public/shared/api.js'),read('public/ehs-common.js'),
-  read('public/global-toolbar-v5.js'),read('src/system-admin.js'),read('public/admin-system.html'),
-  read('migrations/0013_enterprise_stabilization.sql'),read('.github/workflows/cloudflare-deploy.yml'),
-  read('package.json'),read('public/ipass.html'),read('src/evaluation-cycle-fast.js'),read('src/applicability-engine.js'),
-  read('src/evaluation-scoring.js'),read('src/partner-submission-quota.js'),read('public/attachment-preview.js')
+const [ipassBundle,systemBundle]=await Promise.all([readPageBundle('public/ipass.html'),readPageBundle('public/admin-system.html')]);
+const [worker,auth,api,common,toolbar,systemApi,migration,workflow,packageJson,cycleFast,applicability,scoring,submission,preview]=await Promise.all([
+  read('src/worker.js'),read('public/shared/auth.js'),read('public/shared/api.js'),read('public/ehs-common.js'),read('public/global-toolbar-v5.js'),
+  read('src/system-admin.js'),read('migrations/0013_enterprise_stabilization.sql'),read('.github/workflows/cloudflare-deploy.yml'),read('package.json'),
+  read('src/evaluation-cycle-fast.js'),read('src/applicability-engine.js'),read('src/evaluation-scoring.js'),read('src/partner-submission-quota.js'),read('public/attachment-preview.js')
 ]);
-
-assert.ok(!auth.includes('portal-home-refresh.css'),'removed home refresh asset must not be requested');
-assert.ok(!common.includes('setInterval('),'common runtime must not poll the DOM');
-assert.ok(common.includes('MutationObserver')&&common.includes('setTimeout(()=>'),'skeletons must be delayed and event driven');
-assert.ok(common.includes('installDialogAccessibility'),'dialog focus management missing');
-assert.ok(api.includes('ehs.api.v3:')&&api.includes('function invalidate('),'tagged cache generation missing');
-assert.ok(api.includes("state:'stale'")&&api.includes('ehs:api-revalidated'),'stale-while-revalidate behavior missing');
-assert.ok(worker.includes('injectBeforeLast')&&!worker.includes('worker-entry.js'),'worker injection must be consolidated');
-assert.ok(worker.includes("path==='/ipass/templates'")&&worker.includes("path==='/ipass/cycles'"),'first-class i-PaSS admin routes missing');
-assert.ok(!ipass.includes('renderIframe')&&!ipass.includes('<iframe src='),'i-PaSS shell must not render management iframes');
-assert.ok(worker.includes('handleFastCycleStart')&&cycleFast.includes('INSERT OR IGNORE INTO evaluation_target_items_v2'),'set-based cycle materialization missing');
-assert.ok(applicability.includes("status:'undetermined'")&&applicability.includes('industry_code'),'three-state applicability engine missing');
-assert.ok(submission.includes('/edit-lease')&&submission.includes('notifyAdmins'),'edit lease and partner-change notification integration missing');
-assert.ok(scoring.includes('expected_updated_at')&&scoring.includes('summary:scoreSummary'),'optimized concurrent scoring response missing');
-assert.ok(preview.includes('pdfResizeObserver')&&preview.includes('allowExternalViewers'),'high-resolution and sensitive preview controls missing');
-assert.ok(worker.includes('content-security-policy')&&worker.includes('strict-origin-when-cross-origin'),'security response policy missing');
-assert.ok(toolbar.includes('/admin/system')&&systemApi.includes('/api/admin/system/summary')&&systemPage.includes('SYSTEM OPERATIONS'),'system operations center missing');
-assert.ok(migration.includes('recipient_account_id')&&migration.includes('evaluation_edit_leases_v2')&&migration.includes('applicability_status'),'stabilization migration incomplete');
-assert.ok(workflow.includes('npm run migrate:remote')&&workflow.includes('npm run smoke:production'),'production migration/smoke gates missing');
-assert.ok(packageJson.includes('"verify:all"')&&packageJson.includes('"smoke:authenticated"'),'full verification commands missing');
-
-console.log(JSON.stringify({
-  success:true,
-  dead_assets_removed:true,
-  event_driven_runtime:true,
-  tagged_swr_cache:true,
-  consolidated_worker:true,
-  iframe_free_ipass:true,
-  set_based_cycle_start:true,
-  deterministic_applicability:true,
-  edit_leases:true,
-  partner_change_notifications:true,
-  concurrent_partial_scoring:true,
-  high_resolution_preview:true,
-  sensitive_preview_policy:true,
-  dialog_accessibility:true,
-  security_headers:true,
-  canonical_accounts:true,
-  system_operations_center:true,
-  production_migration_gate:true,
-  authenticated_smoke_available:true
-}));
+const ipass=ipassBundle.source,systemPage=systemBundle.source;
+assert.ok(!auth.includes('portal-home-refresh.css'),'removed home refresh asset must not be requested');assert.ok(!common.includes('setInterval('),'common runtime must not poll the DOM');assert.ok(common.includes('MutationObserver')&&common.includes('setTimeout(()=>'),'skeletons must be delayed and event driven');assert.ok(common.includes('installDialogAccessibility'),'dialog focus management missing');assert.ok(api.includes('ehs.api.v3:')&&api.includes('function invalidate('),'tagged cache generation missing');assert.ok(api.includes("state:'stale'")&&api.includes('ehs:api-revalidated'),'stale-while-revalidate behavior missing');assert.ok(worker.includes('injectBeforeLast')&&!worker.includes('worker-entry.js'),'worker injection must be consolidated');assert.ok(worker.includes("path==='/ipass/templates'")&&worker.includes("path==='/ipass/cycles'"),'first-class i-PaSS admin routes missing');assert.ok(!ipass.includes('renderIframe')&&!ipass.includes('<iframe src='),'i-PaSS shell must not render management iframes');assert.ok(worker.includes('handleFastCycleStart')&&cycleFast.includes('INSERT OR IGNORE INTO evaluation_target_items_v2'),'set-based cycle materialization missing');assert.ok(applicability.includes("status:'undetermined'")&&applicability.includes('industry_code'),'three-state applicability engine missing');assert.ok(submission.includes('/edit-lease')&&submission.includes('notifyAdmins'),'edit lease and partner-change notification integration missing');assert.ok(scoring.includes('expected_updated_at')&&scoring.includes('summary:scoreSummary'),'optimized concurrent scoring response missing');assert.ok(preview.includes('pdfResizeObserver')&&preview.includes('allowExternalViewers'),'high-resolution and sensitive preview controls missing');assert.ok(worker.includes('content-security-policy')&&worker.includes('strict-origin-when-cross-origin'),'security response policy missing');assert.ok(toolbar.includes('/admin/system')&&systemApi.includes('/api/admin/system/summary')&&systemPage.includes('SYSTEM OPERATIONS'),'system operations center missing');assert.ok(migration.includes('recipient_account_id')&&migration.includes('evaluation_edit_leases_v2')&&migration.includes('applicability_status'),'stabilization migration incomplete');assert.ok(workflow.includes('npm run migrate:remote')&&workflow.includes('npm run smoke:production'),'production migration/smoke gates missing');assert.ok(packageJson.includes('"verify:all"')&&packageJson.includes('"smoke:authenticated"'),'full verification commands missing');for(const script of [...ipassBundle.scripts,...systemBundle.scripts])new Function(script);
+console.log(JSON.stringify({success:true,dead_assets_removed:true,event_driven_runtime:true,tagged_swr_cache:true,consolidated_worker:true,iframe_free_ipass:true,set_based_cycle_start:true,deterministic_applicability:true,edit_leases:true,partner_change_notifications:true,concurrent_partial_scoring:true,high_resolution_preview:true,sensitive_preview_policy:true,dialog_accessibility:true,security_headers:true,canonical_accounts:true,system_operations_center:true,production_migration_gate:true,authenticated_smoke_available:true,modular_pages:true}));
