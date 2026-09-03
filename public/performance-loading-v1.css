@@ -1,0 +1,13 @@
+/* Show skeletons only when a request takes long enough to be perceptible. */
+.loading.ehs-skeleton-loading{
+  opacity:0;
+  animation:ehs-skeleton-delayed-show .01s linear .14s forwards!important;
+}
+.loading.ehs-skeleton-loading::after{
+  animation-delay:.14s!important;
+}
+@keyframes ehs-skeleton-delayed-show{to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .loading.ehs-skeleton-loading{animation:none!important;opacity:1}
+  .loading.ehs-skeleton-loading::after{animation:none!important}
+}
