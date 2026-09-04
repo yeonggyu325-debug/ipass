@@ -30,8 +30,8 @@ const IPASS_STYLE='<link rel="stylesheet" href="/ipass-ui-v2.css?v=2" data-ipass
 const IPASS_SCRIPT='<script src="/ipass-ui-v2.js?v=2" data-ipass-ui-v2="true"></script>';
 const SUBMISSION_STYLE='<link rel="stylesheet" href="/evaluation-submit.css?v=1">';
 const SUBMISSION_SCRIPT='<script src="/evaluation-submit-enhance.js?v=16"></script><script src="/evaluation-submit-nav-v2.js?v=2"></script>';
-const RESOURCE_PREVIEW_V3_STYLE='<link rel="stylesheet" href="/resource-preview-v2.css?v=4"><link rel="stylesheet" href="/resource-preview-v3.css?v=4">';
-const RESOURCE_PREVIEW_V3_SCRIPT='<script src="/resource-preview-v2.js?v=4"></script><script src="/resource-preview-v3.js?v=4"></script>'; 
+const RESOURCE_PREVIEW_V3_STYLE='<link rel="stylesheet" href="/resource-preview-v2.css?v=5"><link rel="stylesheet" href="/resource-preview-v3.css?v=5">';
+const RESOURCE_PREVIEW_V3_SCRIPT='<script src="/resource-preview-v2.js?v=5"></script><script src="/resource-preview-v3.js?v=5"></script>'; 
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{if(!window.EHSAuth||!window.EHSAuth.readSession())window.EHSAuth?window.EHSAuth.redirectToLogin("/home"):location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
 const EMBED_STYLE='<style id="ipass-embedded-style">body{background:#f5f7f9!important}.header{display:none!important}.layout{min-height:100vh!important}.side{top:0!important;height:100vh!important}.main{padding-top:20px!important}.shell{padding-top:20px!important}.page-head{margin-top:0!important}</style>';
 const ROOT_ROUTE_SCRIPT=`<script id="ipass-route-v24">(function(){var tries=0,t=setInterval(function(){try{if(typeof window.openPortalService==='function'&&!window.openPortalService.__ipassRouted){var original=window.openPortalService;var wrapped=function(service){var map={ipass:'/ipass',training:'/education',voc:'/voc',notices:'/notices',resources:'/resources'};if(map[service]){location.href=map[service];return}return original.apply(this,arguments)};wrapped.__ipassRouted=true;window.openPortalService=wrapped}}catch(_){}if(++tries>40)clearInterval(t)},200)})();</script>`;
@@ -69,7 +69,7 @@ async function injectShared(response,{path='/',home=false,root=false,submission=
   if(home){html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,HOME_STYLE,'/portal-home-v3.css?v=4');html=injectBody(html,HOME_SCRIPT,'/portal-home-v3.js?v=7')}
   if(path.startsWith('/ipass')){html=injectHead(html,IPASS_STYLE,'/ipass-ui-v2.css?v=2');html=injectBody(html,IPASS_SCRIPT,'/ipass-ui-v2.js?v=2')}
   if(submission){html=injectHead(html,SUBMISSION_STYLE,'/evaluation-submit.css?v=1');html=injectBody(html,SUBMISSION_SCRIPT,'/evaluation-submit-enhance.js?v=16')}
-  if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v3.css?v=4');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v3.js?v=4')}
+  if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v3.css?v=5');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v3.js?v=5')}
   if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');
   return htmlResponse(response,html)
 }
