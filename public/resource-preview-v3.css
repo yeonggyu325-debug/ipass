@@ -1,4 +1,4 @@
-/* Resource preview V3: one-shot fit, editable percentage zoom, wheel scaling. */
+/* Resource preview V3: native renderer zoom UI bridge and flow-document fallback. */
 body.ehs-resource-preview-v2 .ap-overlay{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 body.ehs-resource-preview-v2 .ap-toolbar:after{content:none!important;display:none!important}
 body.ehs-resource-preview-v2 .ap-fit-state{display:none!important}
@@ -9,4 +9,6 @@ body.ehs-resource-preview-v2 .ap-zoom-editor{display:inline-flex;align-items:cen
 body.ehs-resource-preview-v2 .ap-zoom-editor:focus-within{border-color:#86b4cf;box-shadow:0 0 0 2px rgba(55,125,166,.1)}
 body.ehs-resource-preview-v2 .ap-zoom-input{width:48px;padding:0;border:0;outline:0;background:transparent;color:#29495d;text-align:right;font:inherit;font-variant-numeric:tabular-nums}
 body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom{overflow:auto!important}
+body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-pptx{overflow:visible!important;align-items:flex-start!important;justify-content:center!important;min-width:max-content}
+body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-docx{overflow:visible!important}
 @media(max-width:760px){body.ehs-resource-preview-v2 .ap-zoom-editor{height:30px;padding:0 6px}body.ehs-resource-preview-v2 .ap-zoom-input{width:40px}}
