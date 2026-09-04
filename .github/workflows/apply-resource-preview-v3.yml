@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - public/resource-preview-v2.js
       - public/resource-preview-v3.js
       - public/resource-preview-v3.css
       - .github/workflows/apply-resource-preview-v3.yml
@@ -32,13 +33,20 @@ jobs:
           if(!source.includes('RESOURCE_PREVIEW_V3_STYLE')){
             const anchor="const SUBMISSION_SCRIPT='<script src=\"/evaluation-submit-enhance.js?v=16\"></script><script src=\"/evaluation-submit-nav-v2.js?v=2\"></script>';";
             if(!source.includes(anchor))throw new Error('submission asset anchor not found');
-            source=source.replace(anchor,anchor+"\nconst RESOURCE_PREVIEW_V3_STYLE='<link rel=\"stylesheet\" href=\"/resource-preview-v2.css?v=2\"><link rel=\"stylesheet\" href=\"/resource-preview-v3.css?v=1\">';\nconst RESOURCE_PREVIEW_V3_SCRIPT='<script src=\"/resource-preview-v2.js?v=2\"></script><script src=\"/resource-preview-v3.js?v=1\"></script>'; ");
+            source=source.replace(anchor,anchor+"\nconst RESOURCE_PREVIEW_V3_STYLE='<link rel=\"stylesheet\" href=\"/resource-preview-v2.css?v=3\"><link rel=\"stylesheet\" href=\"/resource-preview-v3.css?v=2\">';\nconst RESOURCE_PREVIEW_V3_SCRIPT='<script src=\"/resource-preview-v2.js?v=3\"></script><script src=\"/resource-preview-v3.js?v=2\"></script>'; ");
+          }else{
+            source=source.replace(/resource-preview-v2\.css\?v=\d+/g,'resource-preview-v2.css?v=3');
+            source=source.replace(/resource-preview-v3\.css\?v=\d+/g,'resource-preview-v3.css?v=2');
+            source=source.replace(/resource-preview-v2\.js\?v=\d+/g,'resource-preview-v2.js?v=3');
+            source=source.replace(/resource-preview-v3\.js\?v=\d+/g,'resource-preview-v3.js?v=2');
           }
           if(!source.includes("if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE")){
             const anchor="  if(submission){html=injectHead(html,SUBMISSION_STYLE,'/evaluation-submit.css?v=1');html=injectBody(html,SUBMISSION_SCRIPT,'/evaluation-submit-enhance.js?v=16')}";
             if(!source.includes(anchor))throw new Error('injectShared submission anchor not found');
-            source=source.replace(anchor,anchor+"\n  if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v3.css?v=1');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v3.js?v=1')}");
+            source=source.replace(anchor,anchor+"\n  if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v3.css?v=2');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v3.js?v=2')}");
           }
+          source=source.replace("'/resource-preview-v3.css?v=1'","'/resource-preview-v3.css?v=2'");
+          source=source.replace("'/resource-preview-v3.js?v=1'","'/resource-preview-v3.js?v=2'");
           fs.writeFileSync(path,source);
           NODE
       - name: Commit worker wiring
@@ -48,5 +56,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/worker.js
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "feat: activate resource preview v3"
+          git commit -m "feat: activate resource preview zoom editor"
           git push origin HEAD:main
