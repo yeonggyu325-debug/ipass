@@ -16,6 +16,7 @@
   }
   function body(){return visibleModal()?.querySelector('.ap-body')||null}
   function toolbar(){return visibleModal()?.querySelector('.ap-toolbar')||null}
+  function manualZoomActive(){return body()?.dataset.resourceManualZoom==='1'}
   function usableSize(){
     const el=body();if(!el)return{width:0,height:0};
     const cs=getComputedStyle(el);
@@ -64,7 +65,7 @@
     return true;
   }
   function fitTarget(el,force=false){
-    if(!el||(!force&&fittedTargets.has(el)))return;
+    if(!el||(!force&&manualZoomActive())||(!force&&fittedTargets.has(el)))return;
     if(el instanceof HTMLImageElement&&!el.complete){
       if(el.dataset.resourceFitWait!=='1'){
         el.dataset.resourceFitWait='1';
@@ -75,7 +76,7 @@
     setFit(el);
   }
   function scheduleFit(target=currentTarget(),force=false){
-    if(!target)return;
+    if(!target||(!force&&manualZoomActive()))return;
     if(frame)cancelAnimationFrame(frame);
     frame=requestAnimationFrame(()=>{
       frame=0;
@@ -94,7 +95,8 @@
     if(fit.dataset.resourceFitBound!=='1'){
       fit.dataset.resourceFitBound='1';
       fit.addEventListener('click',()=>{
-        body()?.classList.remove('ap-manual-zoom');
+        const previewBody=body();
+        if(previewBody){delete previewBody.dataset.resourceManualZoom;previewBody.classList.remove('ap-manual-zoom')}
         scheduleFit(currentTarget(),true);
       });
     }
@@ -106,24 +108,24 @@
     const previewBody=modal.querySelector('.ap-body');if(!previewBody)return;
     resizeObserver=new ResizeObserver(()=>{
       const target=currentTarget();
-      if(target&&!fittedTargets.has(target))scheduleFit(target);
+      if(target&&!fittedTargets.has(target)&&!manualZoomActive())scheduleFit(target);
     });
     resizeObserver.observe(previewBody);
     mutationObserver=new MutationObserver(()=>{
       installFitControl();
       const target=currentTarget();
-      if(target&&!fittedTargets.has(target))scheduleFit(target);
+      if(target&&!fittedTargets.has(target)&&!manualZoomActive())scheduleFit(target);
     });
     mutationObserver.observe(modal,{childList:true,subtree:true});
     installFitControl();
-    const target=currentTarget();if(target)scheduleFit(target);
+    const target=currentTarget();if(target&&!manualZoomActive())scheduleFit(target);
   }
   const pageObserver=new MutationObserver(()=>{
     const modal=visibleModal();
     if(!modal){observedModal=null;resizeObserver?.disconnect();mutationObserver?.disconnect();return}
     observeModal(modal);
     installFitControl();
-    const target=currentTarget();if(target&&!fittedTargets.has(target))scheduleFit(target);
+    const target=currentTarget();if(target&&!fittedTargets.has(target)&&!manualZoomActive())scheduleFit(target);
   });
   pageObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
 })();
