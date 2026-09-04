@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 const ORIGIN = process.env.IPASS_ORIGIN || 'https://ipass.i-pass-eval.workers.dev';
 const RETRIES = 4;
 const RETRY_MS = 1500;
-const PREVIEW_VERSION = 10;
+const PREVIEW_VERSION = 11;
 
 const htmlRoutes = [
   '/', '/home', '/ipass', '/ipass/evaluations', '/ipass/templates', '/ipass/cycles',
@@ -102,12 +102,14 @@ async function checkResourcePreviewRuntime() {
     "document.addEventListener('wheel'","event.key==='ArrowLeft'","event.key==='ArrowRight'",'ap-zoom-input'
   ]) assert.ok(controller.includes(token), `${controllerPath}: missing ${token}`);
 
-  assert.ok(style.includes('.ap-body.ap-manual-zoom .ap-pdf-canvas{max-width:none!important}'), `${stylePath}: PDF width remains clamped`);
-  assert.ok(style.includes('.ap-body.ap-manual-zoom .ap-pdf-stage{width:max-content!important'), `${stylePath}: PDF scroll extent missing`);
-  assert.ok(style.includes('.ap-body.ap-manual-zoom .ap-pptx{width:max-content!important'), `${stylePath}: PPTX scroll extent missing`);
+  assert.ok(style.includes('.ap-pdf-canvas{max-width:none!important'), `${stylePath}: PDF width remains clamped`);
+  assert.ok(style.includes('.ap-pdf-stage{width:max-content!important'), `${stylePath}: PDF scroll extent missing`);
+  assert.ok(style.includes('.ap-pptx{width:max-content!important'), `${stylePath}: PPTX scroll extent missing`);
+  assert.ok(style.includes('padding:50vh 50vw!important'), `${stylePath}: pan gutters missing`);
+  assert.ok(style.includes('scrollbar-gutter:stable both-edges'), `${stylePath}: stable scrollbar gutter missing`);
   assert.ok(!controller.includes('/vendor/attachment-preview/xlsx.full.min.js'), `${controllerPath}: nonexistent XLSX preload returned`);
 
-  results.push({type:'preview-runtime',path:'/resources',version:PREVIEW_VERSION,single_injection:true,pointer_anchored_zoom:true,full_scroll_extent:true});
+  results.push({type:'preview-runtime',path:'/resources',version:PREVIEW_VERSION,single_injection:true,pointer_anchored_zoom:true,full_scroll_extent:true,pan_gutters:true});
 }
 
 const health = await request('/api/health');
