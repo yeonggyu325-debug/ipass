@@ -42,6 +42,7 @@ if (!resourcePreview.includes('Math.min(space.width/source.width,space.height/so
 if (!resourcePreview.includes('fittedTargets')) failures.push('resource-preview:one-shot-fit');
 if (!resourcePreview.includes('ResizeObserver')) failures.push('resource-preview:responsive-fit');
 if (!resourcePreviewCss.includes('width:min(1680px,calc(100vw - 36px))')) failures.push('resource-preview:enterprise-modal');
+if (resourcePreviewCss.includes('원본 비율 유지')) failures.push('resource-preview:legacy-original-ratio-label');
 if (!resourcePreviewV3.includes("document.addEventListener('wheel'")) failures.push('resource-preview:wheel-zoom');
 if (!resourcePreviewV3.includes('ap-zoom-input')) failures.push('resource-preview:editable-zoom');
 if (!resourcePreviewV3.includes("text==='＋'||text==='－'")) failures.push('resource-preview:legacy-zoom-hide');
@@ -51,4 +52,4 @@ if (!worker.includes('/resource-preview-v2.js?v=4')) failures.push('resource-pre
 if (!worker.includes('/resource-preview-v3.js?v=4')) failures.push('resource-preview:v3-cache-bust');
 
 if (failures.length) throw new Error(`Attachment preview verification failed: ${failures.join(', ')}`);
-console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',single_injection_source:true,aspect_ratio_preserved:true,initial_fit_only:true,wheel_zoom:true,editable_zoom:true,legacy_zoom_controls_hidden:true,enterprise_ui:true}}));
+console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',single_injection_source:true,aspect_ratio_preserved:true,initial_fit_only:true,wheel_zoom:true,editable_zoom:true,legacy_zoom_controls_hidden:true,legacy_original_ratio_label:false,enterprise_ui:true}}));
