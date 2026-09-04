@@ -8,14 +8,14 @@ body.ehs-resource-preview-v2 .ap-legacy-zoom-counter{display:none!important}
 body.ehs-resource-preview-v2 .ap-zoom-editor{display:inline-flex;align-items:center;gap:2px;height:32px;padding:0 8px;border:1px solid #ccd8df;border-radius:7px;background:#fff;color:#415b6b;font-size:10px;font-weight:800;white-space:nowrap}
 body.ehs-resource-preview-v2 .ap-zoom-editor:focus-within{border-color:#86b4cf;box-shadow:0 0 0 2px rgba(55,125,166,.1)}
 body.ehs-resource-preview-v2 .ap-zoom-input{width:48px;padding:0;border:0;outline:0;background:transparent;color:#29495d;text-align:right;font:inherit;font-variant-numeric:tabular-nums}
-body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom{overflow:auto!important;overscroll-behavior:contain;scroll-behavior:auto!important}
-body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-pdf-stage{width:max-content!important;min-width:100%!important;min-height:100%!important;justify-items:center!important;align-items:start!important}
+body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom{overflow:auto!important;overscroll-behavior:contain;scroll-behavior:auto!important;scrollbar-gutter:stable both-edges}
+body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-pdf-stage{width:max-content!important;min-width:100%!important;min-height:100%!important;justify-items:center!important;align-items:start!important;box-sizing:content-box!important;padding:50vh 50vw!important}
 body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-pdf-canvas{max-width:none!important;flex:none!important}
 body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-image-stage,
-body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-hwp-stage{width:max-content!important;min-width:100%!important;min-height:100%!important;justify-content:center!important;align-items:flex-start!important}
-body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-pptx{width:max-content!important;min-width:100%!important;min-height:100%!important;overflow:visible!important;align-items:flex-start!important;justify-content:center!important}
+body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-hwp-stage{width:max-content!important;min-width:100%!important;min-height:100%!important;justify-content:center!important;align-items:flex-start!important;box-sizing:content-box!important;padding:50vh 50vw!important}
+body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-pptx{width:max-content!important;min-width:100%!important;min-height:100%!important;overflow:visible!important;align-items:flex-start!important;justify-content:center!important;box-sizing:content-box!important;padding:50vh 50vw!important}
 body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-pptx>div{max-width:none!important;flex:none!important}
 body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-docx{width:max-content!important;min-width:100%!important;overflow:visible!important}
-body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-docx .docx-wrapper{width:max-content!important;min-width:100%!important}
-body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-sheet{width:max-content!important;min-width:100%!important}
+body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-docx .docx-wrapper{width:max-content!important;min-width:100%!important;margin:50vh 50vw!important}
+body.ehs-resource-preview-v2 .ap-body.ap-manual-zoom .ap-sheet{width:max-content!important;min-width:100%!important;margin:50vh 50vw!important}
 @media(max-width:760px){body.ehs-resource-preview-v2 .ap-zoom-editor{height:30px;padding:0 6px}body.ehs-resource-preview-v2 .ap-zoom-input{width:40px}}
