@@ -13,6 +13,8 @@
   let pdfZoomRequest=0;
   let pdfFitWidth=0;
   let pdfFitHeight=0;
+  let pptZoomRequest=0;
+  let pptNativeZoom=100;
 
   function preload(href,rel,as){
     if(document.querySelector(`link[data-resource-preview-prewarm="${href}"]`))return;
@@ -96,6 +98,12 @@
       el.style.removeProperty('max-width');
       el.style.removeProperty('max-height');
     }
+    if(isPptTarget(el)){
+      if(el.style.getPropertyPriority('width')==='important')el.style.removeProperty('width');
+      if(el.style.getPropertyPriority('height')==='important')el.style.removeProperty('height');
+      if(el.style.getPropertyPriority('max-width')==='important')el.style.removeProperty('max-width');
+      if(el.style.getPropertyPriority('max-height')==='important')el.style.removeProperty('max-height');
+    }
   }
 
   function recordBase(el,width,height,{force=false}={}){
@@ -106,6 +114,7 @@
     if(!w||!h)return;
     baseWidth=Math.max(1,w);baseHeight=Math.max(1,h);lastTarget=el;zoomPercent=100;
     if(isPdfTarget(el)){pdfFitWidth=baseWidth;pdfFitHeight=baseHeight;pdfZoomRequest+=1}
+    if(isPptTarget(el)){pptNativeZoom=100;pptZoomRequest+=1}
     const previewBody=body();
     if(previewBody){delete previewBody.dataset.resourceManualZoom;previewBody.classList.remove('ap-manual-zoom')}
     clearTargetZoom(el);
@@ -130,6 +139,9 @@
     if(el!==lastTarget){
       if(isPdfTarget(el)&&isManual()&&pdfFitWidth&&pdfFitHeight){
         capturePdfNativeSize(el);lastTarget=el;return el;
+      }
+      if(isPptTarget(el)&&isManual()&&baseWidth&&baseHeight){
+        lastTarget=el;return el;
       }
       if(el.dataset.resourceFitWidth&&el.dataset.resourceFitHeight){
         recordBase(el,Number(el.dataset.resourceFitWidth),Number(el.dataset.resourceFitHeight));
@@ -246,27 +258,87 @@
     return true;
   }
 
+  function normalizePptZoom(value){
+    return Math.min(300,Math.max(40,Math.round(Number(value||100)/20)*20));
+  }
+
+  function waitForPptZoom(previous,previousRect,ticket){
+    return new Promise(resolve=>{
+      const started=performance.now();
+      const poll=()=>{
+        if(ticket!==pptZoomRequest)return resolve(null);
+        const next=body()?.querySelector('.ap-pptx>div')||null;
+        if(next){
+          const rect=next.getBoundingClientRect();
+          if(next!==previous||Math.abs(rect.width-previousRect.width)>.5||Math.abs(rect.height-previousRect.height)>.5){
+            lastTarget=next;return resolve(next);
+          }
+        }
+        if(performance.now()-started>900){if(next)lastTarget=next;return resolve(next)}
+        requestAnimationFrame(poll);
+      };
+      requestAnimationFrame(poll);
+    });
+  }
+
+  async function applyPptZoom(value){
+    const previewBody=body();
+    let slide=previewBody?.querySelector('.ap-pptx>div')||null;
+    if(!slide)return false;
+    const desired=normalizePptZoom(value);
+    const ticket=++pptZoomRequest;
+    if(previewBody){previewBody.dataset.resourceManualZoom='1';previewBody.classList.add('ap-manual-zoom')}
+    clearTargetZoom(slide);
+    const zoomOut=button(text=>text==='－');
+    const zoomIn=button(text=>text==='＋');
+    let attempts=0;
+
+    while(ticket===pptZoomRequest&&pptNativeZoom<desired&&zoomIn&&attempts<16){
+      const previous=slide;
+      const previousRect=previous.getBoundingClientRect();
+      zoomIn.click();
+      pptNativeZoom=Math.min(300,pptNativeZoom+20);
+      slide=await waitForPptZoom(previous,previousRect,ticket);
+      if(!slide)return false;
+      attempts+=1;
+    }
+    while(ticket===pptZoomRequest&&pptNativeZoom>desired&&zoomOut&&attempts<32){
+      const previous=slide;
+      const previousRect=previous.getBoundingClientRect();
+      zoomOut.click();
+      pptNativeZoom=Math.max(40,pptNativeZoom-20);
+      slide=await waitForPptZoom(previous,previousRect,ticket);
+      if(!slide)return false;
+      attempts+=1;
+    }
+    if(ticket!==pptZoomRequest)return false;
+
+    zoomPercent=pptNativeZoom;
+    clearTargetZoom(slide);
+    const rect=slide.getBoundingClientRect();
+    applyStageSize(slide,Math.max(1,rect.width),Math.max(1,rect.height));
+    lastTarget=slide;
+    const input=ensureZoomInput();
+    if(input&&document.activeElement!==input)input.value=String(pptNativeZoom);
+    return true;
+  }
+
   function applyZoom(percent){
     const el=refreshTarget();if(!el)return false;
     if((!baseWidth||!baseHeight)&&el){const rect=el.getBoundingClientRect();recordBase(el,rect.width,rect.height)}
     if(!baseWidth||!baseHeight)return false;
-    const value=Math.min(500,Math.max(10,Number(percent)||100));
-    zoomPercent=value;
+    let value=Math.min(500,Math.max(10,Number(percent)||100));
     const previewBody=body();
     if(previewBody){previewBody.dataset.resourceManualZoom='1';previewBody.classList.add('ap-manual-zoom')}
-    if(isPdfTarget(el)){void applyPdfZoom(value);return true}
+    if(isPdfTarget(el)){zoomPercent=value;void applyPdfZoom(value);return true}
+    if(isPptTarget(el)){value=normalizePptZoom(value);zoomPercent=value;void applyPptZoom(value);return true}
+    zoomPercent=value;
     const factor=value/100;
     const width=Math.max(1,Math.round(baseWidth*factor));
     const height=Math.max(1,Math.round(baseHeight*factor));
 
     if(isFlowZoomTarget(el)){
       applyFlowZoom(el,factor,width,height);
-    }else if(isPptTarget(el)){
-      el.style.removeProperty('zoom');
-      el.style.setProperty('width',`${baseWidth}px`,'important');
-      el.style.setProperty('height',`${baseHeight}px`,'important');
-      el.style.setProperty('transform',`scale(${factor})`,'important');
-      el.style.setProperty('transform-origin','top center','important');
     }else{
       el.style.removeProperty('zoom');
       el.style.removeProperty('transform');el.style.removeProperty('transform-origin');
@@ -286,9 +358,14 @@
     const value=Number(String(raw??'').replace(/[^0-9.]/g,''));
     applyZoom(Number.isFinite(value)&&value>0?value:100);
   }
-  function stepZoom(direction){applyZoom(zoomPercent+(direction>0?10:-10))}
+  function stepZoom(direction){
+    const el=refreshTarget();
+    const step=isPptTarget(el)?20:10;
+    applyZoom(zoomPercent+(direction>0?step:-step));
+  }
   function resetForPageChange(){
     pdfZoomRequest+=1;pdfFitWidth=0;pdfFitHeight=0;
+    pptZoomRequest+=1;pptNativeZoom=100;
     clearTargetZoom(lastTarget);
     const docx=lastTarget?.closest?.('.ap-docx');if(docx)docx.style.removeProperty('overflow');
     lastTarget=null;baseWidth=0;baseHeight=0;zoomPercent=100;
