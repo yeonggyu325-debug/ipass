@@ -1,0 +1,48 @@
+name: Patch Preview Runtime V4
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/patch-preview-cache-v4.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Bump resource preview runtime assets
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const path='src/worker.js';
+          let s=fs.readFileSync(path,'utf8');
+          s=s.replace(/resource-preview-v2\.css\?v=\d+/g,'resource-preview-v2.css?v=4');
+          s=s.replace(/resource-preview-v3\.css\?v=\d+/g,'resource-preview-v3.css?v=4');
+          s=s.replace(/resource-preview-v2\.js\?v=\d+/g,'resource-preview-v2.js?v=4');
+          s=s.replace(/resource-preview-v3\.js\?v=\d+/g,'resource-preview-v3.js?v=4');
+          fs.writeFileSync(path,s);
+          NODE
+          node <<'NODE'
+          const fs=require('fs');
+          const path='scripts/verify-attachment-preview.mjs';
+          let s=fs.readFileSync(path,'utf8');
+          s=s.replace("/resource-preview-v2.js?v=3","/resource-preview-v2.js?v=4");
+          s=s.replace("/resource-preview-v3.js?v=3","/resource-preview-v3.js?v=4");
+          fs.writeFileSync(path,s);
+          NODE
+      - name: Commit runtime cache bump
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/worker.js scripts/verify-attachment-preview.mjs
+          git commit -m "fix: activate persistent preview zoom runtime"
+          git push origin HEAD:main
