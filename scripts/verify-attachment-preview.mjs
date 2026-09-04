@@ -84,8 +84,10 @@ if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-image-stage')) f
 if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-hwp-stage')) failures.push('resource-preview:hwp-scroll-stage');
 if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-pptx{width:max-content!important')) failures.push('resource-preview:pptx-scroll-stage');
 if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-docx{width:max-content!important')) failures.push('resource-preview:docx-scroll-stage');
-if (!worker.includes('/resource-preview-v2.js?v=9')) failures.push('resource-preview:v2-cache-bust');
-if (!worker.includes('/resource-preview-v3.js?v=9')) failures.push('resource-preview:v3-cache-bust');
+if (!worker.includes('/resource-preview-v2.js?v=10')) failures.push('resource-preview:v2-cache-bust');
+if (!worker.includes('/resource-preview-v3.js?v=10')) failures.push('resource-preview:v3-cache-bust');
+if (!worker.includes('/resource-preview-v2.css?v=10')) failures.push('resource-preview:v2-style-cache-bust');
+if (!worker.includes('/resource-preview-v3.css?v=10')) failures.push('resource-preview:v3-style-cache-bust');
 
 if (failures.length) throw new Error(`Attachment preview verification failed: ${failures.join(', ')}`);
 console.log(JSON.stringify({
@@ -100,7 +102,7 @@ console.log(JSON.stringify({
     pdf_native_rerender_zoom:true,pptx_native_renderer_zoom:true,
     docx_wheel_zoom:true,xlsx_wheel_zoom:true,xlsx_preload_mismatch:false,
     selective_intent_prewarm:true,eager_renderer_prewarm:false,
-    scroll_extent_unclamped:true,wheel_event_isolated:true,
+    scroll_extent_unclamped:true,wheel_event_isolated:true,cache_version:10,
     legacy_zoom_controls_hidden:true,legacy_original_ratio_label:false,enterprise_ui:true
   }
 }));
