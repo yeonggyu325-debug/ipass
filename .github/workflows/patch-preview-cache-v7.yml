@@ -1,0 +1,49 @@
+name: Patch Preview Cache V7
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Bump preview cache version
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/worker.js')
+          s = p.read_text()
+          s = s.replace('/resource-preview-v2.css?v=6', '/resource-preview-v2.css?v=7')
+          s = s.replace('/resource-preview-v3.css?v=6', '/resource-preview-v3.css?v=7')
+          s = s.replace('/resource-preview-v2.js?v=6', '/resource-preview-v2.js?v=7')
+          s = s.replace('/resource-preview-v3.js?v=6', '/resource-preview-v3.js?v=7')
+          p.write_text(s)
+
+          q = Path('scripts/verify-attachment-preview.mjs')
+          t = q.read_text()
+          t = t.replace("/resource-preview-v2.js?v=6", "/resource-preview-v2.js?v=7")
+          t = t.replace("/resource-preview-v3.js?v=6", "/resource-preview-v3.js?v=7")
+          q.write_text(t)
+          PY
+      - name: Commit cache bump
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/worker.js scripts/verify-attachment-preview.mjs
+          if git diff --cached --quiet; then
+            echo "No cache changes needed"
+            exit 0
+          fi
+          git commit -m "fix: activate original-size zoom percentage runtime"
+          git push
