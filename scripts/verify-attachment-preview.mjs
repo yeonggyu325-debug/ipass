@@ -46,8 +46,8 @@ if (!resourcePreviewV3.includes('ap-zoom-input')) failures.push('resource-previe
 if (!resourcePreviewV3.includes("text==='＋'||text==='－'")) failures.push('resource-preview:legacy-zoom-hide');
 if (!resourcePreviewV3Css.includes('.ap-legacy-zoom-control{display:none!important}')) failures.push('resource-preview:legacy-controls-hidden');
 if (!resourcePreviewV3Css.includes('.ap-legacy-actual-control{display:none!important}')) failures.push('resource-preview:legacy-actual-hidden');
-if (!worker.includes('/resource-preview-v2.js?v=3')) failures.push('resource-preview:v2-cache-bust');
-if (!worker.includes('/resource-preview-v3.js?v=3')) failures.push('resource-preview:v3-cache-bust');
+if (!worker.includes('/resource-preview-v2.js?v=4')) failures.push('resource-preview:v2-cache-bust');
+if (!worker.includes('/resource-preview-v3.js?v=4')) failures.push('resource-preview:v3-cache-bust');
 
 if (failures.length) throw new Error(`Attachment preview verification failed: ${failures.join(', ')}`);
 console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',aspect_ratio_preserved:true,initial_fit_only:true,wheel_zoom:true,editable_zoom:true,legacy_zoom_controls_hidden:true,enterprise_ui:true}}));
