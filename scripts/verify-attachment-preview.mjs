@@ -36,7 +36,8 @@ if (!viewer.includes("'webp'")) failures.push('viewer:webp');
 if (!packageJson.includes('"@rhwp/core": "0.8.4"')) failures.push('package:rhwp-version');
 for (const asset of ['@rhwp/core/rhwp.js', '@rhwp/core/rhwp_bg.wasm', 'LICENSE-rhwp.txt']) if (!assetBuilder.includes(asset)) failures.push(`asset-builder:${asset}`);
 
-if (!workerEntry.includes("path !== '/resources'")) failures.push('resource-preview:route-scope');
+if (!worker.includes("if(path==='/resources')")) failures.push('resource-preview:route-scope');
+if (workerEntry.includes('resource-preview-v2') || workerEntry.includes('resource-preview-v3')) failures.push('resource-preview:duplicate-entry-injection');
 if (!resourcePreview.includes('Math.min(space.width/source.width,space.height/source.height)')) failures.push('resource-preview:aspect-fit');
 if (!resourcePreview.includes('fittedTargets')) failures.push('resource-preview:one-shot-fit');
 if (!resourcePreview.includes('ResizeObserver')) failures.push('resource-preview:responsive-fit');
@@ -50,4 +51,4 @@ if (!worker.includes('/resource-preview-v2.js?v=4')) failures.push('resource-pre
 if (!worker.includes('/resource-preview-v3.js?v=4')) failures.push('resource-preview:v3-cache-bust');
 
 if (failures.length) throw new Error(`Attachment preview verification failed: ${failures.join(', ')}`);
-console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',aspect_ratio_preserved:true,initial_fit_only:true,wheel_zoom:true,editable_zoom:true,legacy_zoom_controls_hidden:true,enterprise_ui:true}}));
+console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',single_injection_source:true,aspect_ratio_preserved:true,initial_fit_only:true,wheel_zoom:true,editable_zoom:true,legacy_zoom_controls_hidden:true,enterprise_ui:true}}));
