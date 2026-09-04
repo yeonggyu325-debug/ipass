@@ -44,9 +44,7 @@
 
   function preloadAsset(href,rel){
     if(!href||document.querySelector(`link[data-resource-preview-prewarm="${href}"]`))return;
-    const link=document.createElement('link');
-    link.rel=rel;link.href=href;link.dataset.resourcePreviewPrewarm=href;
-    document.head.appendChild(link);
+    const link=document.createElement('link');link.rel=rel;link.href=href;link.dataset.resourcePreviewPrewarm=href;document.head.appendChild(link);
   }
   function extensionFromText(value){
     const match=String(value||'').match(/\.([a-z0-9]{2,5})(?:$|[\s)\]}>,'"])/i);
@@ -55,11 +53,7 @@
   function extensionHint(node){
     let el=node instanceof Element?node:null;
     for(let depth=0;el&&depth<5;depth+=1,el=el.parentElement){
-      const values=[
-        el.getAttribute('data-file-name'),el.getAttribute('data-filename'),el.getAttribute('data-name'),
-        el.getAttribute('data-extension'),el.getAttribute('data-ext'),el.getAttribute('title'),el.getAttribute('aria-label'),
-        (el.textContent||'').slice(0,500)
-      ];
+      const values=[el.getAttribute('data-file-name'),el.getAttribute('data-filename'),el.getAttribute('data-name'),el.getAttribute('data-extension'),el.getAttribute('data-ext'),el.getAttribute('title'),el.getAttribute('aria-label'),(el.textContent||'').slice(0,500)];
       for(const value of values){const ext=extensionFromText(value);if(ext)return ext}
     }
     return'';
@@ -121,8 +115,7 @@
     if(!wrap){
       wrap=document.createElement('label');wrap.className='ap-zoom-editor';wrap.title='확대/축소 배율 입력';
       const input=document.createElement('input');input.className='ap-zoom-input';input.type='text';input.inputMode='decimal';input.autocomplete='off';input.spellcheck=false;input.setAttribute('aria-label','미리보기 확대 축소 비율');
-      const suffix=document.createElement('span');suffix.textContent='%';
-      wrap.append(input,suffix);bar.append(wrap);
+      const suffix=document.createElement('span');suffix.textContent='%';wrap.append(input,suffix);bar.append(wrap);
       const commit=()=>setZoom(input.value);
       input.addEventListener('change',commit);
       input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();commit();input.blur()}});
@@ -152,27 +145,39 @@
   }
 
   function captureZoomAnchor(event){
-    const type=previewType(),el=zoomTarget(type),previewBody=body();
-    if(!type||!el||!previewBody)return null;
+    const previewBody=body(),type=previewType(),el=zoomTarget(type);
+    if(!previewBody||!type||!el)return null;
+    const bodyRect=previewBody.getBoundingClientRect();
     const rect=el.getBoundingClientRect();
     if(!rect.width||!rect.height)return null;
     const x=Number(event.clientX),y=Number(event.clientY);
-    if(x<rect.left||x>rect.right||y<rect.top||y>rect.bottom)return null;
+    if(x<bodyRect.left||x>bodyRect.right||y<bodyRect.top||y>bodyRect.bottom)return null;
+    const clampedX=Math.min(rect.right,Math.max(rect.left,x));
+    const clampedY=Math.min(rect.bottom,Math.max(rect.top,y));
     return{
       type,
-      ratioX:Math.min(1,Math.max(0,(x-rect.left)/rect.width)),
-      ratioY:Math.min(1,Math.max(0,(y-rect.top)/rect.height)),
-      clientX:x,clientY:y
+      ratioX:Math.min(1,Math.max(0,(clampedX-rect.left)/rect.width)),
+      ratioY:Math.min(1,Math.max(0,(clampedY-rect.top)/rect.height)),
+      clientX:x,clientY:y,
+      bodyLeft:bodyRect.left,bodyTop:bodyRect.top
     };
   }
   function restoreZoomAnchor(anchor){
-    if(!anchor||previewType()!==anchor.type)return;
-    const previewBody=body(),el=zoomTarget(anchor.type);if(!previewBody||!el)return;
-    const rect=el.getBoundingClientRect();if(!rect.width||!rect.height)return;
+    if(!anchor||previewType()!==anchor.type)return false;
+    const previewBody=body(),el=zoomTarget(anchor.type);if(!previewBody||!el)return false;
+    const rect=el.getBoundingClientRect();if(!rect.width||!rect.height)return false;
     const pointX=rect.left+rect.width*anchor.ratioX;
     const pointY=rect.top+rect.height*anchor.ratioY;
-    previewBody.scrollLeft+=pointX-anchor.clientX;
-    previewBody.scrollTop+=pointY-anchor.clientY;
+    const dx=pointX-anchor.clientX,dy=pointY-anchor.clientY;
+    if(Math.abs(dx)<.5&&Math.abs(dy)<.5)return true;
+    const maxLeft=Math.max(0,previewBody.scrollWidth-previewBody.clientWidth);
+    const maxTop=Math.max(0,previewBody.scrollHeight-previewBody.clientHeight);
+    previewBody.scrollLeft=Math.max(0,Math.min(maxLeft,previewBody.scrollLeft+dx));
+    previewBody.scrollTop=Math.max(0,Math.min(maxTop,previewBody.scrollTop+dy));
+    return true;
+  }
+  async function settleZoomAnchor(anchor,frames=4){
+    for(let i=0;i<frames;i+=1){await nextPaint();restoreZoomAnchor(anchor)}
   }
 
   async function setImageOrHwpZoom(value,type){
@@ -183,15 +188,14 @@
     if(!plus||!minus)return false;
     markManual();
     let guard=0;
-    while(current+1<desired&&guard++<60){plus.click();current=currentPercent()}
+    while(current+1<desired&&guard++<60){plus.click();current=currentPercent();await nextPaint()}
     guard=0;
-    while(current-1>desired&&guard++<60){minus.click();current=currentPercent()}
+    while(current-1>desired&&guard++<60){minus.click();current=currentPercent();await nextPaint()}
     updateEditor();return true;
   }
 
   async function setPdfZoom(value){
-    const previewBody=body();
-    if(!previewBody||!pdfTarget())return false;
+    const previewBody=body();if(!previewBody||!pdfTarget())return false;
     const desiredScale=Math.min(3,Math.max(.5,value/100));
     let scale=Number(previewBody.dataset.resourcePdfScale||initialPdfScale());
     const plus=button(text=>text==='＋'),minus=button(text=>text==='－');
@@ -199,11 +203,11 @@
     markManual();
     let guard=0;
     while(scale+.075<desiredScale&&guard++<24){
-      const previous=pdfTarget();plus.click();scale=Math.min(3,scale+.15);previewBody.dataset.resourcePdfScale=String(scale);await waitForCanvas(previous);
+      const previous=pdfTarget();plus.click();scale=Math.min(3,scale+.15);previewBody.dataset.resourcePdfScale=String(scale);await waitForCanvas(previous);await nextPaint();
     }
     guard=0;
     while(scale-.075>desiredScale&&guard++<24){
-      const previous=pdfTarget();minus.click();scale=Math.max(.5,scale-.15);previewBody.dataset.resourcePdfScale=String(scale);await waitForCanvas(previous);
+      const previous=pdfTarget();minus.click();scale=Math.max(.5,scale-.15);previewBody.dataset.resourcePdfScale=String(scale);await waitForCanvas(previous);await nextPaint();
     }
     updateEditor();return true;
   }
@@ -216,9 +220,9 @@
     if(!plus||!minus)return false;
     markManual();
     let guard=0;
-    while(current<desired&&guard++<16){plus.click();current=Math.min(300,current+20);previewBody.dataset.resourcePptZoom=String(current);await wait(55)}
+    while(current<desired&&guard++<16){plus.click();current=Math.min(300,current+20);previewBody.dataset.resourcePptZoom=String(current);await wait(65);await nextPaint()}
     guard=0;
-    while(current>desired&&guard++<16){minus.click();current=Math.max(40,current-20);previewBody.dataset.resourcePptZoom=String(current);await wait(55)}
+    while(current>desired&&guard++<16){minus.click();current=Math.max(40,current-20);previewBody.dataset.resourcePptZoom=String(current);await wait(65);await nextPaint()}
     updateEditor();return true;
   }
 
@@ -226,14 +230,12 @@
   function setFlowZoom(value){
     const previewBody=body(),el=flowZoomTarget();if(!previewBody||!el)return false;
     if(el!==flowTarget){
-      flowTarget=el;
-      const rect=el.getBoundingClientRect();flowBaseWidth=Math.max(1,rect.width);flowBaseHeight=Math.max(1,rect.height);
+      flowTarget=el;const rect=el.getBoundingClientRect();flowBaseWidth=Math.max(1,rect.width);flowBaseHeight=Math.max(1,rect.height);
     }
     const desired=Math.min(500,Math.max(10,value));
-    const factor=desired/100;
     markManual();previewBody.dataset.resourceFlowZoom=String(desired);
     el.style.removeProperty('transform');el.style.removeProperty('transform-origin');el.style.removeProperty('margin-right');el.style.removeProperty('margin-bottom');
-    el.style.setProperty('zoom',String(factor),'important');
+    el.style.setProperty('zoom',String(desired/100),'important');
     const docx=el.closest('.ap-docx');if(docx)docx.style.setProperty('overflow','visible','important');
     updateEditor();return true;
   }
@@ -251,8 +253,8 @@
 
   function resetForNewPreview(){
     const previewBody=body();
-    if(previewBody){delete previewBody.dataset.resourceManualZoom;delete previewBody.dataset.resourcePdfScale;delete previewBody.dataset.resourcePptZoom;delete previewBody.dataset.resourceFlowZoom;previewBody.classList.remove('ap-manual-zoom')}
-    resetFlowTarget();wheelDelta=0;wheelAnchor=null;
+    if(previewBody){delete previewBody.dataset.resourceManualZoom;delete previewBody.dataset.resourcePdfScale;delete previewBody.dataset.resourcePptZoom;delete previewBody.dataset.resourceFlowZoom;previewBody.classList.remove('ap-manual-zoom');previewBody.scrollLeft=0;previewBody.scrollTop=0}
+    resetFlowTarget();wheelDelta=0;wheelAnchor=null;wheelBusy=false;
   }
   function syncPreviewIdentity(){
     const currentModal=modal();if(!currentModal){previewKey='';return false}
@@ -263,7 +265,7 @@
 
   function page(direction){
     const control=direction<0?button(text=>text.startsWith('◀ 이전')):button(text=>text.startsWith('다음 ▶'));
-    if(control&&!control.disabled){control.click();setTimeout(()=>{resetFlowTarget();cleanLegacyControls();updateEditor()},80)}
+    if(control&&!control.disabled){control.click();setTimeout(()=>{resetFlowTarget();cleanLegacyControls();updateEditor();const previewBody=body();if(previewBody){previewBody.scrollTop=0;previewBody.scrollLeft=0}},90)}
   }
   function onKeydown(event){
     if(!modal()||event.defaultPrevented||event.altKey||event.metaKey||event.ctrlKey)return;
@@ -278,7 +280,7 @@
       wheelTimer=0;
       if(wheelBusy){scheduleWheelFlush();return}
       void flushWheelZoom();
-    },45);
+    },28);
   }
   async function flushWheelZoom(){
     const delta=wheelDelta,anchor=wheelAnchor;
@@ -288,9 +290,8 @@
     const step=type==='pptx'?20:(type==='pdf'?15:10);
     wheelBusy=true;
     try{
-      await setZoom(currentPercent()+(delta<0?step:-step));
-      await nextPaint();restoreZoomAnchor(anchor);
-      await nextPaint();restoreZoomAnchor(anchor);
+      const changed=await setZoom(currentPercent()+(delta<0?step:-step));
+      if(changed&&anchor)await settleZoomAnchor(anchor,type==='pdf'||type==='pptx'?6:4);
     }finally{
       wheelBusy=false;
       if(Math.abs(wheelDelta)>=1)scheduleWheelFlush();
@@ -299,15 +300,12 @@
   function onWheel(event){
     const previewBody=body();if(!previewBody||!previewBody.contains(event.target)||event.target?.closest?.('.ap-web-frame'))return;
     const type=previewType();if(!type||type==='web')return;
-    event.preventDefault();
+    event.preventDefault();event.stopPropagation();
     wheelDelta+=event.deltaY;
     wheelAnchor=captureZoomAnchor(event)||wheelAnchor;
     scheduleWheelFlush();
   }
-  function install(){
-    if(!syncPreviewIdentity())return;
-    cleanLegacyControls();ensureZoomEditor();
-  }
+  function install(){if(!syncPreviewIdentity())return;cleanLegacyControls();ensureZoomEditor()}
 
   document.addEventListener('pointerover',event=>prewarmFromNode(event.target),{passive:true});
   document.addEventListener('pointerdown',event=>prewarmFromNode(event.target),{passive:true,capture:true});
@@ -317,8 +315,8 @@
   document.addEventListener('click',event=>{
     const item=event.target.closest?.('.ap-button');if(!item)return;
     const text=(item.textContent||'').trim();
-    if(text.startsWith('◀ 이전')||text.startsWith('다음 ▶'))setTimeout(updateEditor,80);
-    if(/화면 맞춤|너비 맞춤/.test(text))setTimeout(()=>{const previewBody=body();if(previewBody){delete previewBody.dataset.resourceManualZoom;previewBody.classList.remove('ap-manual-zoom')}updateEditor()},80);
+    if(text.startsWith('◀ 이전')||text.startsWith('다음 ▶'))setTimeout(updateEditor,90);
+    if(/화면 맞춤|너비 맞춤/.test(text))setTimeout(()=>{const previewBody=body();if(previewBody){delete previewBody.dataset.resourceManualZoom;previewBody.classList.remove('ap-manual-zoom');previewBody.scrollLeft=0;previewBody.scrollTop=0}updateEditor()},90);
   },true);
   const observer=new MutationObserver(install);
   observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
