@@ -61,13 +61,24 @@ if (!resourcePreviewV3.includes("event.key==='ArrowLeft'")) failures.push('resou
 if (!resourcePreviewV3.includes("event.key==='ArrowRight'")) failures.push('resource-preview:right-arrow');
 if (resourcePreviewV3.includes('resource-preview:fit')) failures.push('resource-preview:legacy-cross-layer-fit-event');
 if (resourcePreviewV3.includes('/vendor/attachment-preview/xlsx.full.min.js')) failures.push('resource-preview:nonexistent-xlsx-prewarm');
+if (!resourcePreviewV3.includes('function captureZoomAnchor')) failures.push('resource-preview:pointer-anchor-capture');
+if (!resourcePreviewV3.includes('function restoreZoomAnchor')) failures.push('resource-preview:pointer-anchor-restore');
+if (!resourcePreviewV3.includes('previewBody.scrollLeft+=pointX-anchor.clientX')) failures.push('resource-preview:pointer-anchor-horizontal-scroll');
+if (!resourcePreviewV3.includes('previewBody.scrollTop+=pointY-anchor.clientY')) failures.push('resource-preview:pointer-anchor-vertical-scroll');
+if (!resourcePreviewV3.includes('wheelBusy')) failures.push('resource-preview:wheel-zoom-serialization');
+if (!resourcePreviewV3.includes('function prewarmForExtension')) failures.push('resource-preview:intent-prewarm');
+if (!resourcePreviewV3.includes("document.addEventListener('pointerover',event=>prewarmFromNode")) failures.push('resource-preview:hover-prewarm');
+if (resourcePreviewV3.includes('\n  prewarm();')) failures.push('resource-preview:eager-all-renderer-prewarm');
+if (!resourcePreviewV3.includes("if(ext==='pdf')")) failures.push('resource-preview:pdf-selective-prewarm');
+if (!resourcePreviewV3.includes("else if(ext==='pptx')")) failures.push('resource-preview:pptx-selective-prewarm');
+if (!resourcePreviewV3.includes("else if(ext==='hwp'||ext==='hwpx')")) failures.push('resource-preview:hwp-selective-prewarm');
 if (!resourcePreviewV3.includes("text==='＋'||text==='－'")) failures.push('resource-preview:legacy-zoom-hide');
 if (!resourcePreviewV3Css.includes('.ap-legacy-zoom-control{display:none!important}')) failures.push('resource-preview:legacy-controls-hidden');
 if (!resourcePreviewV3Css.includes('.ap-legacy-actual-control{display:none!important}')) failures.push('resource-preview:legacy-actual-hidden');
 if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom{overflow:auto!important}')) failures.push('resource-preview:manual-zoom-scroll');
 if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-pptx{overflow:visible!important')) failures.push('resource-preview:pptx-scrollable-zoom');
-if (!worker.includes('/resource-preview-v2.js?v=8')) failures.push('resource-preview:v2-cache-bust');
-if (!worker.includes('/resource-preview-v3.js?v=8')) failures.push('resource-preview:v3-cache-bust');
+if (!worker.includes('/resource-preview-v2.js?v=9')) failures.push('resource-preview:v2-cache-bust');
+if (!worker.includes('/resource-preview-v3.js?v=9')) failures.push('resource-preview:v3-cache-bust');
 
 if (failures.length) throw new Error(`Attachment preview verification failed: ${failures.join(', ')}`);
 console.log(JSON.stringify({
@@ -78,9 +89,10 @@ console.log(JSON.stringify({
   consolidated_worker:true,
   resource_preview:{
     route:'/resources',single_injection_source:true,v2_presentation_only:true,
-    native_renderer_state:true,wheel_zoom:true,editable_zoom:true,keyboard_paging:true,
+    native_renderer_state:true,wheel_zoom:true,pointer_anchored_zoom:true,editable_zoom:true,keyboard_paging:true,
     pdf_native_rerender_zoom:true,pptx_native_renderer_zoom:true,
     docx_wheel_zoom:true,xlsx_wheel_zoom:true,xlsx_preload_mismatch:false,
+    selective_intent_prewarm:true,eager_renderer_prewarm:false,
     legacy_zoom_controls_hidden:true,legacy_original_ratio_label:false,enterprise_ui:true
   }
 }));
