@@ -30,8 +30,8 @@ const IPASS_STYLE='<link rel="stylesheet" href="/ipass-ui-v2.css?v=2" data-ipass
 const IPASS_SCRIPT='<script src="/ipass-ui-v2.js?v=2" data-ipass-ui-v2="true"></script>';
 const SUBMISSION_STYLE='<link rel="stylesheet" href="/evaluation-submit.css?v=1">';
 const SUBMISSION_SCRIPT='<script src="/evaluation-submit-enhance.js?v=16"></script><script src="/evaluation-submit-nav-v2.js?v=2"></script>';
-const RESOURCE_PREVIEW_V3_STYLE='<link rel="stylesheet" href="/resource-preview-v2.css?v=9"><link rel="stylesheet" href="/resource-preview-v3.css?v=9">';
-const RESOURCE_PREVIEW_V3_SCRIPT='<script src="/resource-preview-v2.js?v=9"></script><script src="/resource-preview-v3.js?v=9"></script>'; 
+const RESOURCE_PREVIEW_V3_STYLE='<link rel="stylesheet" href="/resource-preview-v2.css?v=10"><link rel="stylesheet" href="/resource-preview-v3.css?v=10">';
+const RESOURCE_PREVIEW_V3_SCRIPT='<script src="/resource-preview-v2.js?v=10"></script><script src="/resource-preview-v3.js?v=10"></script>'; 
 const HOME_BOOT='<style id="ehs-home-boot">#publicPortal{display:none!important}</style><script id="ehs-home-session">try{if(!window.EHSAuth||!window.EHSAuth.readSession())window.EHSAuth?window.EHSAuth.redirectToLogin("/home"):location.replace("/?next=%2Fhome")}catch(_){location.replace("/?next=%2Fhome")}</script>';
 const EMBED_STYLE='<style id="ipass-embedded-style">body{background:#f5f7f9!important}.header{display:none!important}.layout{min-height:100vh!important}.side{top:0!important;height:100vh!important}.main{padding-top:20px!important}.shell{padding-top:20px!important}.page-head{margin-top:0!important}</style>';
 const ROOT_ROUTE_SCRIPT=`<script id="ipass-route-v24">(function(){var tries=0,t=setInterval(function(){try{if(typeof window.openPortalService==='function'&&!window.openPortalService.__ipassRouted){var original=window.openPortalService;var wrapped=function(service){var map={ipass:'/ipass',training:'/education',voc:'/voc',notices:'/notices',resources:'/resources'};if(map[service]){location.href=map[service];return}return original.apply(this,arguments)};wrapped.__ipassRouted=true;window.openPortalService=wrapped}}catch(_){}if(++tries>40)clearInterval(t)},200)})();</script>`;
@@ -69,7 +69,7 @@ async function injectShared(response,{path='/',home=false,root=false,submission=
   if(home){html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,HOME_STYLE,'/portal-home-v3.css?v=4');html=injectBody(html,HOME_SCRIPT,'/portal-home-v3.js?v=7')}
   if(path.startsWith('/ipass')){html=injectHead(html,IPASS_STYLE,'/ipass-ui-v2.css?v=2');html=injectBody(html,IPASS_SCRIPT,'/ipass-ui-v2.js?v=2')}
   if(submission){html=injectHead(html,SUBMISSION_STYLE,'/evaluation-submit.css?v=1');html=injectBody(html,SUBMISSION_SCRIPT,'/evaluation-submit-enhance.js?v=16')}
-  if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v3.css?v=9');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v3.js?v=9')}
+  if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v3.css?v=10');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v3.js?v=10')}
   if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');
   return htmlResponse(response,html)
 }
@@ -109,12 +109,21 @@ async function core(request,env,ctx){
   const education=await handleEducationSubmission(request,env,ctx,baseWorker);if(education)return education;
   const voc=await handleVocSubmission(request,env,ctx,baseWorker);if(voc)return voc;
   const content=await handlePortalContent(request,env,ctx,baseWorker);if(content)return content;
-  const submission=await handlePartnerSubmissionWithQuota(request,env,ctx,baseWorker);if(submission)return request.method==='GET'?augmentSubmission(submission,path,env):submission;
-  const runtime=await handleEvaluationRuntime(request,env,ctx,baseWorker);if(runtime){if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(runtime,{path,root:true});return runtime}
-  const response=await baseWorker.fetch(request,env,ctx);
-  if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(response,{path,root:true});
-  if(request.method==='GET'&&path==='/evaluation-management.html')return injectShared(response,{path,embedded:url.searchParams.get('embedded')==='1'});
-  return response;
+  const partner=await handlePartnerSubmissionWithQuota(request,env,ctx,baseWorker);if(partner)return augmentSubmission(partner,path,env);
+  const runtime=await handleEvaluationRuntime(request,env,ctx,baseWorker);if(runtime)return runtime;
+  return baseWorker.fetch(request,env,ctx)
 }
 
-export default {async fetch(request,env,ctx){const url=new URL(request.url),id=requestId(request),started=Date.now(),metrics=createRequestMetrics(request,id),measuredEnv=instrumentEnvironment(env,metrics);if(request.method==='OPTIONS'&&isApi(url.pathname)){const headers=new Headers({'x-request-id':id});cors(headers);return new Response(null,{status:204,headers})}const headers=new Headers(request.headers);headers.set('x-request-id',id);const traced=new Request(request,{headers});try{const raw=await core(traced,measuredEnv,ctx);const response=await attach(raw,id,url.pathname);if(shouldAudit(request.method,url.pathname,response.status)){const task=recordRequestAudit(env,{requestId:id,method:request.method,path:url.pathname,status:response.status,durationMs:Date.now()-started});if(ctx?.waitUntil)ctx.waitUntil(task);else void task}return finalizeRequestMetrics(metrics,response,env)}catch(error){console.error('unhandled request error',{request_id:id,path:url.pathname,method:request.method,error:error?.stack||String(error)});const task=recordRequestAudit(env,{requestId:id,method:request.method,path:url.pathname,status:500,durationMs:Date.now()-started});if(ctx?.waitUntil)ctx.waitUntil(task);else void task;let response;if(!isApi(url.pathname))response=new Response('서비스 처리 중 오류가 발생했습니다.',{status:500,headers:{'content-type':'text/plain;charset=utf-8','x-request-id':id}});else{const h=new Headers({'content-type':'application/json;charset=utf-8','x-request-id':id});cors(h);response=new Response(JSON.stringify({success:false,error:'서버 처리 중 오류가 발생했습니다.',code:'UNHANDLED_SERVER_ERROR',request_id:id}),{status:500,headers:h})}return finalizeRequestMetrics(metrics,response,env)}}};
+export default{
+  async fetch(request,env,ctx){
+    const url=new URL(request.url),path=url.pathname,id=requestId(request),started=performance.now();
+    if(request.method==='OPTIONS'&&isApi(path))return attach(new Response(null,{status:204}),id,path);
+    const metrics=createRequestMetrics(request,id);instrumentEnvironment(env,metrics);
+    let response;
+    try{response=await core(request,env,ctx)}catch(error){console.error('worker error',id,error);response=isApi(path)?new Response(JSON.stringify({success:false,error:'서비스 처리 중 오류가 발생했습니다.',request_id:id}),{status:500,headers:{'content-type':'application/json;charset=utf-8'}}):new Response('서비스 처리 중 오류가 발생했습니다.',{status:500})}
+    const status=response.status;
+    try{finalizeRequestMetrics(ctx,env,metrics,response,performance.now()-started)}catch(_){/* metrics must never break requests */}
+    if(shouldAudit(request.method,path,status))try{ctx.waitUntil(recordRequestAudit(env,{request_id:id,method:request.method,path,status,actor:null}))}catch(_){/* audit best effort */}
+    return attach(response,id,path)
+  }
+};
