@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const [viewer, education, educationApi, partnerApi, worker, workerEntry, resourcePreview, resourcePreviewCss, packageJson, assetBuilder] = await Promise.all([
+const [viewer, education, educationApi, partnerApi, worker, workerEntry, resourcePreview, resourcePreviewCss, resourcePreviewV3, resourcePreviewV3Css, packageJson, assetBuilder] = await Promise.all([
   readFile(resolve(root, 'public/attachment-preview.js'), 'utf8'),
   readFile(resolve(root, 'public/education.html'), 'utf8'),
   readFile(resolve(root, 'src/education-submission.js'), 'utf8'),
@@ -11,6 +11,8 @@ const [viewer, education, educationApi, partnerApi, worker, workerEntry, resourc
   readFile(resolve(root, 'src/worker-entry.js'), 'utf8'),
   readFile(resolve(root, 'public/resource-preview-v2.js'), 'utf8'),
   readFile(resolve(root, 'public/resource-preview-v2.css'), 'utf8'),
+  readFile(resolve(root, 'public/resource-preview-v3.js'), 'utf8'),
+  readFile(resolve(root, 'public/resource-preview-v3.css'), 'utf8'),
   readFile(resolve(root, 'package.json'), 'utf8'),
   readFile(resolve(root, 'scripts/prepare-preview-assets.mjs'), 'utf8')
 ]);
@@ -35,13 +37,17 @@ if (!packageJson.includes('"@rhwp/core": "0.8.4"')) failures.push('package:rhwp-
 for (const asset of ['@rhwp/core/rhwp.js', '@rhwp/core/rhwp_bg.wasm', 'LICENSE-rhwp.txt']) if (!assetBuilder.includes(asset)) failures.push(`asset-builder:${asset}`);
 
 if (!workerEntry.includes("path !== '/resources'")) failures.push('resource-preview:route-scope');
-if (!workerEntry.includes('/resource-preview-v2.css?v=1')) failures.push('resource-preview:css-injection');
-if (!workerEntry.includes('/resource-preview-v2.js?v=1')) failures.push('resource-preview:js-injection');
 if (!resourcePreview.includes('Math.min(space.width/source.width,space.height/source.height)')) failures.push('resource-preview:aspect-fit');
-if (!resourcePreview.includes("mode='fit'")) failures.push('resource-preview:fit-default');
+if (!resourcePreview.includes('fittedTargets')) failures.push('resource-preview:one-shot-fit');
 if (!resourcePreview.includes('ResizeObserver')) failures.push('resource-preview:responsive-fit');
 if (!resourcePreviewCss.includes('width:min(1680px,calc(100vw - 36px))')) failures.push('resource-preview:enterprise-modal');
-if (!resourcePreviewCss.includes('.ap-fit-state')) failures.push('resource-preview:fit-indicator');
+if (!resourcePreviewV3.includes("document.addEventListener('wheel'")) failures.push('resource-preview:wheel-zoom');
+if (!resourcePreviewV3.includes('ap-zoom-input')) failures.push('resource-preview:editable-zoom');
+if (!resourcePreviewV3.includes("text==='＋'||text==='－'")) failures.push('resource-preview:legacy-zoom-hide');
+if (!resourcePreviewV3Css.includes('.ap-legacy-zoom-control{display:none!important}')) failures.push('resource-preview:legacy-controls-hidden');
+if (!resourcePreviewV3Css.includes('.ap-legacy-actual-control{display:none!important}')) failures.push('resource-preview:legacy-actual-hidden');
+if (!worker.includes('/resource-preview-v2.js?v=3')) failures.push('resource-preview:v2-cache-bust');
+if (!worker.includes('/resource-preview-v3.js?v=3')) failures.push('resource-preview:v3-cache-bust');
 
 if (failures.length) throw new Error(`Attachment preview verification failed: ${failures.join(', ')}`);
-console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',aspect_ratio_preserved:true,viewport_fit:true,enterprise_ui:true}}));
+console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',aspect_ratio_preserved:true,initial_fit_only:true,wheel_zoom:true,editable_zoom:true,legacy_zoom_controls_hidden:true,enterprise_ui:true}}));
