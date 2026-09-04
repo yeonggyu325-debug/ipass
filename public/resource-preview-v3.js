@@ -13,8 +13,10 @@
   let pdfZoomRequest=0;
   let pdfFitWidth=0;
   let pdfFitHeight=0;
+  let pdfNativeScale=0;
   let pptZoomRequest=0;
   let pptNativeZoom=100;
+  let previewKey='';
 
   function preload(href,rel,as){
     if(document.querySelector(`link[data-resource-preview-prewarm="${href}"]`))return;
@@ -106,18 +108,58 @@
     }
   }
 
+  function initialPdfScale(){
+    const previewBody=body();
+    const width=Number(previewBody?.clientWidth||0);
+    return Math.min(1.45,Math.max(.7,(width-36)/820));
+  }
+  function originalSize(el,displayWidth,displayHeight){
+    if(el instanceof HTMLImageElement){
+      const width=Number(el.naturalWidth||0),height=Number(el.naturalHeight||0);
+      if(width>0&&height>0)return{width,height};
+    }
+    if(isPdfTarget(el)){
+      if(!pdfNativeScale)pdfNativeScale=initialPdfScale();
+      const ratio=Math.max(1,Math.min(Number(window.devicePixelRatio||1),2));
+      const nativeWidth=Number(el.width||0)/ratio;
+      const nativeHeight=Number(el.height||0)/ratio;
+      if(nativeWidth>0&&nativeHeight>0&&pdfNativeScale>0){
+        return{width:nativeWidth/pdfNativeScale,height:nativeHeight/pdfNativeScale};
+      }
+    }
+    return{width:displayWidth,height:displayHeight};
+  }
+  function displayPercent(width,height,originalWidth,originalHeight){
+    const ratios=[];
+    if(originalWidth>0)ratios.push(width/originalWidth);
+    if(originalHeight>0)ratios.push(height/originalHeight);
+    const ratio=ratios.length?Math.min(...ratios):1;
+    return Math.min(500,Math.max(10,Math.round(ratio*1000)/10));
+  }
+
   function recordBase(el,width,height,{force=false}={}){
     if(!el)return;
     if(el===lastTarget&&isManual()&&!force)return;
     const rect=el.getBoundingClientRect();
     const w=Number(width||rect.width||0),h=Number(height||rect.height||0);
     if(!w||!h)return;
-    baseWidth=Math.max(1,w);baseHeight=Math.max(1,h);lastTarget=el;zoomPercent=100;
+    if(isPdfTarget(el)&&!pdfNativeScale)pdfNativeScale=initialPdfScale();
+    const original=originalSize(el,w,h);
+    baseWidth=Math.max(1,Number(original.width||w));
+    baseHeight=Math.max(1,Number(original.height||h));
+    lastTarget=el;
+    zoomPercent=isPptTarget(el)?pptNativeZoom:displayPercent(w,h,baseWidth,baseHeight);
     if(isPdfTarget(el)){pdfFitWidth=baseWidth;pdfFitHeight=baseHeight;pdfZoomRequest+=1}
-    if(isPptTarget(el)){pptNativeZoom=100;pptZoomRequest+=1}
+    if(isPptTarget(el)){pptNativeZoom=100;zoomPercent=100;pptZoomRequest+=1}
     const previewBody=body();
     if(previewBody){delete previewBody.dataset.resourceManualZoom;previewBody.classList.remove('ap-manual-zoom')}
     clearTargetZoom(el);
+    if(isPdfTarget(el)&&el.dataset.resourceFit==='1'){
+      el.style.setProperty('width',`${w}px`,'important');
+      el.style.setProperty('height',`${h}px`,'important');
+      el.style.setProperty('max-width','none','important');
+      el.style.setProperty('max-height','none','important');
+    }
     cleanLegacyControls();ensureZoomInput();
   }
 
@@ -235,6 +277,7 @@
     while(zoomIn&&nativeWidth+1<width&&attempts<24){
       const previous=canvas;
       zoomIn.click();
+      pdfNativeScale=Math.min(3,(pdfNativeScale||initialPdfScale())+.15);
       const next=await waitForPdfCanvas(previous,ticket);
       if(!next||ticket!==pdfZoomRequest)return false;
       canvas=next;
@@ -372,6 +415,18 @@
     const previewBody=body();if(previewBody){delete previewBody.dataset.resourceManualZoom;previewBody.classList.remove('ap-manual-zoom')}
     const input=ensureZoomInput();if(input)input.value='100';
   }
+  function resetPreviewIdentity(){
+    pdfZoomRequest+=1;pdfFitWidth=0;pdfFitHeight=0;pdfNativeScale=0;
+    pptZoomRequest+=1;pptNativeZoom=100;
+    lastTarget=null;baseWidth=0;baseHeight=0;zoomPercent=100;
+  }
+  function syncPreviewIdentity(){
+    const currentModal=modal();
+    if(!currentModal){if(previewKey){previewKey='';resetPreviewIdentity()}return false}
+    const key=(currentModal.querySelector('[data-ap="name"]')?.textContent||'').trim();
+    if(key&&key!==previewKey){previewKey=key;resetPreviewIdentity()}
+    return true;
+  }
   function page(direction){
     const targetButton=direction<0?button(text=>text.startsWith('◀ 이전')):button(text=>text.startsWith('다음 ▶'));
     if(targetButton&&!targetButton.disabled){resetForPageChange();targetButton.click()}
@@ -396,7 +451,7 @@
     },45);
   }
   function install(){
-    if(!modal())return;
+    if(!syncPreviewIdentity())return;
     cleanLegacyControls();ensureZoomInput();refreshTarget();
   }
 
