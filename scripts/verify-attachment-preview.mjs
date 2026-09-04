@@ -33,6 +33,7 @@ if (!education.includes('.ppt,.pptx')) failures.push('education:ppt-upload');
 if (!partnerApi.includes('office_viewer_url')) failures.push('partner-api:office-viewer');
 if (!worker.includes('attachment-preview.js?v=3')) failures.push('worker:viewer-injection');
 if (!viewer.includes("'webp'")) failures.push('viewer:webp');
+if (!viewer.includes("xlsx: 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'")) failures.push('viewer:xlsx-runtime-source');
 if (!viewer.includes("const zoomOut = button('－', () => { scale = Math.max(.5, scale - .15); draw(); }")) failures.push('viewer:pdf-native-zoom');
 if (!viewer.includes('await viewer.setZoom(zoom)')) failures.push('viewer:pptx-native-setzoom');
 if (!viewer.includes("const fitButton = button('화면 맞춤', fit)")) failures.push('viewer:image-native-fit');
@@ -59,6 +60,7 @@ if (!resourcePreviewV3.includes("control.click()")) failures.push('resource-prev
 if (!resourcePreviewV3.includes("event.key==='ArrowLeft'")) failures.push('resource-preview:left-arrow');
 if (!resourcePreviewV3.includes("event.key==='ArrowRight'")) failures.push('resource-preview:right-arrow');
 if (resourcePreviewV3.includes('resource-preview:fit')) failures.push('resource-preview:legacy-cross-layer-fit-event');
+if (resourcePreviewV3.includes('/vendor/attachment-preview/xlsx.full.min.js')) failures.push('resource-preview:nonexistent-xlsx-prewarm');
 if (!resourcePreviewV3.includes("text==='＋'||text==='－'")) failures.push('resource-preview:legacy-zoom-hide');
 if (!resourcePreviewV3Css.includes('.ap-legacy-zoom-control{display:none!important}')) failures.push('resource-preview:legacy-controls-hidden');
 if (!resourcePreviewV3Css.includes('.ap-legacy-actual-control{display:none!important}')) failures.push('resource-preview:legacy-actual-hidden');
@@ -78,7 +80,7 @@ console.log(JSON.stringify({
     route:'/resources',single_injection_source:true,v2_presentation_only:true,
     native_renderer_state:true,wheel_zoom:true,editable_zoom:true,keyboard_paging:true,
     pdf_native_rerender_zoom:true,pptx_native_renderer_zoom:true,
-    docx_wheel_zoom:true,xlsx_wheel_zoom:true,legacy_zoom_controls_hidden:true,
-    legacy_original_ratio_label:false,enterprise_ui:true
+    docx_wheel_zoom:true,xlsx_wheel_zoom:true,xlsx_preload_mismatch:false,
+    legacy_zoom_controls_hidden:true,legacy_original_ratio_label:false,enterprise_ui:true
   }
 }));
