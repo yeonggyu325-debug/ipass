@@ -78,16 +78,15 @@ if (!resourcePreviewV3.includes("text==='＋'||text==='－'")) failures.push('re
 if (!resourcePreviewV3Css.includes('.ap-legacy-zoom-control{display:none!important}')) failures.push('resource-preview:legacy-controls-hidden');
 if (!resourcePreviewV3Css.includes('.ap-legacy-actual-control{display:none!important}')) failures.push('resource-preview:legacy-actual-hidden');
 if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom{overflow:auto!important')) failures.push('resource-preview:manual-zoom-scroll');
-if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-pdf-canvas{max-width:none!important')) failures.push('resource-preview:pdf-no-width-clamp');
-if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-pdf-stage{width:max-content!important')) failures.push('resource-preview:pdf-scroll-stage');
-if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-image-stage')) failures.push('resource-preview:image-scroll-stage');
-if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-hwp-stage')) failures.push('resource-preview:hwp-scroll-stage');
-if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-pptx{width:max-content!important')) failures.push('resource-preview:pptx-scroll-stage');
-if (!resourcePreviewV3Css.includes('.ap-body.ap-manual-zoom .ap-docx{width:max-content!important')) failures.push('resource-preview:docx-scroll-stage');
-if (!worker.includes('/resource-preview-v2.js?v=10')) failures.push('resource-preview:v2-cache-bust');
-if (!worker.includes('/resource-preview-v3.js?v=10')) failures.push('resource-preview:v3-cache-bust');
-if (!worker.includes('/resource-preview-v2.css?v=10')) failures.push('resource-preview:v2-style-cache-bust');
-if (!worker.includes('/resource-preview-v3.css?v=10')) failures.push('resource-preview:v3-style-cache-bust');
+if (!resourcePreviewV3Css.includes('.ap-pdf-canvas{max-width:none!important')) failures.push('resource-preview:pdf-no-width-clamp');
+if (!resourcePreviewV3Css.includes('.ap-pdf-stage{width:max-content!important')) failures.push('resource-preview:pdf-scroll-stage');
+if (!resourcePreviewV3Css.includes('.ap-pdf-stage') || !resourcePreviewV3Css.includes('padding:50vh 50vw!important')) failures.push('resource-preview:pdf-pan-gutter');
+if (!resourcePreviewV3Css.includes('.ap-image-stage')) failures.push('resource-preview:image-scroll-stage');
+if (!resourcePreviewV3Css.includes('.ap-hwp-stage')) failures.push('resource-preview:hwp-scroll-stage');
+if (!resourcePreviewV3Css.includes('.ap-pptx{width:max-content!important')) failures.push('resource-preview:pptx-scroll-stage');
+if (!resourcePreviewV3Css.includes('.ap-docx{width:max-content!important')) failures.push('resource-preview:docx-scroll-stage');
+if (!resourcePreviewV3Css.includes('scrollbar-gutter:stable both-edges')) failures.push('resource-preview:stable-scrollbar-gutter');
+for (const suffix of ['v2.js?v=11','v3.js?v=11','v2.css?v=11','v3.css?v=11']) if (!worker.includes(`/resource-preview-${suffix}`)) failures.push(`resource-preview:cache-bust:${suffix}`);
 
 if (failures.length) throw new Error(`Attachment preview verification failed: ${failures.join(', ')}`);
 console.log(JSON.stringify({
@@ -102,7 +101,7 @@ console.log(JSON.stringify({
     pdf_native_rerender_zoom:true,pptx_native_renderer_zoom:true,
     docx_wheel_zoom:true,xlsx_wheel_zoom:true,xlsx_preload_mismatch:false,
     selective_intent_prewarm:true,eager_renderer_prewarm:false,
-    scroll_extent_unclamped:true,wheel_event_isolated:true,cache_version:10,
+    scroll_extent_unclamped:true,pan_gutters:true,wheel_event_isolated:true,cache_version:11,
     legacy_zoom_controls_hidden:true,legacy_original_ratio_label:false,enterprise_ui:true
   }
 }));
