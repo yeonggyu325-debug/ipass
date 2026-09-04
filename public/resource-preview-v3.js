@@ -1,10 +1,12 @@
-/* Resource preview controller: native renderer state first, flow-document fallback only. */
+/* Resource preview controller: native renderer state first, cursor-anchored wheel zoom, intent-based prewarm. */
 (function(){
   'use strict';
   if(location.pathname!=='/resources')return;
 
   let wheelTimer=0;
   let wheelDelta=0;
+  let wheelAnchor=null;
+  let wheelBusy=false;
   let previewKey='';
   let flowTarget=null;
   let flowBaseWidth=0;
@@ -31,18 +33,50 @@
     if(body()?.querySelector('.ap-web-frame'))return'web';
     return'';
   }
+  function zoomTarget(type=previewType()){
+    if(type==='pdf')return pdfTarget();
+    if(type==='pptx')return pptTarget();
+    if(type==='hwp')return hwpTarget();
+    if(type==='image')return imageTarget();
+    if(type==='docx'||type==='xlsx')return flowZoomTarget();
+    return null;
+  }
 
-  function prewarm(){
-    const assets=[
-      ['/vendor/attachment-preview/pdf.min.mjs','modulepreload'],
-      ['/vendor/attachment-preview/pptx-renderer.es.js','modulepreload'],
-      ['/vendor/attachment-preview/rhwp.js','modulepreload']
-    ];
-    for(const [href,rel] of assets){
-      if(document.querySelector(`link[data-resource-preview-prewarm="${href}"]`))continue;
-      const link=document.createElement('link');link.rel=rel;link.href=href;link.dataset.resourcePreviewPrewarm=href;document.head.appendChild(link);
+  function preloadAsset(href,rel){
+    if(!href||document.querySelector(`link[data-resource-preview-prewarm="${href}"]`))return;
+    const link=document.createElement('link');
+    link.rel=rel;link.href=href;link.dataset.resourcePreviewPrewarm=href;
+    document.head.appendChild(link);
+  }
+  function extensionFromText(value){
+    const match=String(value||'').match(/\.([a-z0-9]{2,5})(?:$|[\s)\]}>,'"])/i);
+    return match?.[1]?.toLowerCase()||'';
+  }
+  function extensionHint(node){
+    let el=node instanceof Element?node:null;
+    for(let depth=0;el&&depth<5;depth+=1,el=el.parentElement){
+      const values=[
+        el.getAttribute('data-file-name'),el.getAttribute('data-filename'),el.getAttribute('data-name'),
+        el.getAttribute('data-extension'),el.getAttribute('data-ext'),el.getAttribute('title'),el.getAttribute('aria-label'),
+        (el.textContent||'').slice(0,500)
+      ];
+      for(const value of values){const ext=extensionFromText(value);if(ext)return ext}
+    }
+    return'';
+  }
+  function prewarmForExtension(extension){
+    const ext=String(extension||'').toLowerCase();
+    if(ext==='pdf'){
+      preloadAsset('/vendor/attachment-preview/pdf.min.mjs','modulepreload');
+      preloadAsset('/vendor/attachment-preview/pdf.worker.min.mjs','prefetch');
+    }else if(ext==='pptx'){
+      preloadAsset('/vendor/attachment-preview/pptx-renderer.es.js','modulepreload');
+    }else if(ext==='hwp'||ext==='hwpx'){
+      preloadAsset('/vendor/attachment-preview/rhwp.js','modulepreload');
+      preloadAsset('/vendor/attachment-preview/rhwp_bg.wasm','prefetch');
     }
   }
+  function prewarmFromNode(node){const ext=extensionHint(node);if(ext)prewarmForExtension(ext)}
 
   function cleanLegacyControls(){
     document.querySelectorAll('.ap-fit-state').forEach(node=>node.remove());
@@ -103,6 +137,7 @@
   function markManual(){const previewBody=body();if(previewBody){previewBody.dataset.resourceManualZoom='1';previewBody.classList.add('ap-manual-zoom')}}
 
   function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+  function nextPaint(){return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))}
   function waitForCanvas(previous,timeout=900){
     return new Promise(resolve=>{
       const started=performance.now();
@@ -114,6 +149,30 @@
       };
       requestAnimationFrame(poll);
     });
+  }
+
+  function captureZoomAnchor(event){
+    const type=previewType(),el=zoomTarget(type),previewBody=body();
+    if(!type||!el||!previewBody)return null;
+    const rect=el.getBoundingClientRect();
+    if(!rect.width||!rect.height)return null;
+    const x=Number(event.clientX),y=Number(event.clientY);
+    if(x<rect.left||x>rect.right||y<rect.top||y>rect.bottom)return null;
+    return{
+      type,
+      ratioX:Math.min(1,Math.max(0,(x-rect.left)/rect.width)),
+      ratioY:Math.min(1,Math.max(0,(y-rect.top)/rect.height)),
+      clientX:x,clientY:y
+    };
+  }
+  function restoreZoomAnchor(anchor){
+    if(!anchor||previewType()!==anchor.type)return;
+    const previewBody=body(),el=zoomTarget(anchor.type);if(!previewBody||!el)return;
+    const rect=el.getBoundingClientRect();if(!rect.width||!rect.height)return;
+    const pointX=rect.left+rect.width*anchor.ratioX;
+    const pointY=rect.top+rect.height*anchor.ratioY;
+    previewBody.scrollLeft+=pointX-anchor.clientX;
+    previewBody.scrollTop+=pointY-anchor.clientY;
   }
 
   async function setImageOrHwpZoom(value,type){
@@ -157,9 +216,9 @@
     if(!plus||!minus)return false;
     markManual();
     let guard=0;
-    while(current<desired&&guard++<16){plus.click();current=Math.min(300,current+20);previewBody.dataset.resourcePptZoom=String(current);await wait(45)}
+    while(current<desired&&guard++<16){plus.click();current=Math.min(300,current+20);previewBody.dataset.resourcePptZoom=String(current);await wait(55)}
     guard=0;
-    while(current>desired&&guard++<16){minus.click();current=Math.max(40,current-20);previewBody.dataset.resourcePptZoom=String(current);await wait(45)}
+    while(current>desired&&guard++<16){minus.click();current=Math.max(40,current-20);previewBody.dataset.resourcePptZoom=String(current);await wait(55)}
     updateEditor();return true;
   }
 
@@ -193,12 +252,12 @@
   function resetForNewPreview(){
     const previewBody=body();
     if(previewBody){delete previewBody.dataset.resourceManualZoom;delete previewBody.dataset.resourcePdfScale;delete previewBody.dataset.resourcePptZoom;delete previewBody.dataset.resourceFlowZoom;previewBody.classList.remove('ap-manual-zoom')}
-    resetFlowTarget();
+    resetFlowTarget();wheelDelta=0;wheelAnchor=null;
   }
   function syncPreviewIdentity(){
     const currentModal=modal();if(!currentModal){previewKey='';return false}
     const key=(currentModal.querySelector('[data-ap="name"]')?.textContent||'').trim();
-    if(key&&key!==previewKey){previewKey=key;resetForNewPreview()}
+    if(key&&key!==previewKey){previewKey=key;resetForNewPreview();prewarmForExtension(extensionFromText(key))}
     return true;
   }
 
@@ -212,23 +271,47 @@
     if(event.key==='ArrowLeft'){event.preventDefault();page(-1)}
     else if(event.key==='ArrowRight'){event.preventDefault();page(1)}
   }
+
+  function scheduleWheelFlush(){
+    if(wheelTimer)return;
+    wheelTimer=setTimeout(()=>{
+      wheelTimer=0;
+      if(wheelBusy){scheduleWheelFlush();return}
+      void flushWheelZoom();
+    },45);
+  }
+  async function flushWheelZoom(){
+    const delta=wheelDelta,anchor=wheelAnchor;
+    wheelDelta=0;wheelAnchor=null;
+    if(Math.abs(delta)<1)return;
+    const type=previewType();if(!type||type==='web')return;
+    const step=type==='pptx'?20:(type==='pdf'?15:10);
+    wheelBusy=true;
+    try{
+      await setZoom(currentPercent()+(delta<0?step:-step));
+      await nextPaint();restoreZoomAnchor(anchor);
+      await nextPaint();restoreZoomAnchor(anchor);
+    }finally{
+      wheelBusy=false;
+      if(Math.abs(wheelDelta)>=1)scheduleWheelFlush();
+    }
+  }
   function onWheel(event){
     const previewBody=body();if(!previewBody||!previewBody.contains(event.target)||event.target?.closest?.('.ap-web-frame'))return;
     const type=previewType();if(!type||type==='web')return;
-    event.preventDefault();wheelDelta+=event.deltaY;
-    if(wheelTimer)return;
-    wheelTimer=setTimeout(()=>{
-      const delta=wheelDelta;wheelDelta=0;wheelTimer=0;if(Math.abs(delta)<1)return;
-      const step=type==='pptx'?20:(type==='pdf'?15:10);
-      void setZoom(currentPercent()+(delta<0?step:-step));
-    },45);
+    event.preventDefault();
+    wheelDelta+=event.deltaY;
+    wheelAnchor=captureZoomAnchor(event)||wheelAnchor;
+    scheduleWheelFlush();
   }
   function install(){
     if(!syncPreviewIdentity())return;
     cleanLegacyControls();ensureZoomEditor();
   }
 
-  prewarm();
+  document.addEventListener('pointerover',event=>prewarmFromNode(event.target),{passive:true});
+  document.addEventListener('pointerdown',event=>prewarmFromNode(event.target),{passive:true,capture:true});
+  document.addEventListener('focusin',event=>prewarmFromNode(event.target),true);
   document.addEventListener('keydown',onKeydown,true);
   document.addEventListener('wheel',onWheel,{passive:false,capture:true});
   document.addEventListener('click',event=>{
