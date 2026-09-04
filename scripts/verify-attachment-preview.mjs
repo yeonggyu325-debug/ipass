@@ -59,6 +59,11 @@ if (!resourcePreviewV3.includes('function applyPptZoom')) failures.push('resourc
 if (!resourcePreviewV3.includes('function waitForPptZoom')) failures.push('resource-preview:pptx-render-wait');
 if (!resourcePreviewV3.includes('pptNativeZoom')) failures.push('resource-preview:pptx-native-zoom-state');
 if (resourcePreviewV3.includes("isPptTarget(el)){\n      el.style.removeProperty('zoom');\n      el.style.setProperty('width'")) failures.push('resource-preview:pptx-css-transform-zoom');
+if (!resourcePreviewV3.includes('function originalSize')) failures.push('resource-preview:original-size-baseline');
+if (!resourcePreviewV3.includes('function displayPercent')) failures.push('resource-preview:display-percent-calculation');
+if (!resourcePreviewV3.includes('naturalWidth')) failures.push('resource-preview:image-natural-size');
+if (!resourcePreviewV3.includes('initialPdfScale')) failures.push('resource-preview:pdf-original-scale');
+if (resourcePreviewV3.includes('baseWidth=Math.max(1,w);baseHeight=Math.max(1,h);lastTarget=el;zoomPercent=100')) failures.push('resource-preview:fit-size-treated-as-100');
 if (!resourcePreviewV3.includes("text==='＋'||text==='－'")) failures.push('resource-preview:legacy-zoom-hide');
 if (!resourcePreviewV3Css.includes('.ap-legacy-zoom-control{display:none!important}')) failures.push('resource-preview:legacy-controls-hidden');
 if (!resourcePreviewV3Css.includes('.ap-legacy-actual-control{display:none!important}')) failures.push('resource-preview:legacy-actual-hidden');
@@ -66,4 +71,4 @@ if (!worker.includes('/resource-preview-v2.js?v=6')) failures.push('resource-pre
 if (!worker.includes('/resource-preview-v3.js?v=6')) failures.push('resource-preview:v3-cache-bust');
 
 if (failures.length) throw new Error(`Attachment preview verification failed: ${failures.join(', ')}`);
-console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',single_injection_source:true,aspect_ratio_preserved:true,initial_fit_only:true,wheel_zoom:true,docx_wheel_zoom:true,xlsx_wheel_zoom:true,pdf_native_rerender_zoom:true,pptx_native_renderer_zoom:true,editable_zoom:true,legacy_zoom_controls_hidden:true,legacy_original_ratio_label:false,enterprise_ui:true}}));
+console.log(JSON.stringify({success:true,browser_renderers:['pdf','xlsx','docx','pptx','hwp','hwpx','image'],web_viewer_fallbacks:['ppt','doc','hwp-on-error','hwpx-on-error'],allowed_extensions:requiredExtensions.length,consolidated_worker:true,resource_preview:{route:'/resources',single_injection_source:true,aspect_ratio_preserved:true,initial_fit_only:true,wheel_zoom:true,docx_wheel_zoom:true,xlsx_wheel_zoom:true,pdf_native_rerender_zoom:true,pptx_native_renderer_zoom:true,original_size_zoom_percentage:true,editable_zoom:true,legacy_zoom_controls_hidden:true,legacy_original_ratio_label:false,enterprise_ui:true}}));
