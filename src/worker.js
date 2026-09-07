@@ -96,15 +96,14 @@ async function dispatch(request,env,ctx){
 
 export default {
   async fetch(request,env,ctx){
-    const metrics=createRequestMetrics(request);
+    const metrics=createRequestMetrics(request,requestId(request));
     const instrumentedEnv=instrumentEnvironment(env,metrics);
     try{
       const response=await dispatch(request,instrumentedEnv,ctx);
-      finalizeRequestMetrics(ctx,metrics,response.status);
-      return response;
+      try{return finalizeRequestMetrics(metrics,response,instrumentedEnv)}
+      catch(metricError){console.warn('performance finalization failed',metricError);return response}
     }catch(error){
-      recordRequestAudit?.(ctx,env,{request,error});
-      finalizeRequestMetrics(ctx,metrics,500,error);
+      try{recordRequestAudit?.(ctx,env,{request,error})}catch(auditError){console.warn('request audit failed',auditError)}
       throw error;
     }
   }
