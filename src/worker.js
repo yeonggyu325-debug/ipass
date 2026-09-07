@@ -69,42 +69,53 @@ async function injectShared(response,{path='/',home=false,root=false,submission=
   if(home){html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,HOME_STYLE,'/portal-home-v3.css?v=4');html=injectBody(html,HOME_SCRIPT,'/portal-home-v3.js?v=7')}
   if(path.startsWith('/ipass')){html=injectHead(html,IPASS_STYLE,'/ipass-ui-v2.css?v=2');html=injectBody(html,IPASS_SCRIPT,'/ipass-ui-v2.js?v=2')}
   if(submission){html=injectHead(html,SUBMISSION_STYLE,'/evaluation-submit.css?v=1');html=injectBody(html,SUBMISSION_SCRIPT,'/evaluation-submit-enhance.js?v=16')}
-  if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v2.css?v=11');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v2.js?v=11')}
+  if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v3.css?v=11');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v3.js?v=11')}
   if(embedded)html=injectHead(html,EMBED_STYLE,'ipass-embedded-style');
-  return htmlResponse(response,html);
+  return htmlResponse(response,html)
 }
+async function serveAsset(request,env,assetPath,options={}){const response=await env.ASSETS.fetch(rewriteRequest(request,assetPath,{clearSearch:true}));return response.ok?injectShared(response,{...options,path:new URL(request.url).pathname}):response}
+function kstToday(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const map=Object.fromEntries(parts.map(p=>[p.type,p.value]));return `${map.year}-${map.month}-${map.day}`}
+function submissionState(target,storageAvailable){const today=kstToday(),start=String(target?.start_at||'').slice(0,10),end=String(target?.end_at||'').slice(0,10),active=target?.cycle_status==='active';let reason=null;if(!active)reason='평가회차가 진행중 상태가 아닙니다.';else if(start&&today<start)reason='평가 시작일 전입니다.';else if(end&&today>end)reason='평가기간이 종료되었습니다.';const editable=!reason;return {can_edit:editable,can_submit:editable,can_upload:editable&&storageAvailable,can_delete_file:editable,edit_reason:reason,today_kst:today}}
+async function augmentSubmission(response,path,env){if(!response.ok||!/^\/api\/partner\/submission\/[^/]+$/.test(path))return response;const type=response.headers.get('content-type')||'';if(!type.includes('application/json'))return response;const data=await response.clone().json().catch(()=>null);if(!data?.success||!data.workspace?.target)return response;const state=submissionState(data.workspace.target,!!env.EVIDENCE_FILES);data.capabilities={...(data.capabilities||{}),...state,editable:state.can_edit};const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');return new Response(JSON.stringify(data),{status:response.status,statusText:response.statusText,headers})}
+async function attach(response,id,path){const headers=new Headers(response.headers);headers.set('x-request-id',id);if(isApi(path))cors(headers);const type=headers.get('content-type')||'';if(isApi(path)&&type.includes('application/json')){const text=await response.text();let data;try{data=JSON.parse(text)}catch{return new Response(text,{status:response.status,statusText:response.statusText,headers})}if(data&&typeof data==='object'&&!Array.isArray(data)&&!data.request_id)data.request_id=id;headers.delete('content-length');headers.delete('content-encoding');return new Response(JSON.stringify(data),{status:response.status,statusText:response.statusText,headers})}return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
+function shouldAudit(method,path,status){if(!isApi(path)||path==='/api/performance/rum')return false;if(method!=='GET'&&method!=='OPTIONS')return true;return status>=400}
 
-async function dispatch(request,env,ctx){
+async function core(request,env,ctx){
   const url=new URL(request.url),path=url.pathname;
-  if(request.method==='OPTIONS'){const headers=new Headers();cors(headers);return new Response(null,{status:204,headers})}
   if(path==='/api/health')return new Response(JSON.stringify({success:true}),{headers:{'content-type':'application/json;charset=utf-8','cache-control':'no-store'}});
-  let response;
-  if(path.startsWith('/api/evaluations')||path.startsWith('/api/templates')||path.startsWith('/api/cycles'))response=await handleEvaluationManagement(request,env,ctx);
-  else if(path.startsWith('/api/runtime'))response=await handleEvaluationRuntime(request,env,ctx);
-  else if(path.startsWith('/api/partner-submission'))response=await handlePartnerSubmissionWithQuota(request,env,ctx);
-  else if(path.startsWith('/api/storage-admin'))response=await handleStorageAdmin(request,env,ctx);
-  else if(path.startsWith('/api/system-admin'))response=await handleSystemAdmin(request,env,ctx);
-  else if(path.startsWith('/api/evaluation-scoring'))response=await handleEvaluationScoring(request,env,ctx);
-  else if(path.startsWith('/api/education'))response=await handleEducationSubmission(request,env,ctx);
-  else if(path.startsWith('/api/voc'))response=await handleVocSubmission(request,env,ctx);
-  else if(path.startsWith('/api/portal-content'))response=await handlePortalContent(request,env,ctx);
-  else if(path.startsWith('/api/portal-shell'))response=await handlePortalShellApi(request,env,ctx);
-  else response=await baseWorker.fetch(request,env,ctx);
-  if(isApi(path)){const headers=new Headers(response.headers);cors(headers);headers.set('x-request-id',requestId(request));return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
-  return injectShared(response,{path,home:path==='/home',root:path==='/',submission:path==='/evaluation-submit.html',embedded:url.searchParams.get('embed')==='1'});
+  const rum=await handlePerformanceRum(request,env);if(rum)return rum;
+  const shell=await handlePortalShellApi(request,env,ctx,baseWorker);if(shell)return shell;
+  if(request.method==='GET'&&IPASS_PATHS.has(path))return serveAsset(request,env,'/ipass.html');
+  if(request.method==='GET'&&(path==='/admin/approvals'||path==='/admin/accounts'))return serveAsset(request,env,'/admin-accounts.html');
+  if(request.method==='GET'&&path==='/evaluation-scoring.html')return serveAsset(request,env,'/evaluation-scoring.html');
+  if(request.method==='GET'&&path==='/evaluation-submit.html')return serveAsset(request,env,'/evaluation-submit.html',{submission:true});
+  if(request.method==='GET'&&path==='/evaluation-cycle.html')return serveAsset(request,env,'/evaluation-cycle.html',{embedded:url.searchParams.get('embedded')==='1'});
+  if(request.method==='GET'&&path==='/committee.html'){const next=new URL(request.url);next.pathname='/committee';return Response.redirect(next.toString(),302)}
+  if(request.method==='GET'&&path==='/committee')return serveAsset(request,env,'/committee.html');
+  if(request.method==='GET'&&path==='/education.html'){const next=new URL(request.url);next.pathname='/education';return Response.redirect(next.toString(),302)}
+  if(request.method==='GET'&&path==='/education')return serveAsset(request,env,'/education.html');
+  if(request.method==='GET'&&path==='/voc.html'){const next=new URL(request.url);next.pathname='/voc';return Response.redirect(next.toString(),302)}
+  if(request.method==='GET'&&path==='/voc')return serveAsset(request,env,'/voc.html');
+  if(request.method==='GET'&&path==='/notices')return serveAsset(request,env,'/content-hub.html');
+  if(request.method==='GET'&&path==='/resources')return serveAsset(request,env,'/content-hub.html');
+  if(request.method==='GET'&&path==='/faq.html'){const next=new URL(request.url);next.pathname='/faq';return Response.redirect(next.toString(),302)}
+  if(request.method==='GET'&&path==='/faq')return serveAsset(request,env,'/faq.html');
+  if(request.method==='GET'&&path==='/home'){
+    const rootReq=rewriteRequest(request,'/');let response=await handleEvaluationRuntime(rootReq,env,ctx,baseWorker);if(!response)response=await baseWorker.fetch(rootReq,env,ctx);return injectShared(response,{path,home:true,root:true});
+  }
+  const system=await handleSystemAdmin(request,env,ctx,baseWorker);if(system)return system;
+  const scoring=await handleEvaluationScoring(request,env,ctx,baseWorker);if(scoring)return scoring;
+  const management=await handleEvaluationManagement(request,env,ctx,baseWorker);if(management)return management;
+  const storage=await handleStorageAdmin(request,env,ctx,baseWorker);if(storage)return storage;
+  const education=await handleEducationSubmission(request,env,ctx,baseWorker);if(education)return education;
+  const voc=await handleVocSubmission(request,env,ctx,baseWorker);if(voc)return voc;
+  const content=await handlePortalContent(request,env,ctx,baseWorker);if(content)return content;
+  const submission=await handlePartnerSubmissionWithQuota(request,env,ctx,baseWorker);if(submission)return request.method==='GET'?augmentSubmission(submission,path,env):submission;
+  const runtime=await handleEvaluationRuntime(request,env,ctx,baseWorker);if(runtime){if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(runtime,{path,root:true});return runtime}
+  const response=await baseWorker.fetch(request,env,ctx);
+  if(request.method==='GET'&&(path==='/'||path==='/index.html'))return injectShared(response,{path,root:true});
+  if(request.method==='GET'&&path==='/evaluation-management.html')return injectShared(response,{path,embedded:url.searchParams.get('embedded')==='1'});
+  return response;
 }
 
-export default {
-  async fetch(request,env,ctx){
-    const metrics=createRequestMetrics(request,requestId(request));
-    const instrumentedEnv=instrumentEnvironment(env,metrics);
-    try{
-      const response=await dispatch(request,instrumentedEnv,ctx);
-      try{return finalizeRequestMetrics(metrics,response,instrumentedEnv)}
-      catch(metricError){console.warn('performance finalization failed',metricError);return response}
-    }catch(error){
-      try{recordRequestAudit?.(ctx,env,{request,error})}catch(auditError){console.warn('request audit failed',auditError)}
-      throw error;
-    }
-  }
-};
+export default {async fetch(request,env,ctx){const url=new URL(request.url),id=requestId(request),started=Date.now(),metrics=createRequestMetrics(request,id),measuredEnv=instrumentEnvironment(env,metrics);if(request.method==='OPTIONS'&&isApi(url.pathname)){const headers=new Headers({'x-request-id':id});cors(headers);return new Response(null,{status:204,headers})}const headers=new Headers(request.headers);headers.set('x-request-id',id);const traced=new Request(request,{headers});try{const raw=await core(traced,measuredEnv,ctx);const response=await attach(raw,id,url.pathname);if(shouldAudit(request.method,url.pathname,response.status)){const task=recordRequestAudit(env,{requestId:id,method:request.method,path:url.pathname,status:response.status,durationMs:Date.now()-started});if(ctx?.waitUntil)ctx.waitUntil(task);else void task}return finalizeRequestMetrics(metrics,response,env)}catch(error){console.error('unhandled request error',{request_id:id,path:url.pathname,method:request.method,error:error?.stack||String(error)});try{const task=recordRequestAudit(env,{requestId:id,method:request.method,path:url.pathname,status:500,durationMs:Date.now()-started});if(ctx?.waitUntil)ctx.waitUntil(task);else void task}catch(auditError){console.warn('request audit failed',auditError)}let response;if(!isApi(url.pathname))response=new Response('서비스 처리 중 오류가 발생했습니다.',{status:500,headers:{'content-type':'text/plain;charset=utf-8','x-request-id':id}});else{const h=new Headers({'content-type':'application/json;charset=utf-8','x-request-id':id});cors(h);response=new Response(JSON.stringify({success:false,error:'서버 처리 중 오류가 발생했습니다.',code:'UNHANDLED_SERVER_ERROR',request_id:id}),{status:500,headers:h})}try{return finalizeRequestMetrics(metrics,response,env)}catch(metricError){console.warn('performance finalization failed',metricError);return response}}}};
