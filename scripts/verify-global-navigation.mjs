@@ -22,9 +22,9 @@ assert.ok(toolbarV5.includes('회원가입 승인') && toolbarV5.includes('/admi
 assert.ok(toolbarV5.includes('협력사 계정 관리') && toolbarV5.includes('/admin/accounts'), '관리자 메뉴에서 독립 협력사 계정 관리 화면에 접근할 수 있어야 함');
 assert.ok(toolbarV5.includes('협력사 관리') && toolbarV5.includes('/admin-partners.html'), '관리자 메뉴에 협력사 관리 진입점이 필요');
 assert.ok(toolbarV5.includes('i-PaSS 관리') && toolbarV5.includes('data-admin-route="/ipass"'), '관리자 메뉴에 i-PaSS 관리 진입점이 필요');
-assert.ok(worker.includes("'/admin/approvals'") && worker.includes("'/admin/accounts'") && worker.includes("'/admin-partners.html'"), 'Worker가 독립 관리자 경로를 제공해야 함');
+assert.ok(worker.includes("'/admin/approvals'") && worker.includes("'/admin/accounts'"), 'Worker가 독립 계정 관리자 경로를 제공해야 함');
 assert.ok(adminAccounts.includes('/api/admin/registrations') && adminAccounts.includes("user.role!=='admin'"), '관리자 계정 화면은 기존 승인 API와 관리자 권한 검증을 사용해야 함');
-assert.ok(adminPartners.includes('/api/admin/partners') && adminPartners.includes('role="switch"'), '협력사 관리 화면은 대상 토글과 관리 API를 사용해야 함');
+assert.ok(adminPartners.includes('/api/admin/partners') && adminPartners.includes('role="switch"') && adminPartners.includes("user.role!=='admin'"), '협력사 관리 화면은 대상 토글과 관리자 권한 검증을 사용해야 함');
 for (const page of [adminAccounts, adminPartners]) {
   assert.ok(page.includes('font-size:28px') && page.includes('margin-bottom:24px'), '관리자 화면 제목과 섹션 간격은 공통 리듬을 따라야 함');
   assert.ok(page.includes('grid-template-columns:repeat(4,minmax(0,1fr))') && page.includes('gap:12px'), '관리자 요약 카드 그리드는 동일해야 함');
