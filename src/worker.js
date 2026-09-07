@@ -17,7 +17,7 @@ const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=11">';
 const UI_FOUNDATION='<link rel="stylesheet" href="/ehs-ui-foundation.css?v=2">';
 const PERFORMANCE_STYLE='<link rel="stylesheet" href="/performance-loading-v1.css?v=1">';
 const TOOLBAR_STYLE='<link rel="stylesheet" href="/global-toolbar-v5.css?v=5" data-global-toolbar-v5="true">';
-const PORTAL_SHELL_STYLE='<link rel="stylesheet" href="/portal-shell-v1.css?v=1">';
+const PORTAL_SHELL_STYLE='<link rel="stylesheet" href="/portal-shell-v1.css?v=2">';
 const COMMON_AUTH='<script src="/shared/auth.js?v=4"></script>';
 const COMMON_API='<script src="/shared/api.js?v=6"></script>';
 const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=13"></script>';
@@ -62,7 +62,7 @@ async function injectShared(response,{path='/',home=false,root=false,submission=
   html=injectHead(html,COMMON_PREVIEW,'/attachment-preview.js?v=3');
   if(isProtected(path)){
     html=injectHead(html,TOOLBAR_STYLE,'/global-toolbar-v5.css?v=5');
-    html=injectHead(html,PORTAL_SHELL_STYLE,'/portal-shell-v1.css?v=1');
+    html=injectHead(html,PORTAL_SHELL_STYLE,'/portal-shell-v1.css?v=2');
     html=injectBody(html,TOOLBAR_SCRIPT,'/global-toolbar-v5.js?v=7');
   }
   if(root){html=injectBody(html,LOGIN_SCRIPT,'/login-home-redirect.js?v=2');html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v24');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v21');html=injectBody(html,IPASS_GRADE_SCRIPT,'ipass-grade-v21')}
