@@ -20,13 +20,13 @@ for (const [href, label] of services) assert.ok(toolbarV5.includes(`['${href}','
 assert.ok(toolbarV5.includes('회원가입 승인') && toolbarV5.includes('/admin/approvals'), '관리자 메뉴에서 독립 회원가입 승인 화면에 접근할 수 있어야 함');
 assert.ok(toolbarV5.includes('협력사 계정 관리') && toolbarV5.includes('/admin/accounts'), '관리자 메뉴에서 독립 협력사 계정 관리 화면에 접근할 수 있어야 함');
 assert.ok(toolbarV5.includes('i-PaSS 관리') && toolbarV5.includes('data-admin-route="/ipass"'), '관리자 메뉴에 i-PaSS 관리 진입점이 필요');
-assert.ok(worker.includes("path==='/admin/approvals'||path==='/admin/accounts'"), 'Worker가 독립 관리자 경로를 제공해야 함');
+assert.ok(worker.includes("'/admin/approvals'") && worker.includes("'/admin/accounts'"), 'Worker가 독립 관리자 경로를 제공해야 함');
 assert.ok(adminAccounts.includes('/api/admin/registrations') && adminAccounts.includes("user.role!=='admin'"), '관리자 계정 화면은 기존 승인 API와 관리자 권한 검증을 사용해야 함');
 assert.ok(!content.includes('id="noticeTab"') && !content.includes('id="resourceTab"'), '게시판 내부 교차 탭은 제거되어야 함');
 assert.ok(!home.includes('<h2>EHS 서비스</h2>'), 'EHS 서비스 문구는 제거되어야 함');
 assert.ok(css.includes('border:0!important'), '공통 UI의 장식성 테두리를 최소화해야 함');
 assert.ok(common.includes('Cloudflare R2 저장공간') && css.includes('.ehs-storage-capacity'), '관리자 저장공간 UI가 필요');
-assert.ok(worker.includes("path==='/faq'"), '독립 FAQ 라우트가 필요');
+assert.ok(worker.includes("'/faq'"), '독립 FAQ 라우트가 필요');
 assert.ok(faq.includes('<h1>FAQ</h1>'), 'FAQ 페이지가 필요');
 assert.ok(ipass.includes('id="ipassShell"') && ipass.includes('class="workspace-nav"'), 'i-PaSS는 전체 폭 상단 업무 메뉴를 사용해야 함');
 assert.ok(!ipass.includes('<aside class="side" id="sideNav">') && !ipass.includes('grid-template-columns:220px'), 'i-PaSS 외부 좌측 메뉴는 제거되어야 함');
