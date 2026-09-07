@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>협력사 관리 | Hniruja EHS</title>
+<link rel="stylesheet" href="/global-toolbar-v5.css?v=5" data-global-toolbar-v5="true">
+<link rel="stylesheet" href="/portal-shell-v1.css?v=2">
+<script src="/shared/auth.js?v=4"></script>
+<script src="/shared/api.js?v=6"></script>
+<script src="/global-toolbar-v5.js?v=7" data-global-toolbar-v5="true"></script>
+<style>
+:root{--ink:#24343f;--text:#566771;--muted:#8b98a0;--line:#e3e8ec;--page:#f5f7f9;--blue:#236f9f;--blue-soft:#eef6fa;--green:#24745a;--green-soft:#edf7f2;--gray:#78858d;--gray-soft:#f2f4f5}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--page);color:var(--ink);font-family:"Pretendard Variable","Pretendard","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif;letter-spacing:-.025em}button,input{font:inherit}.hidden{display:none!important}
+.partner-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:24px}.partner-head h1{margin:0;font-size:28px;letter-spacing:-.045em}.partner-head p{margin:8px 0 0;color:var(--muted);font-size:12px;line-height:1.55}.partner-tools{display:flex;align-items:center;gap:8px}.search{width:270px;height:40px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:#fff;outline:none;color:#40525d;font-size:12px}.search:focus{border-color:#9bbdd2;box-shadow:0 0 0 3px rgba(35,111,159,.07)}.refresh{height:40px;padding:0 13px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#62727c;font-size:11px;font-weight:750;cursor:pointer}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px}.metric{padding:18px 20px;border-radius:12px;background:#fff;box-shadow:0 4px 16px rgba(30,48,62,.04)}.metric span{display:block;color:#85929a;font-size:11px;font-weight:720}.metric b{display:block;margin-top:7px;font-size:24px;letter-spacing:-.04em}.metric.target b{color:var(--green)}.metric.non-target b{color:var(--gray)}
+.panel{overflow:hidden;border-radius:13px;background:#fff;box-shadow:0 5px 18px rgba(30,48,62,.045)}.panel-head{min-height:58px;padding:0 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.panel-head strong{font-size:14px}.panel-head span{color:#8a969e;font-size:10.5px}.table-wrap{overflow:auto}table{width:100%;min-width:780px;border-collapse:collapse}th,td{padding:14px 16px;border-bottom:1px solid #edf0f2;text-align:left}th{background:#f7f9fa;color:#657782;font-size:10.5px;font-weight:800}td{color:#4e606b;font-size:11.5px}tbody tr:last-child td{border-bottom:0}.company b{display:block;color:#30434f;font-size:12px}.company small{display:block;margin-top:4px;color:#909ba2;font-size:9.5px}.badge{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;background:var(--green-soft);color:var(--green);font-size:9.5px;font-weight:820}.badge.off{background:var(--gray-soft);color:var(--gray)}
+.target-cell{width:190px}.toggle-wrap{display:flex;align-items:center;gap:10px}.toggle{position:relative;width:44px;height:24px;flex:none;border:0;border-radius:999px;background:#cbd3d8;cursor:pointer;transition:.18s}.toggle::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(25,40,52,.24);transition:.18s}.toggle.on{background:#3d8b69}.toggle.on::after{transform:translateX(20px)}.toggle:disabled{opacity:.55;cursor:wait}.toggle-label{min-width:42px;color:#7b8890;font-size:10.5px;font-weight:760}.toggle-label.on{color:var(--green)}.loading,.empty,.error{padding:46px 20px;text-align:center;color:#919ca4;font-size:11px}.error{color:#b94d47}
+@media(max-width:820px){.partner-head{align-items:stretch;flex-direction:column}.partner-tools{width:100%}.search{width:100%;flex:1}.summary{grid-template-columns:1fr 1fr}.panel-head{padding:14px 16px;align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main class="shell admin-partner-shell">
+  <section class="partner-head">
+    <div><h1>협력사 관리</h1><p>도급 협력사를 관리대상과 비대상으로 구분합니다. 신규 협력사는 기본적으로 관리대상으로 표시됩니다.</p></div>
+    <div class="partner-tools"><input id="searchInput" class="search" type="search" placeholder="회사명·업종 검색"><button id="refreshBtn" class="refresh" type="button">새로고침</button></div>
+  </section>
+  <section class="summary"><div class="metric"><span>전체 협력사</span><b id="totalCount">-</b></div><div class="metric target"><span>관리대상</span><b id="targetCount">-</b></div><div class="metric non-target"><span>비대상</span><b id="nonTargetCount">-</b></div><div class="metric"><span>등록 계정</span><b id="accountCount">-</b></div></section>
+  <section class="panel"><div class="panel-head"><strong>도급 협력사</strong><span>토글 변경 즉시 저장</span></div><div id="tableBox" class="loading">협력사 정보를 불러오는 중...</div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));let rows=[];
+function summary(){const target=rows.filter(r=>r.is_target).length;$('totalCount').textContent=rows.length;$('targetCount').textContent=target;$('nonTargetCount').textContent=rows.length-target;$('accountCount').textContent=rows.reduce((sum,r)=>sum+Number(r.account_count||0),0)}
+function render(){summary();const q=$('searchInput').value.trim().toLowerCase();const list=q?rows.filter(r=>[r.company_name,r.industry_name,r.industry_code].some(v=>String(v||'').toLowerCase().includes(q))):rows;$('tableBox').className='';$('tableBox').innerHTML=list.length?`<div class="table-wrap"><table><thead><tr><th>협력사</th><th>업종</th><th>등록 계정</th><th>구분</th><th class="target-cell">관리대상</th></tr></thead><tbody>${list.map(r=>`<tr data-row="${esc(r.id)}"><td class="company"><b>${esc(r.company_name||'-')}</b><small>${esc(r.id)}</small></td><td>${esc(r.industry_name||r.industry_code||'-')}</td><td>${Number(r.account_count||0)}개</td><td><span class="badge ${r.is_target?'':'off'}">${r.is_target?'대상':'비대상'}</span></td><td class="target-cell"><div class="toggle-wrap"><button class="toggle ${r.is_target?'on':''}" type="button" role="switch" aria-checked="${r.is_target?'true':'false'}" aria-label="${esc(r.company_name)} 관리대상 여부" data-toggle="${esc(r.id)}"></button><span class="toggle-label ${r.is_target?'on':''}">${r.is_target?'대상':'비대상'}</span></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">조건에 맞는 협력사가 없습니다.</div>';document.querySelectorAll('[data-toggle]').forEach(btn=>btn.onclick=()=>toggleTarget(btn.dataset.toggle,btn))}
+async function load(){ $('tableBox').className='loading';$('tableBox').textContent='협력사 정보를 불러오는 중...';try{const data=await window.EHSApi.request('/api/admin/partners',{ehsNoCache:true});rows=data.partners||[];render()}catch(error){$('tableBox').className='error';$('tableBox').textContent=window.EHSApi?.describe?window.EHSApi.describe(error):error.message}}
+async function toggleTarget(id,button){const row=rows.find(r=>r.id===id);if(!row)return;const next=!row.is_target;button.disabled=true;try{await window.EHSApi.request(`/api/admin/partners/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({is_target:next})});row.is_target=next;render()}catch(error){button.disabled=false;alert(window.EHSApi?.describe?window.EHSApi.describe(error):error.message)}}
+(async()=>{try{const user=await window.EHSAuth.requireUser();if(user.role!=='admin'){location.replace('/home');return}window.__EHS_PAGE_USER=user;document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:user}));$('searchInput').addEventListener('input',render);$('refreshBtn').onclick=load;await load()}catch(error){if(error?.status!==401){$('tableBox').className='error';$('tableBox').textContent=error.message||'협력사 관리 화면을 열 수 없습니다.'}}})();
+</script>
+</body>
+</html>
