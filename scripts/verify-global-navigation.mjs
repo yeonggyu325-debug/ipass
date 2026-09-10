@@ -8,10 +8,12 @@ const home = await readFile(new URL('../public/index.html', import.meta.url), 'u
 const toolbarV5 = await readFile(new URL('../public/global-toolbar-v5.js', import.meta.url), 'utf8');
 const content = await readFile(new URL('../public/content-hub.html', import.meta.url), 'utf8');
 const worker = await readFile(new URL('../src/worker.js', import.meta.url), 'utf8');
+const shellApi = await readFile(new URL('../src/portal-shell-api.js', import.meta.url), 'utf8');
 const faq = await readFile(new URL('../public/faq.html', import.meta.url), 'utf8');
 const ipass = await readFile(new URL('../public/ipass.html', import.meta.url), 'utf8');
 const adminAccounts = await readFile(new URL('../public/admin-accounts.html', import.meta.url), 'utf8');
 const adminPartners = await readFile(new URL('../public/admin-partners.html', import.meta.url), 'utf8');
+const signup = await readFile(new URL('../public/signup.html', import.meta.url), 'utf8');
 
 const services = [
   ['/ipass', 'i-PaSS'], ['/committee', '안전보건협의체'], ['/education', '교육자료'],
@@ -31,7 +33,12 @@ for (const page of [adminAccounts, adminPartners]) {
   assert.ok(page.includes('height:40px') && page.includes('border-radius:9px'), '관리자 상단 컨트롤 높이와 모서리는 동일해야 함');
   assert.ok(page.includes('회원가입 승인') && page.includes('협력사 계정') && page.includes('협력사 관리'), '관리자 협력사 화면은 동일한 3개 업무 탭을 제공해야 함');
 }
-assert.ok(adminPartners.includes('data-filter="all"') && adminPartners.includes('data-filter="target"') && adminPartners.includes('data-filter="non-target"'), '협력사 관리에는 전체/관리대상/비대상 필터가 필요');
+assert.ok(adminPartners.includes('협력사 마스터') && adminPartners.includes('data-setting="${key}"') && adminPartners.includes('signup_enabled'), '협력사 관리가 공통 마스터와 가입 허용 토글을 제공해야 함');
+assert.ok(adminPartners.includes('data-filter="all"') && adminPartners.includes('data-filter="target"') && adminPartners.includes('data-filter="signup"'), '협력사 관리에는 전체/협의체 대상/가입 허용 필터가 필요');
+assert.ok(shellApi.includes("path==='/api/public/companies'") && shellApi.includes('pm.signup_enabled=1'), '회원가입 회사 목록은 협력사 마스터의 가입 허용 회사만 제공해야 함');
+assert.ok(shellApi.includes("path==='/api/auth/register'") && shellApi.includes('회원가입이 허용된 협력사만 가입할 수 있습니다.'), '서버에서도 미등록/가입차단 협력사 가입을 거부해야 함');
+assert.ok(shellApi.includes('committee_target_preferences') && shellApi.includes("entity_type,entity_id,is_target"), '협력사 협의체 대상 토글은 협의체 대상 설정과 동기화되어야 함');
+assert.ok(signup.includes('/api/public/companies') && signup.includes('id="company"'), '회원가입 화면은 서버가 제공하는 협력사 선택 목록을 사용해야 함');
 assert.ok(!content.includes('id="noticeTab"') && !content.includes('id="resourceTab"'), '게시판 내부 교차 탭은 제거되어야 함');
 assert.ok(!home.includes('<h2>EHS 서비스</h2>'), 'EHS 서비스 문구는 제거되어야 함');
 assert.ok(css.includes('border:0!important'), '공통 UI의 장식성 테두리를 최소화해야 함');
@@ -51,4 +58,4 @@ assert.ok(worker.includes('/ehs-ui-foundation.css?v=2') && worker.includes('/glo
 const inlineScripts = [...ipass.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match => match[1]).filter(source => source.trim());
 for (const source of inlineScripts) new Function(source);
 for (const source of [adminAccounts, adminPartners].flatMap(page=>[...page.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match=>match[1]).filter(code=>code.trim()))) new Function(source);
-console.log(JSON.stringify({success:true,services:services.length,admin_routes:true,admin_ui_balanced:true,partner_filters:true,consolidated_worker:true,faq_route:true,ipass_full_width:true,ipass_partner_views:true}));
+console.log(JSON.stringify({success:true,services:services.length,admin_routes:true,admin_ui_balanced:true,partner_master:true,signup_whitelist:true,committee_partner_sync:true,consolidated_worker:true,faq_route:true,ipass_full_width:true,ipass_partner_views:true}));
