@@ -31,10 +31,8 @@ const BODY_SCRIPT_PATTERNS = [
 export function normalizeInjectedBodyScripts(html) {
   let output=String(html||'');const scripts=[];
   for(const pattern of BODY_SCRIPT_PATTERNS)output=output.replace(pattern,match=>{scripts.push(match);return ''});
-  if(!scripts.length)return output;
-  const uniqueScripts=[],seen=new Set();for(const script of scripts){if(seen.has(script))continue;seen.add(script);uniqueScripts.push(script)}
-  const closeBody=output.toLowerCase().lastIndexOf('</body>'),payload=uniqueScripts.join('');
-  return closeBody<0?output+payload:output.slice(0,closeBody)+payload+output.slice(closeBody);
+  if(scripts.length){const uniqueScripts=[],seen=new Set();for(const script of scripts){if(seen.has(script))continue;seen.add(script);uniqueScripts.push(script)}const closeBody=output.toLowerCase().lastIndexOf('</body>'),payload=uniqueScripts.join('');output=closeBody<0?output+payload:output.slice(0,closeBody)+payload+output.slice(closeBody)}
+  return output.replaceAll('/login-home-redirect.js?v=2','/login-home-redirect.js?v=3').replaceAll('/global-toolbar-v5.js?v=7','/global-toolbar-v5.js?v=8');
 }
 
 async function normalizeHtmlResponse(response){
@@ -51,6 +49,7 @@ export default {
     await ensurePartnerAccountReset(env);
     const accountAction=await handleAdminAccountActions(request,env,ctx,worker);if(accountAction)return accountAction;
     const path=new URL(request.url).pathname;
+    if(path==='/admin-partners.html'){const next=new URL(request.url);next.pathname='/admin/partners';return Response.redirect(next.toString(),302)}
     const routedRequest=path==='/admin/partners'?rewritePath(request,'/admin/accounts'):request;
     return normalizeHtmlResponse(await worker.fetch(routedRequest,env,ctx));
   }
