@@ -50,6 +50,7 @@ async function ensurePartnerManagementSchema(env){
     await env.partner_evaluation_db.prepare(`
       INSERT INTO committee_target_preferences(entity_type,entity_id,is_target,updated_at)
       SELECT 'partner',company_id,is_target,CURRENT_TIMESTAMP FROM partner_management
+      WHERE 1=1
       ON CONFLICT(entity_type,entity_id) DO UPDATE SET is_target=excluded.is_target,updated_at=CURRENT_TIMESTAMP
     `).run();
   })().catch(error=>{partnerManagementSchemaReady=null;throw error});
