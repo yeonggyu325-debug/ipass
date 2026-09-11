@@ -1,15 +1,15 @@
 /* Portal shell spacing + notifications */
 :root{
-  --ehs-shell-max:1320px;
-  --ehs-shell-gutter:24px;
-  --ehs-shell-section-gap:24px;
-  --ehs-shell-column-gap:24px;
-  --ehs-shell-grid-gap:12px;
-  --ehs-shell-block-pad:18px;
+  --ehs-shell-max:var(--ehs-container-max,1320px);
+  --ehs-shell-gutter:var(--ehs-page-gutter,24px);
+  --ehs-shell-section-gap:var(--ehs-section-gap,24px);
+  --ehs-shell-column-gap:var(--ehs-column-gap,24px);
+  --ehs-shell-grid-gap:var(--ehs-grid-gap,12px);
+  --ehs-shell-block-pad:var(--ehs-block-pad,18px);
 }
 
 .ehs-notification-wrap{position:relative}
-.ehs-notification-panel{display:none;position:absolute;right:0;top:42px;width:340px;max-height:430px;overflow:hidden;background:#fff;border:1px solid #e3e8eb;border-radius:12px;box-shadow:0 16px 40px rgba(27,44,57,.14);z-index:620}
+.ehs-notification-panel{display:none;position:absolute;right:0;top:42px;width:340px;max-height:430px;overflow:hidden;background:#fff;border:1px solid #e3e8eb;border-radius:12px;box-shadow:0 16px 40px rgba(27,44,57,.14);z-index:var(--ehs-layer-dropdown,620)}
 .ehs-notification-panel.open{display:block}
 .ehs-notification-head{height:46px;padding:0 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #edf0f2}
 .ehs-notification-head strong{font-size:13px;color:#28353e}
@@ -39,7 +39,7 @@
   margin-left:auto!important;
   margin-right:auto!important;
 }
-#app main,.shell,#ipassShell{padding-top:24px!important;padding-bottom:56px!important}
+#app main,.shell,#ipassShell{padding-top:var(--ehs-page-top,24px)!important;padding-bottom:var(--ehs-page-bottom,56px)!important}
 .shell,#ipassShell{column-gap:var(--ehs-shell-column-gap)!important;row-gap:var(--ehs-shell-section-gap)!important}
 
 /* Global file actions: keep accessible text in the DOM, but show compact icons only. */
@@ -63,8 +63,8 @@ button[data-download]:hover,button.download-file:hover,button.file-action[data-d
 /* Home: one spacing rhythm instead of independent 9/10/12/16/24px gaps. */
 #page-portalHome .home-v3-shell{gap:var(--ehs-shell-section-gap)!important}
 #page-portalHome .home-v3-section{margin:0!important}
-#page-portalHome .home-v3-section-head{margin-bottom:12px!important}
-#page-portalHome .home-v3-welcome{margin:0!important;padding:var(--ehs-shell-block-pad) 20px!important}
+#page-portalHome .home-v3-section-head{margin-bottom:var(--ehs-space-3,12px)!important}
+#page-portalHome .home-v3-welcome{margin:0!important;padding:var(--ehs-shell-block-pad) var(--ehs-space-5,20px)!important}
 #page-portalHome .home-action-grid,
 #page-portalHome .service-panel,
 #page-portalHome .ipass-projection-grid,
@@ -73,10 +73,10 @@ button[data-download]:hover,button.download-file:hover,button.file-action[data-d
 #page-portalHome .service-tile,
 #page-portalHome .ipass-metric{margin:0!important;min-width:0!important}
 #page-portalHome .ipass-score-shell{width:100%;margin:0!important;overflow:hidden!important}
-#page-portalHome .ipass-score-top{display:grid!important;grid-template-columns:minmax(220px,.72fr) minmax(0,1.28fr)!important;align-items:stretch!important;gap:16px!important;padding:var(--ehs-shell-block-pad) 20px!important}
+#page-portalHome .ipass-score-top{display:grid!important;grid-template-columns:minmax(220px,.72fr) minmax(0,1.28fr)!important;align-items:stretch!important;gap:var(--ehs-space-4,16px)!important;padding:var(--ehs-shell-block-pad) var(--ehs-space-5,20px)!important}
 #page-portalHome .ipass-formula{min-width:0!important;margin:0!important}
-#page-portalHome .ipass-projection-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:12px 20px!important}
-#page-portalHome .ipass-metric-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:0 20px 20px!important;background:#fff!important}
+#page-portalHome .ipass-projection-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:var(--ehs-space-3,12px) var(--ehs-space-5,20px)!important}
+#page-portalHome .ipass-metric-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:0 var(--ehs-space-5,20px) var(--ehs-space-5,20px)!important;background:#fff!important}
 #page-portalHome .ipass-metric{border:1px solid #e8ecef!important;border-radius:10px!important}
 #page-portalHome .service-panel{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 #page-portalHome .service-tile{min-height:80px!important}
@@ -84,24 +84,20 @@ button[data-download]:hover,button.download-file:hover,button.file-action[data-d
 
 /* i-PaSS and other authenticated shells follow the same outer grid. */
 #ipassShell .workspace-nav{margin:0!important}
-#ipassShell .hero>div:first-child{margin-bottom:16px!important}
+#ipassShell .hero>div:first-child{margin-bottom:var(--ehs-space-4,16px)!important}
 #ipassShell .kpis,
 #ipassShell .partner-kpis,
 #ipassShell .quick-grid{gap:var(--ehs-shell-grid-gap)!important}
 
 @media(max-width:1120px){
-  :root{--ehs-shell-gutter:16px;--ehs-shell-section-gap:20px;--ehs-shell-column-gap:20px}
-  #app main,.shell,#ipassShell{padding-top:20px!important;padding-bottom:48px!important}
   #page-portalHome .ipass-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   #page-portalHome .service-panel{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
 
 @media(max-width:760px){
-  :root{--ehs-shell-gutter:16px;--ehs-shell-section-gap:18px;--ehs-shell-column-gap:16px;--ehs-shell-grid-gap:10px;--ehs-shell-block-pad:16px}
-  #app main,.shell,#ipassShell{padding-top:18px!important;padding-bottom:40px!important}
-  #page-portalHome .ipass-score-top{grid-template-columns:1fr!important;padding:16px!important}
+  #page-portalHome .ipass-score-top{grid-template-columns:1fr!important;padding:var(--ehs-space-4,16px)!important}
   #page-portalHome .ipass-projection-grid,
-  #page-portalHome .ipass-metric-grid{grid-template-columns:1fr!important;padding:10px 16px 16px!important}
+  #page-portalHome .ipass-metric-grid{grid-template-columns:1fr!important;padding:var(--ehs-grid-gap,10px) var(--ehs-space-4,16px) var(--ehs-space-4,16px)!important}
   #page-portalHome .service-panel{grid-template-columns:1fr!important}
   .ehs-notification-panel{position:fixed;left:12px;right:12px;top:58px;width:auto;max-height:calc(100vh - 76px)}
 }
