@@ -1,5 +1,6 @@
-/* EHS UI Foundation v2
-   Shared visual language only. Business layouts and page-specific interactions stay intact. */
+/* EHS UI Foundation v3
+   Canonical design tokens and compatibility layer for authenticated portal UI.
+   Page-specific layouts remain intact while shared visual decisions come from here. */
 :root {
   color-scheme: light;
 
@@ -33,7 +34,15 @@
   --ehs-font-meta: 12px;
   --ehs-line-height-body: 1.55;
 
-  /* Spacing */
+  /* Spatial system */
+  --ehs-container-max: 1320px;
+  --ehs-page-gutter: 24px;
+  --ehs-page-top: 24px;
+  --ehs-page-bottom: 56px;
+  --ehs-section-gap: 24px;
+  --ehs-column-gap: 24px;
+  --ehs-grid-gap: 12px;
+  --ehs-block-pad: 18px;
   --ehs-space-1: 4px;
   --ehs-space-2: 8px;
   --ehs-space-3: 12px;
@@ -53,6 +62,15 @@
   --ehs-shadow-hover: 0 6px 20px rgba(28, 47, 62, .09);
   --ehs-shadow-modal: 0 24px 64px rgba(20, 34, 45, .20);
   --ehs-focus-ring: 0 0 0 3px rgba(40, 118, 166, .16);
+
+  /* Layer system */
+  --ehs-layer-page: 0;
+  --ehs-layer-sticky: 100;
+  --ehs-layer-toolbar: 500;
+  --ehs-layer-dropdown: 620;
+  --ehs-layer-overlay: 800;
+  --ehs-layer-modal: 900;
+  --ehs-layer-toast: 1000;
 
   /* Existing page variables map to one shared language. */
   --ehs-primary: var(--ehs-color-primary);
@@ -147,6 +165,14 @@ summary,
 
 ::selection {
   background: rgba(40, 118, 166, .18);
+}
+
+/* Canonical content edge. Existing shells can opt in without bespoke numbers. */
+.ehs-container {
+  width: min(var(--ehs-container-max), calc(100% - (var(--ehs-page-gutter) * 2))) !important;
+  max-width: var(--ehs-container-max) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 /* Typography: page, section and metadata hierarchy */
@@ -385,18 +411,28 @@ summary,
   color: var(--ehs-color-danger) !important;
 }
 
-/* Dialogs */
+/* Layering and dialogs */
+.ehs-global-header.ehs-toolbar-v5 {
+  z-index: var(--ehs-layer-toolbar) !important;
+}
+
+:where(.ehs-global-user-menu, .ehs-notification-panel, .gnb-menu, .user-dropdown) {
+  z-index: var(--ehs-layer-dropdown) !important;
+}
+
+:where(.modal, .detail-modal) {
+  z-index: var(--ehs-layer-modal) !important;
+  background: rgba(25, 36, 46, .42) !important;
+}
+
 :where(.modal-box, .modal-card, .detail-modal-card) {
   border: 0 !important;
   border-radius: var(--ehs-radius-modal) !important;
   box-shadow: var(--ehs-shadow-modal) !important;
 }
 
-:where(.modal, .detail-modal) {
-  background: rgba(25, 36, 46, .42) !important;
-}
-
 :where(.toast, #toast) {
+  z-index: var(--ehs-layer-toast) !important;
   border: 0 !important;
   border-radius: 10px !important;
   background: #263740 !important;
@@ -421,6 +457,28 @@ summary,
   width: 52px !important;
   min-height: var(--ehs-control-height) !important;
   font-size: var(--ehs-font-meta) !important;
+}
+
+@media (max-width: 1120px) {
+  :root {
+    --ehs-page-gutter: 16px;
+    --ehs-page-top: 20px;
+    --ehs-page-bottom: 48px;
+    --ehs-section-gap: 20px;
+    --ehs-column-gap: 20px;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --ehs-page-gutter: 16px;
+    --ehs-page-top: 18px;
+    --ehs-page-bottom: 40px;
+    --ehs-section-gap: 18px;
+    --ehs-column-gap: 16px;
+    --ehs-grid-gap: 10px;
+    --ehs-block-pad: 16px;
+  }
 }
 
 @media (max-width: 640px) {
