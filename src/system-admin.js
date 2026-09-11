@@ -19,7 +19,13 @@ export async function recordRequestAudit(env,{requestId,method,path,status,durat
 export async function handleSystemAdmin(request,env,ctx,innerApp){
   const url=new URL(request.url),path=url.pathname;
   if(request.method==='GET'&&path===`/api/admin/system/request-diagnostic/${ONE_SHOT_REQUEST_ID}`){
-    try{const row=await env.partner_evaluation_db.prepare(`SELECT request_id,method,path,status,duration_ms,created_at FROM system_request_audit_v2 WHERE request_id=? LIMIT 1`).bind(ONE_SHOT_REQUEST_ID).first();return json({success:true,request:row||null})}catch(error){return json({success:false,error:String(error?.message||error)},500)}
+    const out={success:true};
+    try{out.request=await env.partner_evaluation_db.prepare(`SELECT request_id,method,path,status,duration_ms,created_at FROM system_request_audit_v2 WHERE request_id=? LIMIT 1`).bind(ONE_SHOT_REQUEST_ID).first()}catch(error){out.audit_error=String(error?.message||error)}
+    for(const table of ['companies','partner_management','portal_accounts']){try{const r=await env.partner_evaluation_db.prepare(`PRAGMA table_info(${table})`).all();out[`${table}_columns`]=(r.results||[]).map(x=>x.name)}catch(error){out[`${table}_error`]=String(error?.message||error)}}
+    try{const r=await env.partner_evaluation_db.prepare(`SELECT c.id,c.company_name,c.industry_code,c.industry_name,c.status,pm.is_target,pm.signup_enabled,pm.updated_at,COALESCE(a.account_count,0) AS account_count FROM companies c JOIN partner_management pm ON pm.company_id=c.id LEFT JOIN (SELECT company_id,COUNT(*) AS account_count FROM portal_accounts WHERE role='partner' AND approval_status IN ('pending','approved') GROUP BY company_id) a ON a.company_id=c.id WHERE c.status='active' ORDER BY c.company_name COLLATE NOCASE LIMIT 5`).all();out.partner_query_ok=true;out.partner_sample=r.results||[]}catch(error){out.partner_query_ok=false;out.partner_query_error=String(error?.message||error)}
+    try{await env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_partner_management_target ON partner_management(is_target)`).run();out.target_index_ok=true}catch(error){out.target_index_ok=false;out.target_index_error=String(error?.message||error)}
+    try{await env.partner_evaluation_db.prepare(`CREATE INDEX IF NOT EXISTS idx_partner_management_signup ON partner_management(signup_enabled)`).run();out.signup_index_ok=true}catch(error){out.signup_index_ok=false;out.signup_index_error=String(error?.message||error)}
+    return json(out);
   }
   if(!path.startsWith('/api/admin/system/'))return null;
   const auth=await admin(request,env,ctx,innerApp);if(!auth.ok)return auth.response;
