@@ -55,6 +55,8 @@ export function normalizeInjectedBodyScripts(html) {
   if(scripts.length){const uniqueScripts=[],seen=new Set();for(const script of scripts){if(seen.has(script))continue;seen.add(script);uniqueScripts.push(script)}const closeBody=output.toLowerCase().lastIndexOf('</body>'),payload=uniqueScripts.join('');output=closeBody<0?output+payload:output.slice(0,closeBody)+payload+output.slice(closeBody)}
   return output
     .replaceAll('/login-home-redirect.js?v=2','/login-home-redirect.js?v=3')
+    .replaceAll('/ehs-ui-foundation.css?v=2','/ehs-ui-foundation.css?v=3')
+    .replaceAll('/portal-shell-v1.css?v=2','/portal-shell-v1.css?v=3')
     .replaceAll('/global-toolbar-v5.css?v=5','/global-toolbar-v5.css?v=6')
     .replaceAll('/global-toolbar-v5.js?v=7','/global-toolbar-v5.js?v=9')
     .replaceAll('/global-toolbar-v5.js?v=8','/global-toolbar-v5.js?v=9');
