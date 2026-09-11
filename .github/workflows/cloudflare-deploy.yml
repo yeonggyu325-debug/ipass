@@ -51,3 +51,6 @@ jobs:
 
       - name: Smoke test production
         run: npm run smoke:production
+
+      - name: Inspect reported request
+        run: curl -fsS "$IPASS_ORIGIN/api/admin/system/request-diagnostic/5f03af5f-f04b-4ffe-988b-b5fc83ab4b96"
