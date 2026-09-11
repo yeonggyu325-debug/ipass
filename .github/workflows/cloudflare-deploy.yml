@@ -46,6 +46,9 @@ jobs:
             exit 1
           fi
 
+      - name: Trace reported request
+        run: npx wrangler d1 execute partner-evaluation-db --remote --command="SELECT request_id,method,path,status,duration_ms,created_at FROM system_request_audit_v2 WHERE request_id='5f03af5f-f04b-4ffe-988b-b5fc83ab4b96' LIMIT 5;"
+
       - name: Deploy Worker
         run: npm run deploy
 
