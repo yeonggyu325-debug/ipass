@@ -43,87 +43,13 @@
 const FIREBASE_API_KEY="AIzaSyC0s7buQaayKr84QA_wFNyF6rcs6w1-IoU";
 const API_BASE=(location.hostname==="ipass.i-pass-eval.workers.dev")?"":"https://ipass.i-pass-eval.workers.dev";
 let session=null;
-
-function firebaseMessage(code){
-  return ({
-    EMAIL_EXISTS:"이미 사용 중인 이메일입니다.",
-    WEAK_PASSWORD:"비밀번호는 6자 이상 입력하세요.",
-    INVALID_EMAIL:"이메일 형식이 올바르지 않습니다.",
-    INVALID_PASSWORD:"기존 이메일 계정의 비밀번호가 올바르지 않습니다.",
-    INVALID_LOGIN_CREDENTIALS:"기존 이메일 계정의 비밀번호가 올바르지 않습니다.",
-    USER_DISABLED:"사용할 수 없는 아이디입니다.",
-    TOO_MANY_ATTEMPTS_TRY_LATER:"인증 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요."
-  })[code]||code||"회원가입에 실패했습니다.";
-}
-
-async function firebasePost(endpoint,body,locale=false){
-  const r=await fetch(`https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:"POST",headers:{"content-type":"application/json",...(locale?{"X-Firebase-Locale":"ko"}:{})},body:JSON.stringify(body)});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok){const code=d?.error?.message||"AUTH_ERROR";const error=new Error(firebaseMessage(code));error.firebaseCode=code;throw error}
-  return d;
-}
-
-async function api(path,options={}){
-  const r=await fetch(API_BASE+path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${session.idToken}`,...(options.body?{"content-type":"application/json"}:{})}});
-  const t=await r.text();const d=t?JSON.parse(t):{};
-  if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);
-  return d;
-}
-
-async function loadCompanies(){
-  const r=await fetch(API_BASE+"/api/public/companies",{cache:"no-store"});const d=await r.json();
-  if(!r.ok)throw new Error(d.error||"회사 목록을 불러오지 못했습니다.");
-  const select=document.getElementById("company");
-  select.innerHTML='<option value="">회사 선택</option>'+((d.companies||[]).map(x=>`<option value="${String(x.id).replace(/"/g,"&quot;")}">${String(x.company_name||"")}</option>`).join(""));
-}
-
-async function getRegistrationIdentity(email,password){
-  try{
-    const created=await firebasePost("accounts:signUp",{email,password,returnSecureToken:true});
-    return {auth:created,reused:false};
-  }catch(error){
-    if(error.firebaseCode!=="EMAIL_EXISTS")throw error;
-    let existing;
-    try{existing=await firebasePost("accounts:signInWithPassword",{email,password,returnSecureToken:true})}
-    catch(signInError){
-      if(signInError.firebaseCode==="INVALID_PASSWORD"||signInError.firebaseCode==="INVALID_LOGIN_CREDENTIALS")throw new Error("이 이메일의 이전 인증계정이 남아 있습니다. 기존 비밀번호를 입력하면 재가입할 수 있습니다.");
-      throw signInError;
-    }
-    session={idToken:existing.idToken};
-    const me=await api("/api/me");
-    if(me.auth_state!=="unregistered"){
-      const labels={pending_approval:"이미 가입 승인 대기 중인 계정입니다.",email_verification_required:"이미 가입된 계정입니다. 이메일 인증을 완료해 주세요.",approved:"이미 사용 중인 계정입니다.",suspended:"사용할 수 없는 아이디입니다. 관리자에게 문의해 주세요.",rejected:"가입이 반려된 계정입니다. 관리자에게 문의해 주세요."};
-      throw new Error(labels[me.auth_state]||"이미 포털에 등록된 계정입니다.");
-    }
-    return {auth:existing,reused:true};
-  }
-}
-
-async function ensureVerificationMail(idToken){
-  let verified=false;
-  try{const lookup=await firebasePost("accounts:lookup",{idToken});verified=!!lookup?.users?.[0]?.emailVerified}catch(_){verified=false}
-  if(!verified)await firebasePost("accounts:sendOobCode",{requestType:"VERIFY_EMAIL",idToken},true);
-  return verified;
-}
-
-document.getElementById("signupForm").onsubmit=async e=>{
-  e.preventDefault();
-  const msg=document.getElementById("message"),submit=e.currentTarget.querySelector(".primary");
-  msg.className="msg";msg.textContent="회원가입 처리 중...";submit.disabled=true;
-  try{
-    const email=document.getElementById("email").value.trim();
-    const p1=document.getElementById("password").value,p2=document.getElementById("password2").value;
-    if(p1!==p2)throw new Error("비밀번호 확인이 일치하지 않습니다.");
-    const identity=await getRegistrationIdentity(email,p1);
-    session={idToken:identity.auth.idToken};
-    await api("/api/auth/register",{method:"POST",body:JSON.stringify({company_id:document.getElementById("company").value,name:document.getElementById("name").value.trim(),position:document.getElementById("position").value,phone:document.getElementById("phone").value.trim(),privacy_agreed:document.getElementById("privacy").checked})});
-    const alreadyVerified=await ensureVerificationMail(identity.auth.idToken);
-    msg.className="msg ok";
-    msg.textContent=alreadyVerified?"재가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.":"회원가입이 완료되었습니다. 이메일 인증 후 관리자 승인을 기다려주세요.";
-    document.getElementById("signupForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=true);
-  }catch(err){submit.disabled=false;msg.className="msg error";msg.textContent=err.message}
-};
-
+function firebaseMessage(code){return({EMAIL_EXISTS:"이미 사용 중인 이메일입니다.",WEAK_PASSWORD:"비밀번호는 6자 이상 입력하세요.",INVALID_EMAIL:"이메일 형식이 올바르지 않습니다.",INVALID_PASSWORD:"기존 이메일 계정의 비밀번호가 올바르지 않습니다.",INVALID_LOGIN_CREDENTIALS:"기존 이메일 계정의 비밀번호가 올바르지 않습니다.",USER_DISABLED:"사용할 수 없는 아이디입니다.",TOO_MANY_ATTEMPTS_TRY_LATER:"인증 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요."})[code]||code||"회원가입에 실패했습니다."}
+async function firebasePost(endpoint,body,locale=false){const r=await fetch(`https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${encodeURIComponent(FIREBASE_API_KEY)}`,{method:"POST",headers:{"content-type":"application/json",...(locale?{"X-Firebase-Locale":"ko"}:{})},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok){const code=d?.error?.message||"AUTH_ERROR";const error=new Error(firebaseMessage(code));error.firebaseCode=code;throw error}return d}
+async function api(path,options={}){const r=await fetch(API_BASE+path,{...options,headers:{Accept:"application/json",Authorization:`Bearer ${session.idToken}`,...(options.body?{"content-type":"application/json"}:{})}});const t=await r.text();const d=t?JSON.parse(t):{};if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);return d}
+async function loadCompanies(){const r=await fetch(API_BASE+"/api/public/companies",{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"회사 목록을 불러오지 못했습니다.");const select=document.getElementById("company");select.innerHTML='<option value="">회사 선택</option>'+((d.companies||[]).map(x=>`<option value="${String(x.id).replace(/"/g,"&quot;")}">${String(x.company_name||"")}</option>`).join(""))}
+async function getRegistrationIdentity(email,password){try{const created=await firebasePost("accounts:signUp",{email,password,returnSecureToken:true});return{auth:created,reused:false}}catch(error){if(error.firebaseCode!=="EMAIL_EXISTS")throw error;let existing;try{existing=await firebasePost("accounts:signInWithPassword",{email,password,returnSecureToken:true})}catch(signInError){if(signInError.firebaseCode==="INVALID_PASSWORD"||signInError.firebaseCode==="INVALID_LOGIN_CREDENTIALS")throw new Error("이 이메일의 이전 인증계정이 남아 있습니다. 기존 비밀번호를 입력하면 재가입할 수 있습니다.");throw signInError}session={idToken:existing.idToken};const me=await api("/api/me");const legacyPartner=me.user?.role==="partner"&&!me.user?.name&&!me.user?.position&&!me.user?.phone;if(me.auth_state!=="unregistered"&&!legacyPartner){const labels={pending_approval:"이미 가입 승인 대기 중인 계정입니다.",email_verification_required:"이미 가입된 계정입니다. 이메일 인증을 완료해 주세요.",approved:"이미 사용 중인 계정입니다.",suspended:"사용할 수 없는 아이디입니다. 관리자에게 문의해 주세요.",rejected:"가입이 반려된 계정입니다. 관리자에게 문의해 주세요."};throw new Error(labels[me.auth_state]||"이미 포털에 등록된 계정입니다.")}return{auth:existing,reused:true}}}
+async function ensureVerificationMail(idToken){let verified=false;try{const lookup=await firebasePost("accounts:lookup",{idToken});verified=!!lookup?.users?.[0]?.emailVerified}catch(_){verified=false}if(!verified)await firebasePost("accounts:sendOobCode",{requestType:"VERIFY_EMAIL",idToken},true);return verified}
+document.getElementById("signupForm").onsubmit=async e=>{e.preventDefault();const msg=document.getElementById("message"),submit=e.currentTarget.querySelector(".primary");msg.className="msg";msg.textContent="회원가입 처리 중...";submit.disabled=true;try{const email=document.getElementById("email").value.trim();const p1=document.getElementById("password").value,p2=document.getElementById("password2").value;if(p1!==p2)throw new Error("비밀번호 확인이 일치하지 않습니다.");const identity=await getRegistrationIdentity(email,p1);session={idToken:identity.auth.idToken};await api("/api/auth/register",{method:"POST",body:JSON.stringify({company_id:document.getElementById("company").value,name:document.getElementById("name").value.trim(),position:document.getElementById("position").value,phone:document.getElementById("phone").value.trim(),privacy_agreed:document.getElementById("privacy").checked})});const alreadyVerified=await ensureVerificationMail(identity.auth.idToken);msg.className="msg ok";msg.textContent=alreadyVerified?"재가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.":"회원가입이 완료되었습니다. 이메일 인증 후 관리자 승인을 기다려주세요.";document.getElementById("signupForm").querySelectorAll("input,select,button").forEach(el=>el.disabled=true)}catch(err){submit.disabled=false;msg.className="msg error";msg.textContent=err.message}};
 loadCompanies().catch(err=>{const msg=document.getElementById("message");msg.className="msg error";msg.textContent=err.message||"회사 목록을 불러오지 못했습니다."});
 </script>
 </body>
