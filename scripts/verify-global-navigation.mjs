@@ -6,6 +6,7 @@ const css=await readFile(new URL('../public/ehs-common.css',import.meta.url),'ut
 const foundation=await readFile(new URL('../public/ehs-ui-foundation.css',import.meta.url),'utf8');
 const home=await readFile(new URL('../public/index.html',import.meta.url),'utf8');
 const toolbarV5=await readFile(new URL('../public/global-toolbar-v5.js',import.meta.url),'utf8');
+const toolbarCss=await readFile(new URL('../public/global-toolbar-v5.css',import.meta.url),'utf8');
 const content=await readFile(new URL('../public/content-hub.html',import.meta.url),'utf8');
 const worker=await readFile(new URL('../src/worker.js',import.meta.url),'utf8');
 const workerEntry=await readFile(new URL('../src/worker-entry.js',import.meta.url),'utf8');
@@ -35,6 +36,11 @@ assert.ok(adminAccounts.includes('data-logo-paste')&&adminAccounts.includes("add
 assert.ok(adminPartners.includes('data-logo-paste'),'기존 협력사 관리 경로의 로고 기능 호환 필요');
 assert.ok(shellApi.includes('/api/partner-logo/')&&shellApi.includes('EVIDENCE_FILES.put'),'협력사 로고 API 필요');
 assert.ok(toolbarV5.includes('user.logo_url'),'협력사 상단 프로필 로고 필요');
+assert.ok(toolbarV5.includes('return {name:`${base}님`,base,company,isAdmin}')&&!toolbarV5.includes("String(user?.position||'').trim()"),'상단 사용자명은 직책 없이 이름님 형식이어야 함');
+assert.ok(toolbarCss.includes('width:52px;height:36px')&&toolbarCss.includes('border-radius:0!important')&&toolbarCss.includes('gap:16px'),'상단 협력사 로고는 원형 제거·확대·이름과 충분한 간격이 필요');
+assert.ok(toolbarV5.includes("list.querySelectorAll('[data-id]')")&&toolbarV5.includes("JSON.stringify({id:btn.dataset.id})"),'알림 개별 읽음 기능을 유지해야 함');
+assert.ok(toolbarV5.includes("if(e.key==='Escape')closeAll()")&&toolbarV5.includes("setAttribute('aria-expanded'"),'툴바 메뉴 기능과 접근성 상태를 통일해야 함');
+assert.ok(workerEntry.includes("'/global-toolbar-v5.css?v=6'")&&workerEntry.includes("'/global-toolbar-v5.js?v=9'"),'운영 페이지는 최신 공통 툴바 자산을 사용해야 함');
 assert.ok(shellApi.includes("path==='/api/public/companies'")&&shellApi.includes('pm.signup_enabled=1'),'가입 가능 협력사 화이트리스트 필요');
 assert.ok(signup.includes('id="company"')&&signup.includes('<label for="position">직책</label>'),'회원가입은 협력사 선택과 직책 용어를 사용해야 함');
 assert.ok(!signup.includes('id="jobTitle"')&&!signup.includes('job_title:'),'중복 직책 입력란은 제거되어야 함');
@@ -50,4 +56,5 @@ assert.ok(foundation.includes('--ehs-font-page-title: 28px')&&foundation.include
 assert.ok(worker.includes('/ehs-ui-foundation.css?v=2')&&worker.includes('/global-toolbar-v5.js?v=7'),'통합 Worker 공통 UI 자산 필요');
 for(const source of [...ipass.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean))new Function(source);
 for(const source of [...adminAccounts.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean))new Function(source);
-console.log(JSON.stringify({success:true,services:services.length,unified_partner_admin:true,admin_ui_balanced:true,account_delete:true,signup_position_as_job_title:true,partner_logo_clipboard:true,signup_whitelist:true,consolidated_worker:true}));
+new Function(toolbarV5);
+console.log(JSON.stringify({success:true,services:services.length,unified_partner_admin:true,admin_ui_balanced:true,account_delete:true,signup_position_as_job_title:true,partner_logo_clipboard:true,signup_whitelist:true,consolidated_worker:true,toolbar_identity_unified:true,toolbar_interactions_preserved:true}));
