@@ -46,9 +46,6 @@ jobs:
             exit 1
           fi
 
-      - name: Reset existing partner portal accounts
-        run: npx wrangler d1 execute partner-evaluation-db --remote --command="DELETE FROM portal_accounts WHERE role <> 'admin'; SELECT COUNT(*) AS remaining_partner_accounts FROM portal_accounts WHERE role <> 'admin';"
-
       - name: Deploy Worker
         run: npm run deploy
 
