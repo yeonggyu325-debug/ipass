@@ -2,7 +2,9 @@ import worker from './worker.js';
 import { handleAdminAccountActions } from './admin-account-actions.js';
 
 const PARTNER_RESET_ID='2026-09-11-reset-partner-portal-accounts-v1';
+const DONGHAE_RESET_ID='2026-09-11-reset-donghae-reregister-v1';
 let resetPromise=null;
+let donghaeResetPromise=null;
 
 async function ensurePartnerAccountReset(env){
   if(resetPromise)return resetPromise;
@@ -14,6 +16,25 @@ async function ensurePartnerAccountReset(env){
     await env.partner_evaluation_db.prepare(`INSERT INTO system_one_shot_migrations(id,applied_at) VALUES(?,CURRENT_TIMESTAMP)`).bind(PARTNER_RESET_ID).run();
   })().catch(error=>{resetPromise=null;throw error});
   return resetPromise;
+}
+
+async function ensureDonghaeReregisterReset(env){
+  if(donghaeResetPromise)return donghaeResetPromise;
+  donghaeResetPromise=(async()=>{
+    await env.partner_evaluation_db.prepare(`CREATE TABLE IF NOT EXISTS system_one_shot_migrations(id TEXT PRIMARY KEY,applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+    const applied=await env.partner_evaluation_db.prepare(`SELECT id FROM system_one_shot_migrations WHERE id=? LIMIT 1`).bind(DONGHAE_RESET_ID).first();
+    if(applied)return;
+    const company=await env.partner_evaluation_db.prepare(`SELECT id FROM companies WHERE company_name='동해산업' LIMIT 1`).first();
+    if(company?.id){
+      await env.partner_evaluation_db.prepare(`DELETE FROM portal_accounts WHERE company_id=? AND role='partner'`).bind(company.id).run();
+      await env.partner_evaluation_db.prepare(`UPDATE companies SET status='active' WHERE id=?`).bind(company.id).run();
+      try{
+        await env.partner_evaluation_db.prepare(`UPDATE partner_management SET signup_enabled=1,updated_at=CURRENT_TIMESTAMP WHERE company_id=?`).bind(company.id).run();
+      }catch(error){console.warn('donghae partner management reset skipped',error)}
+    }
+    await env.partner_evaluation_db.prepare(`INSERT INTO system_one_shot_migrations(id,applied_at) VALUES(?,CURRENT_TIMESTAMP)`).bind(DONGHAE_RESET_ID).run();
+  })().catch(error=>{donghaeResetPromise=null;throw error});
+  return donghaeResetPromise;
 }
 
 const BODY_SCRIPT_PATTERNS = [
@@ -47,6 +68,7 @@ function rewritePath(request,path){const url=new URL(request.url);url.pathname=p
 export default {
   async fetch(request,env,ctx){
     await ensurePartnerAccountReset(env);
+    await ensureDonghaeReregisterReset(env);
     const accountAction=await handleAdminAccountActions(request,env,ctx,worker);if(accountAction)return accountAction;
     const path=new URL(request.url).pathname;
     if(path==='/admin-partners.html'){const next=new URL(request.url);next.pathname='/admin/partners';return Response.redirect(next.toString(),302)}
