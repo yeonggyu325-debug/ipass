@@ -20,8 +20,8 @@ assert.ok(worker.includes('evaluation-submit.css?v=1')&&submitCss.includes('.sub
 const regression='<!doctype html><html><body><script>const exportHtml=`<html><body>sheet</body></html>`;<script src="/global-toolbar-v5.js?v=7" data-global-toolbar-v5="true"></script>window.after=true;</script><main>page</main></body></html>';
 const normalized=normalizeInjectedBodyScripts(regression);
 assert.ok(normalized.includes('const exportHtml=`<html><body>sheet</body></html>`;window.after=true;</script>'),'injected toolbar must be removed from inline script payload');
-assert.ok(normalized.lastIndexOf('/global-toolbar-v5.js?v=8')>normalized.lastIndexOf('<main>page</main>'),'toolbar must be moved to the real document body end');
-assert.equal((normalized.match(/global-toolbar-v5\.js\?v=8/g)||[]).length,1,'toolbar must remain exactly once after normalization');
+assert.ok(normalized.lastIndexOf('/global-toolbar-v5.js?v=9')>normalized.lastIndexOf('<main>page</main>'),'toolbar must be moved to the real document body end');
+assert.equal((normalized.match(/global-toolbar-v5\.js\?v=9/g)||[]).length,1,'toolbar must remain exactly once after normalization');
 
 const removed=['src/worker-v17.js','src/worker-v18.js','src/worker-v19.js','src/worker-v20.js','src/worker-v21.js','public/global-toolbar-v4.css','public/global-toolbar-v4.js','public/portal-enhance.css','public/portal-home-refresh.css','public/portal-home-refresh-v2.css','public/evaluation-submit-enhance.css','public/evaluation-submit-redesign.css','public/evaluation-submit-progress.css','public/evaluation-submit-nav-v2.css'];
 for(const path of removed){let exists=true;try{await access(new URL('../'+path,import.meta.url))}catch{exists=false}assert.equal(exists,false,`legacy file must be removed: ${path}`)}
