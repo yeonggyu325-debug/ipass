@@ -35,6 +35,10 @@ for (const page of [adminAccounts, adminPartners]) {
 }
 assert.ok(adminPartners.includes('협력사 마스터') && adminPartners.includes('data-setting="${key}"') && adminPartners.includes('signup_enabled'), '협력사 관리가 공통 마스터와 가입 허용 토글을 제공해야 함');
 assert.ok(adminPartners.includes('data-filter="all"') && adminPartners.includes('data-filter="target"') && adminPartners.includes('data-filter="signup"'), '협력사 관리에는 전체/협의체 대상/가입 허용 필터가 필요');
+assert.ok(adminPartners.includes('data-logo-paste') && adminPartners.includes("addEventListener('paste'") && adminPartners.includes('navigator.clipboard?.read'), '협력사 로고는 버튼과 Ctrl+V 클립보드 붙여넣기를 지원해야 함');
+assert.ok(adminPartners.includes('table-layout:fixed') && adminPartners.includes('text-align:center') && adminPartners.includes('justify-content:center'), '협력사 표와 도형 내부 텍스트는 중앙 정렬 규칙을 사용해야 함');
+assert.ok(shellApi.includes('/api/partner-logo/') && shellApi.includes('logo_key') && shellApi.includes('EVIDENCE_FILES.put'), '협력사 로고 저장·조회 API가 필요');
+assert.ok(toolbarV5.includes('user.logo_url'), '협력사 로그인 후 상단 프로필에 회사 로고가 표시되어야 함');
 assert.ok(shellApi.includes("path==='/api/public/companies'") && shellApi.includes('pm.signup_enabled=1'), '회원가입 회사 목록은 협력사 마스터의 가입 허용 회사만 제공해야 함');
 assert.ok(shellApi.includes("path==='/api/auth/register'") && shellApi.includes('회원가입이 허용된 협력사만 가입할 수 있습니다.'), '서버에서도 미등록/가입차단 협력사 가입을 거부해야 함');
 assert.ok(shellApi.includes('committee_target_preferences') && shellApi.includes("entity_type,entity_id,is_target"), '협력사 협의체 대상 토글은 협의체 대상 설정과 동기화되어야 함');
@@ -58,4 +62,4 @@ assert.ok(worker.includes('/ehs-ui-foundation.css?v=2') && worker.includes('/glo
 const inlineScripts = [...ipass.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match => match[1]).filter(source => source.trim());
 for (const source of inlineScripts) new Function(source);
 for (const source of [adminAccounts, adminPartners].flatMap(page=>[...page.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match=>match[1]).filter(code=>code.trim()))) new Function(source);
-console.log(JSON.stringify({success:true,services:services.length,admin_routes:true,admin_ui_balanced:true,partner_master:true,signup_whitelist:true,committee_partner_sync:true,consolidated_worker:true,faq_route:true,ipass_full_width:true,ipass_partner_views:true}));
+console.log(JSON.stringify({success:true,services:services.length,admin_routes:true,admin_ui_balanced:true,partner_master:true,signup_whitelist:true,committee_partner_sync:true,partner_logo_clipboard:true,consolidated_worker:true,faq_route:true,ipass_full_width:true,ipass_partner_views:true}));
