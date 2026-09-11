@@ -19,48 +19,18 @@
 
   function ensureOverlay(){
     if(overlay||!document.body)return overlay;
-    overlay=document.createElement('div');
-    overlay.id='ehsLoginConnecting';
-    overlay.setAttribute('role','status');
-    overlay.setAttribute('aria-live','polite');
-    overlay.innerHTML='<div class="box"><span class="spinner" aria-hidden="true"></span><span>접속중입니다.</span></div>';
-    document.body.appendChild(overlay);
-    return overlay;
+    overlay=document.createElement('div');overlay.id='ehsLoginConnecting';overlay.setAttribute('role','status');overlay.setAttribute('aria-live','polite');overlay.innerHTML='<div class="box"><span class="spinner" aria-hidden="true"></span><span>접속중입니다.</span></div>';document.body.appendChild(overlay);return overlay;
   }
   function showConnecting(){ensureOverlay();document.documentElement.classList.add('ehs-login-connecting')}
   function hideConnecting(){document.documentElement.classList.remove('ehs-login-connecting')}
-
-  function approvedState(){
-    const app=document.getElementById('app');
-    const publicPortal=document.getElementById('publicPortal');
-    return !!(app&&!app.classList.contains('hidden')&&(!publicPortal||publicPortal.classList.contains('hidden')));
-  }
-  function goHomeWhenApproved(){
-    if(done||!approvedState())return;
-    done=true;
-    showConnecting();
-    location.replace('/home');
-  }
-  function recoverFailedLogin(){
-    if(done||approvedState())return;
-    const btn=document.getElementById('loginBtn');
+  function normalizeUnavailableMessage(){
     const msg=document.getElementById('loginMessage');
-    if(btn&&!btn.disabled&&(msg?.textContent||'').trim())hideConnecting();
+    if(msg&&['사용 중지된 계정입니다.','사용할 수 없는 계정입니다.','등록되지 않은 이메일입니다.'].includes((msg.textContent||'').trim()))msg.textContent='사용할 수 없는 아이디입니다.';
+    document.querySelectorAll('.modal-body,.action-message,[role="dialog"] p').forEach(el=>{const text=(el.textContent||'').trim();if(text==='사용 중지된 계정입니다.'||text==='사용할 수 없는 계정입니다.')el.textContent='사용할 수 없는 아이디입니다.'})
   }
-  function boot(){
-    ensureOverlay();
-    const form=document.getElementById('loginForm');
-    const app=document.getElementById('app');
-    const publicPortal=document.getElementById('publicPortal');
-    if(window.EHSAuth?.readSession?.())showConnecting();
-    form?.addEventListener('submit',showConnecting,true);
-    const observer=new MutationObserver(()=>{goHomeWhenApproved();recoverFailedLogin()});
-    if(app)observer.observe(app,{attributes:true,attributeFilter:['class']});
-    if(publicPortal)observer.observe(publicPortal,{attributes:true,attributeFilter:['class']});
-    const btn=document.getElementById('loginBtn');if(btn)observer.observe(btn,{attributes:true,attributeFilter:['disabled']});
-    const msg=document.getElementById('loginMessage');if(msg)observer.observe(msg,{childList:true,characterData:true,subtree:true});
-    document.addEventListener('ehs:user-ready',()=>setTimeout(goHomeWhenApproved,0));
-    goHomeWhenApproved();
-  }
+  function approvedState(){const app=document.getElementById('app'),publicPortal=document.getElementById('publicPortal');return !!(app&&!app.classList.contains('hidden')&&(!publicPortal||publicPortal.classList.contains('hidden')))}
+  function goHomeWhenApproved(){if(done||!approvedState())return;done=true;showConnecting();location.replace('/home')}
+  function recoverFailedLogin(){if(done||approvedState())return;normalizeUnavailableMessage();const btn=document.getElementById('loginBtn'),msg=document.getElementById('loginMessage');if(btn&&!btn.disabled&&(msg?.textContent||'').trim())hideConnecting()}
+  function boot(){ensureOverlay();const form=document.getElementById('loginForm'),app=document.getElementById('app'),publicPortal=document.getElementById('publicPortal');if(window.EHSAuth?.readSession?.())showConnecting();form?.addEventListener('submit',showConnecting,true);const observer=new MutationObserver(()=>{normalizeUnavailableMessage();goHomeWhenApproved();recoverFailedLogin()});if(app)observer.observe(app,{attributes:true,attributeFilter:['class']});if(publicPortal)observer.observe(publicPortal,{attributes:true,attributeFilter:['class']});const btn=document.getElementById('loginBtn');if(btn)observer.observe(btn,{attributes:true,attributeFilter:['disabled']});const msg=document.getElementById('loginMessage');if(msg)observer.observe(msg,{childList:true,characterData:true,subtree:true});document.body&&observer.observe(document.body,{childList:true,subtree:true});document.addEventListener('ehs:user-ready',()=>setTimeout(goHomeWhenApproved,0));normalizeUnavailableMessage();goHomeWhenApproved()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
