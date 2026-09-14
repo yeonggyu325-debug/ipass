@@ -223,6 +223,51 @@ summary,
   font-size: var(--ehs-font-meta) !important;
 }
 
+/* Typography v3 role map: all authenticated pages share one readable scale. */
+:where(.top, .hero, .page-head, .page-header) h2,
+:where(.section-title, .workspace-title, .board-title),
+#app .section-head h2 {
+  color: var(--ehs-color-ink) !important;
+  font-size: var(--ehs-font-section-title) !important;
+  font-weight: 780 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -.025em !important;
+}
+
+:where(.panel-head, .card-head, .item-head, .sidebar-head, .people-card-head,
+  .edit-section-head, .photo-head, .detail-title, .modal-title) strong,
+:where(.panel-head, .card-head, .item-head) h3,
+:where(.case-title, .item-title, .tpl-name, .cycle-title, .month-no, .company b) {
+  font-size: var(--ehs-font-card-title) !important;
+  font-weight: 780 !important;
+  line-height: 1.4 !important;
+}
+
+:where(.top p, .hero p, .page-head p, .page-header p, .partner-intro, .notice,
+  .answer, .submitted, .guide-view, .review-comment, .policy-note, .setting-help,
+  .period-banner, .preview-note, .empty, .loading, .error, .detail-empty,
+  .exempt-empty, .annual-loading) {
+  font-size: var(--ehs-font-body) !important;
+  line-height: var(--ehs-line-height-body) !important;
+}
+
+:where(.summary-card span, .metric span, .kpi span, .status-cell, .month-status,
+  .file-name b, .file-action, .photo-tool, .category, .type, .score-badge,
+  .role-chip, .role-badge, .badge, .status, .chip, .tag, .state) {
+  font-size: var(--ehs-font-label) !important;
+}
+
+:where(.latest, .meta, .sub, .legend, .legend span, .matrix-head, .company small,
+  .case-snippet, .char-count, .photo-head span, .modal-title span,
+  .section-head span, .card-head span, .panel-head span, .sidebar-head span,
+  .hero-meta, .item-meta, .item-category, .file-size, .file-name span,
+  .upload-note, .upload p, .busy, .save-state, .reason, .cycle-meta, .tpl-meta,
+  .detail-date, .month-updated, .month-files, .storage-copy, .storage-meter-text,
+  .count, .saved, .score-label) {
+  font-size: var(--ehs-font-meta) !important;
+  line-height: 1.5 !important;
+}
+
 /* Primary controls */
 :where(.btn, .head-btn, .header-btn, .logout-btn, .action-text) {
   min-height: var(--ehs-control-height) !important;

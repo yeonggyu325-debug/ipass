@@ -25,6 +25,21 @@
   #app .gnb-service-link{width:100%;height:42px;padding:0 13px;font-size:12px;justify-content:flex-start}
 }
 
+/* Typography v3: the action dashboard follows the shared six-step scale. */
+#app .gnb-service-link,
+#app .user-avatar,
+#app .user-company,
+#page-portalHome .home-eyebrow,
+#page-portalHome .home-date,
+#page-portalHome .important-badge,
+#page-portalHome .important-date,
+#page-portalHome .home-v3-section-head p,
+#page-portalHome .home-v3-text-link,
+#page-portalHome .home-action-index,
+#page-portalHome .home-action-copy small,
+#page-portalHome .service-text span,
+#page-portalHome .loading{font-size:var(--ehs-font-meta,12px)!important}
+
 #app main{width:min(1200px,calc(100% - 36px));padding:22px 0 50px;background:#f6f8fa}
 #page-portalHome{max-width:100%}
 #page-portalHome .home-v3-shell{display:flex;flex-direction:column;gap:18px}

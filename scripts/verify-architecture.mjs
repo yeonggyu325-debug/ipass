@@ -20,12 +20,12 @@ assert.ok(!api.includes('global-toolbar-v5.js')&&!api.includes('portal-home-v3.j
 assert.ok(worker.includes('evaluation-submit.css?v=1')&&submitCss.includes('.submit-progress-ring'),'submission CSS must be consolidated');
 assert.ok(foundation.includes('EHS UI Foundation v3')&&foundation.includes('--ehs-container-max: 1320px')&&foundation.includes('--ehs-layer-modal: 900'),'foundation v3 must own container and layer tokens');
 assert.ok(shell.includes('--ehs-shell-max:var(--ehs-container-max,1320px)')&&shell.includes('var(--ehs-page-top,24px)'),'portal shell must consume foundation spacing tokens');
-assert.ok(entry.includes("'/ehs-ui-foundation.css?v=3'")&&entry.includes("'/portal-shell-v1.css?v=3'"),'production normalization must publish foundation v3 assets');
+assert.ok(entry.includes("'/ehs-ui-foundation.css?v=4'")&&entry.includes("'/portal-shell-v1.css?v=3'"),'production normalization must publish foundation v3 assets');
 
 const regression='<!doctype html><html><head><link rel="stylesheet" href="/ehs-ui-foundation.css?v=2"><link rel="stylesheet" href="/portal-shell-v1.css?v=2"></head><body><script>const exportHtml=`<html><body>sheet</body></html>`;<script src="/global-toolbar-v5.js?v=7" data-global-toolbar-v5="true"></script>window.after=true;</script><main>page</main></body></html>';
 const normalized=normalizeInjectedBodyScripts(regression);
 assert.ok(normalized.includes('const exportHtml=`<html><body>sheet</body></html>`;window.after=true;</script>'),'injected toolbar must be removed from inline script payload');
-assert.ok(normalized.includes('/ehs-ui-foundation.css?v=3')&&normalized.includes('/portal-shell-v1.css?v=3'),'shared UI assets must be normalized to v3');
+assert.ok(normalized.includes('/ehs-ui-foundation.css?v=4')&&normalized.includes('/portal-shell-v1.css?v=3'),'shared UI assets must be normalized to v3');
 assert.ok(normalized.lastIndexOf('/global-toolbar-v5.js?v=9')>normalized.lastIndexOf('<main>page</main>'),'toolbar must be moved to the real document body end');
 assert.equal((normalized.match(/global-toolbar-v5\.js\?v=9/g)||[]).length,1,'toolbar must remain exactly once after normalization');
 

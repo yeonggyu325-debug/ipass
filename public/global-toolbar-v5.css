@@ -13,3 +13,15 @@ body.ehs-toolbar-v5-ready>header.header,body.ehs-toolbar-v5-ready>header.app-hea
 @media(max-width:1120px){.ehs-toolbar-v5 .ehs-v5-top-inner{width:calc(100% - 32px)!important;grid-template-columns:190px minmax(0,1fr) 230px;gap:20px}.ehs-toolbar-v5 .ehs-global-nav{gap:4px}.ehs-toolbar-v5 .ehs-global-link{min-width:66px;padding:0 9px;font-size:12.5px}.ehs-toolbar-v5 .ehs-v5-brand-copy small{display:none}}
 @media(max-width:900px){.ehs-toolbar-v5 .ehs-v5-top-inner{grid-template-columns:auto auto 1fr}.ehs-toolbar-v5 .ehs-global-mobile{display:grid;justify-self:start}.ehs-toolbar-v5 .ehs-global-nav{display:none;position:absolute;top:var(--ehs-toolbar-h);left:16px;right:16px;height:auto;min-width:0;padding:8px;background:#fff;border:1px solid var(--ehs-toolbar-line);border-radius:10px;box-shadow:0 13px 32px rgba(30,47,59,.14);flex-direction:column;align-items:stretch;gap:4px}.ehs-toolbar-v5 .ehs-global-nav.open{display:flex}.ehs-toolbar-v5 .ehs-global-link{width:100%;height:42px;min-width:0;padding:0 12px;justify-content:flex-start;border-radius:7px;font-size:13px}.ehs-toolbar-v5 .ehs-global-actions{justify-self:end}.ehs-toolbar-v5 .ehs-global-user-btn{gap:12px}.ehs-toolbar-v5 .ehs-global-avatar{width:46px;flex-basis:46px;height:34px}.ehs-toolbar-v5 .ehs-global-avatar img{max-width:46px;max-height:34px}}
 @media(max-width:560px){.ehs-toolbar-v5 .ehs-v5-top-inner{width:calc(100% - 24px)!important;gap:8px}.ehs-toolbar-v5 .ehs-global-brand img{height:25px}.ehs-toolbar-v5 .ehs-v5-brand-copy strong{font-size:13px}.ehs-toolbar-v5 .ehs-v5-brand-copy small{display:none}.ehs-toolbar-v5 .ehs-global-actions{gap:4px}.ehs-toolbar-v5 .ehs-global-user-btn{padding:0 2px;gap:8px}.ehs-toolbar-v5 .ehs-global-avatar{width:38px;flex-basis:38px;height:30px}.ehs-toolbar-v5 .ehs-global-avatar img{max-width:38px;max-height:30px}.ehs-toolbar-v5 .ehs-global-copy strong{max-width:78px;font-size:11.5px}.ehs-toolbar-v5 .ehs-global-caret{display:none}.ehs-toolbar-v5 .ehs-global-bell{display:grid}.ehs-toolbar-v5 .ehs-notification-panel{position:fixed;top:calc(var(--ehs-toolbar-h) + 6px);right:12px;left:12px;width:auto}}
+
+/* Typography v3: toolbar text never drops below the shared metadata size. */
+.ehs-toolbar-v5 .ehs-v5-brand-copy small,
+.ehs-toolbar-v5 .ehs-global-bell span,
+.ehs-toolbar-v5 .ehs-global-caret,
+.ehs-toolbar-v5 .ehs-global-user-menu span,
+.ehs-toolbar-v5 .ehs-notification-head button,
+.ehs-toolbar-v5 .ehs-notification-item span,
+.ehs-toolbar-v5 .ehs-notification-item small,
+.ehs-toolbar-v5 .ehs-notification-empty{font-size:var(--ehs-font-meta,12px)!important}
+.ehs-toolbar-v5 .ehs-global-user-menu button,
+.ehs-toolbar-v5 .ehs-notification-item strong{font-size:var(--ehs-font-label,13px)!important}

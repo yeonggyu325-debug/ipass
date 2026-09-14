@@ -14,16 +14,16 @@ import { createRequestMetrics, finalizeRequestMetrics, handlePerformanceRum, ins
 const IPASS_PATHS=new Set(['/ipass','/ipass/','/ipass/evaluations','/ipass/templates','/ipass/cycles']);
 const PROTECTED_PATHS=new Set(['/home','/committee','/education','/voc','/notices','/resources','/faq','/admin/approvals','/admin/accounts','/evaluation-management.html','/evaluation-cycle.html','/evaluation-submit.html','/evaluation-scoring.html']);
 const COMMON_STYLE='<link rel="stylesheet" href="/ehs-common.css?v=11">';
-const UI_FOUNDATION='<link rel="stylesheet" href="/ehs-ui-foundation.css?v=2">';
+const UI_FOUNDATION='<link rel="stylesheet" href="/ehs-ui-foundation.css?v=4">';
 const PERFORMANCE_STYLE='<link rel="stylesheet" href="/performance-loading-v1.css?v=1">';
-const TOOLBAR_STYLE='<link rel="stylesheet" href="/global-toolbar-v5.css?v=5" data-global-toolbar-v5="true">';
+const TOOLBAR_STYLE='<link rel="stylesheet" href="/global-toolbar-v5.css?v=7" data-global-toolbar-v5="true">';
 const PORTAL_SHELL_STYLE='<link rel="stylesheet" href="/portal-shell-v1.css?v=2">';
 const COMMON_AUTH='<script src="/shared/auth.js?v=4"></script>';
 const COMMON_API='<script src="/shared/api.js?v=6"></script>';
 const COMMON_BEHAVIOR='<script src="/ehs-common.js?v=13"></script>';
 const COMMON_PREVIEW='<script src="/attachment-preview.js?v=3"></script>';
 const TOOLBAR_SCRIPT='<script src="/global-toolbar-v5.js?v=7" data-global-toolbar-v5="true"></script>';
-const HOME_STYLE='<link rel="stylesheet" href="/portal-home-v3.css?v=4" data-portal-home-v3="true">';
+const HOME_STYLE='<link rel="stylesheet" href="/portal-home-v3.css?v=5" data-portal-home-v3="true">';
 const HOME_SCRIPT='<script src="/portal-home-v3.js?v=7" data-portal-home-v3="true"></script>';
 const LOGIN_SCRIPT='<script src="/login-home-redirect.js?v=2" data-login-home-redirect="true"></script>';
 const IPASS_STYLE='<link rel="stylesheet" href="/ipass-ui-v2.css?v=2" data-ipass-ui-v2="true">';
@@ -54,19 +54,19 @@ async function htmlResponse(response,html){const headers=new Headers(response.he
 async function injectShared(response,{path='/',home=false,root=false,submission=false,embedded=false}={}){
   const type=response.headers.get('content-type')||'';if(!type.includes('text/html'))return response;let html=stripLegacyShared(await response.text());
   html=injectHead(html,COMMON_STYLE,'/ehs-common.css?v=11');
-  html=injectHead(html,UI_FOUNDATION,'/ehs-ui-foundation.css?v=2');
+  html=injectHead(html,UI_FOUNDATION,'/ehs-ui-foundation.css?v=4');
   html=injectHead(html,PERFORMANCE_STYLE,'/performance-loading-v1.css?v=1');
   html=injectHead(html,COMMON_AUTH,'/shared/auth.js?v=4');
   html=injectHead(html,COMMON_API,'/shared/api.js?v=6');
   html=injectHead(html,COMMON_BEHAVIOR,'/ehs-common.js?v=13');
   html=injectHead(html,COMMON_PREVIEW,'/attachment-preview.js?v=3');
   if(isProtected(path)){
-    html=injectHead(html,TOOLBAR_STYLE,'/global-toolbar-v5.css?v=5');
+    html=injectHead(html,TOOLBAR_STYLE,'/global-toolbar-v5.css?v=7');
     html=injectHead(html,PORTAL_SHELL_STYLE,'/portal-shell-v1.css?v=2');
     html=injectBody(html,TOOLBAR_SCRIPT,'/global-toolbar-v5.js?v=7');
   }
   if(root){html=injectBody(html,LOGIN_SCRIPT,'/login-home-redirect.js?v=2');html=injectBody(html,ROOT_ROUTE_SCRIPT,'ipass-route-v24');html=injectBody(html,PARTNER_ROUTE_SCRIPT,'partner-eval-route-v21');html=injectBody(html,IPASS_GRADE_SCRIPT,'ipass-grade-v21')}
-  if(home){html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,HOME_STYLE,'/portal-home-v3.css?v=4');html=injectBody(html,HOME_SCRIPT,'/portal-home-v3.js?v=7')}
+  if(home){html=injectHead(html,HOME_BOOT,'ehs-home-boot');html=injectHead(html,HOME_STYLE,'/portal-home-v3.css?v=5');html=injectBody(html,HOME_SCRIPT,'/portal-home-v3.js?v=7')}
   if(path.startsWith('/ipass')){html=injectHead(html,IPASS_STYLE,'/ipass-ui-v2.css?v=2');html=injectBody(html,IPASS_SCRIPT,'/ipass-ui-v2.js?v=2')}
   if(submission){html=injectHead(html,SUBMISSION_STYLE,'/evaluation-submit.css?v=1');html=injectBody(html,SUBMISSION_SCRIPT,'/evaluation-submit-enhance.js?v=16')}
   if(path==='/resources'){html=injectHead(html,RESOURCE_PREVIEW_V3_STYLE,'/resource-preview-v3.css?v=11');html=injectBody(html,RESOURCE_PREVIEW_V3_SCRIPT,'/resource-preview-v3.js?v=11')}

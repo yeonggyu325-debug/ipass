@@ -43,7 +43,7 @@ assert.ok(toolbarV5.includes('return {name:`${base}님`,base,company,isAdmin}')&
 assert.ok(toolbarCss.includes('width:52px;height:36px')&&toolbarCss.includes('border-radius:0!important')&&toolbarCss.includes('gap:16px'),'상단 협력사 로고는 원형 제거·확대·이름과 충분한 간격이 필요');
 assert.ok(toolbarV5.includes("list.querySelectorAll('[data-id]')")&&toolbarV5.includes("JSON.stringify({id:btn.dataset.id})"),'알림 개별 읽음 기능을 유지해야 함');
 assert.ok(toolbarV5.includes("if(e.key==='Escape')closeAll()")&&toolbarV5.includes("setAttribute('aria-expanded'"),'툴바 메뉴 기능과 접근성 상태를 통일해야 함');
-assert.ok(workerEntry.includes("'/global-toolbar-v5.css?v=6'")&&workerEntry.includes("'/global-toolbar-v5.js?v=9'"),'운영 페이지는 최신 공통 툴바 자산을 사용해야 함');
+assert.ok(workerEntry.includes("'/global-toolbar-v5.css?v=7'")&&workerEntry.includes("'/global-toolbar-v5.js?v=9'"),'운영 페이지는 최신 공통 툴바 자산을 사용해야 함');
 assert.ok(shellApi.includes("path==='/api/public/companies'")&&shellApi.includes('pm.signup_enabled=1'),'가입 가능 협력사 화이트리스트 필요');
 assert.ok(signup.includes('id="company"')&&signup.includes('<label for="position">직책</label>'),'회원가입은 협력사 선택과 직책 용어를 사용해야 함');
 assert.ok(!signup.includes('id="jobTitle"')&&!signup.includes('job_title:'),'중복 직책 입력란은 제거되어야 함');
@@ -65,7 +65,9 @@ assert.ok(foundation.includes('EHS UI Foundation v3')&&foundation.includes('--eh
 assert.ok(foundation.includes('--ehs-font-page-title: 28px')&&foundation.includes('--ehs-font-meta: 12px')&&foundation.includes('--ehs-control-height: 40px'),'공통 타이포·컨트롤 토큰 필요');
 assert.ok(foundation.includes('--ehs-layer-toolbar: 500')&&foundation.includes('--ehs-layer-modal: 900')&&foundation.includes('--ehs-layer-toast: 1000'),'공통 레이어 토큰 필요');
 assert.ok(shell.includes('--ehs-shell-max:var(--ehs-container-max,1320px)')&&shell.includes('--ehs-shell-section-gap:var(--ehs-section-gap,24px)'),'포털 셸은 foundation 토큰을 소비해야 함');
-assert.ok(workerEntry.includes("'/ehs-ui-foundation.css?v=3'")&&workerEntry.includes("'/portal-shell-v1.css?v=3'"),'운영 페이지는 foundation v3 및 shell v3 캐시 버전을 사용해야 함');
+assert.ok(workerEntry.includes("'/ehs-ui-foundation.css?v=4'")&&workerEntry.includes("'/portal-shell-v1.css?v=3'"),'운영 페이지는 foundation v3 및 shell v3 캐시 버전을 사용해야 함');
+assert.ok(foundation.includes('Typography v3 role map')&&foundation.includes('.company small')&&foundation.includes('.case-snippet'),'업무 화면은 공통 Typography v3 역할 매핑을 사용해야 함');
+assert.ok(toolbarCss.includes('Typography v3: toolbar text never drops below')&&toolbarCss.includes('var(--ehs-font-meta,12px)'),'공통 툴바 글자는 12px 미만으로 표시되면 안 됨');
 for(const source of [...ipass.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean))new Function(source);
 for(const source of [...adminAccounts.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean))new Function(source);
 new Function(toolbarV5);
