@@ -18,6 +18,8 @@ const ipass=await readFile(new URL('../public/ipass.html',import.meta.url),'utf8
 const adminAccounts=await readFile(new URL('../public/admin-accounts.html',import.meta.url),'utf8');
 const adminPartners=await readFile(new URL('../public/admin-partners.html',import.meta.url),'utf8');
 const signup=await readFile(new URL('../public/signup.html',import.meta.url),'utf8');
+const standaloneFiles=['committee.html','education.html','voc.html','content-hub.html','faq.html','ipass.html','evaluation-submit.html','evaluation-scoring.html','evaluation-cycle.html','evaluation-management.html'];
+const standalonePages=await Promise.all(standaloneFiles.map(async name=>[name,await readFile(new URL(`../public/${name}`,import.meta.url),'utf8')]));
 
 const services=[['/ipass','i-PaSS'],['/committee','안전보건협의체'],['/education','교육자료'],['/voc','VOC'],['/notices','공지사항'],['/faq','FAQ'],['/resources','자료실']];
 for(const [href,label] of services)assert.ok(toolbarV5.includes(`['${href}','${label}']`),`공통 툴바에 ${label} 필요`);
@@ -46,6 +48,12 @@ assert.ok(shellApi.includes("path==='/api/public/companies'")&&shellApi.includes
 assert.ok(signup.includes('id="company"')&&signup.includes('<label for="position">직책</label>'),'회원가입은 협력사 선택과 직책 용어를 사용해야 함');
 assert.ok(!signup.includes('id="jobTitle"')&&!signup.includes('job_title:'),'중복 직책 입력란은 제거되어야 함');
 assert.ok(!content.includes('id="noticeTab"')&&!content.includes('id="resourceTab"'),'게시판 내부 교차 탭 제거 필요');
+for(const [name,source] of standalonePages){
+  assert.ok(!/<header\b[^>]*class=["'][^"']*\b(?:header|app-header)\b/i.test(source),`${name}에 페이지 전용 Header가 남아 있으면 안 됨`);
+  assert.ok(!/id=["'](?:userLabel|homeBrand|brandBtn|homeBtn|logoutBtn)["']/.test(source),`${name}에 기존 Header 전용 컨트롤이 남아 있으면 안 됨`);
+}
+assert.ok(!css.includes('body.ehs-global-nav-ready>header.header'),'기존 Header를 CSS로 숨기는 임시 처리는 제거되어야 함');
+assert.ok(toolbarV5.includes('id="ehsGlobalHeader"'),'보호 화면은 공통 툴바 한 개만 생성해야 함');
 assert.ok(!home.includes('<h2>EHS 서비스</h2>'),'EHS 서비스 문구 제거 필요');
 assert.ok(css.includes('border:0!important'),'공통 UI 장식성 테두리 최소화 필요');
 assert.ok(common.includes('Cloudflare R2 저장공간')&&css.includes('.ehs-storage-capacity'),'관리자 저장공간 UI 필요');

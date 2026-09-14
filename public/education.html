@@ -21,12 +21,6 @@
 </style>
 </head>
 <body>
-<header class="header">
-  <div class="header-in">
-    <button class="brand" id="homeBrand" type="button"><img src="/hniruja-logo.png" alt="Hniruja"><span>협력사 EHS 포털</span><small>교육 제출</small></button>
-    <div class="head-actions"><span class="user" id="userLabel"></span><button class="head-btn" id="homeBtn" type="button">포털 홈</button><button class="head-btn logout" id="logoutBtn" type="button">로그아웃</button></div>
-  </div>
-</header>
 <main class="shell">
   <div class="top">
     <div><div class="eyebrow">SAFETY EDUCATION</div><h1 id="pageTitle">교육 제출</h1><p id="pageMeta">월별 안전보건 교육자료를 제출하고 심사상태를 확인합니다.</p></div>
@@ -71,8 +65,7 @@ function dateTime(value){if(!value)return'-';const s=String(value).replace('T','
 function showToast(message){const el=$('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.classList.add('hidden'),2600)}
 function setBusy(value,label='처리 중...'){busy=value;document.querySelectorAll('#detailBody button,#detailBody input,#detailBody textarea').forEach(el=>el.disabled=value);const state=document.querySelector('#detailBody .busy-state');if(state)state.textContent=value?label:''}
 function buildYears(){const now=new Date().getFullYear();for(let year=now+1;year>=now-4;year--){const option=document.createElement('option');option.value=year;option.textContent=`${year}년`;option.selected=year===now;$('year').append(option)}$('year').onchange=loadYear}
-function goHome(){location.href='/home'}
-$('homeBrand').onclick=goHome;$('homeBtn').onclick=goHome;$('logoutBtn').onclick=()=>window.EHSAuth.logout();$('refreshBtn').onclick=loadYear;
+$('refreshBtn').onclick=loadYear;
 
 function renderSummary(summary){$('summary').innerHTML=`
   <div class="summary-card"><span>대상 협력사</span><b>${Number(summary.target_company_count||0)}개사</b></div>
@@ -105,7 +98,7 @@ function renderAdminDetail(submission){const files=submission.files||[];$('detai
 async function reviewEducation(action){const comment=$('reviewComment').value.trim();if(action==='request_changes'&&!comment){alert('재제출 요청 사유를 입력하세요.');return}const message=action==='approve'?'제출완료로 승인할까요?':'협력사에 재제출을 요청할까요?';if(!confirm(message))return;setBusy(true,'심사 저장 중...');try{const data=await api(`/api/admin/education/${encodeURIComponent(activeDetail.id)}/review`,{method:'PATCH',body:JSON.stringify({action,comment})});activeDetail=data.submission;renderAdminDetail(data.submission);showToast(action==='approve'?'제출완료 처리했습니다.':'재제출을 요청했습니다.');await reloadAnnualSilently()}catch(error){setBusy(false);alert(error.message)}}
 async function reloadAnnualSilently(){try{annualData=await api(`/api/education?year=${$('year').value}`);currentUser.role==='admin'?renderAdmin():renderPartner()}catch(error){console.error('education overview refresh failed',error)}}
 
-(async()=>{try{currentUser=await window.EHSAuth.requireUser();const admin=currentUser.role==='admin';$('pageTitle').textContent=admin?'교육 제출현황':'교육자료 제출';$('pageMeta').textContent=admin?'협력사별 월간 교육자료 제출 여부를 확인하고 심사합니다.':'월별 안전보건 교육자료를 제출하고 심사상태를 확인합니다.';$('adminPanel').classList.toggle('hidden',!admin);$('partnerPanel').classList.toggle('hidden',admin);$('userLabel').textContent=[currentUser.company_name,currentUser.position,currentUser.name].filter(Boolean).join(' · ')||currentUser.email||'';buildYears();await loadYear()}catch(error){if(error?.status===401)return;document.querySelector('.shell').innerHTML=`<div class="error">${esc(window.EHSApi?.describe?window.EHSApi.describe(error):error.message)}</div>`}})();
+(async()=>{try{currentUser=await window.EHSAuth.requireUser();window.__EHS_PAGE_USER=currentUser;document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:currentUser}));const admin=currentUser.role==='admin';$('pageTitle').textContent=admin?'교육 제출현황':'교육자료 제출';$('pageMeta').textContent=admin?'협력사별 월간 교육자료 제출 여부를 확인하고 심사합니다.':'월별 안전보건 교육자료를 제출하고 심사상태를 확인합니다.';$('adminPanel').classList.toggle('hidden',!admin);$('partnerPanel').classList.toggle('hidden',admin);buildYears();await loadYear()}catch(error){if(error?.status===401)return;document.querySelector('.shell').innerHTML=`<div class="error">${esc(window.EHSApi?.describe?window.EHSApi.describe(error):error.message)}</div>`}})();
 </script>
 </body>
 </html>

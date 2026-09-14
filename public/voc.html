@@ -23,12 +23,6 @@
 </style>
 </head>
 <body>
-<header class="header">
-  <div class="header-in">
-    <button class="brand" id="homeBrand" type="button"><img src="/hniruja-logo.png" alt="Hniruja"><span>협력사 EHS 포털</span><small>VOC</small></button>
-    <div class="head-actions"><span class="user" id="userLabel"></span><button class="head-btn" id="homeBtn" type="button">포털 홈</button><button class="head-btn logout" id="logoutBtn" type="button">로그아웃</button></div>
-  </div>
-</header>
 <main class="shell">
   <div class="top">
     <div><div class="eyebrow">VOICE OF CUSTOMER</div><h1 id="pageTitle">VOC 건의</h1><p id="pageMeta">EHS 관련 문의와 개선 의견을 접수하고 처리상태를 확인합니다.</p></div>
@@ -76,8 +70,7 @@ function categoryBadge(value){return `<span class="category">${esc(CATEGORY[valu
 function formatDate(value){if(!value)return'-';const date=new Date(String(value).includes('T')?value:String(value).replace(' ','T')+'Z');if(Number.isNaN(date.getTime()))return esc(String(value).slice(0,16));return date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
 function formatBytes(value){const n=Number(value||0);if(n<1024)return `${n} B`;if(n<1024*1024)return `${Math.round(n/1024)} KB`;return `${Math.round(n/1024/1024*10)/10} MB`}
 function showToast(message){const el=$('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.classList.add('hidden'),2800)}
-function goHome(){location.href='/home'}
-$('homeBrand').onclick=goHome;$('homeBtn').onclick=goHome;$('logoutBtn').onclick=()=>window.EHSAuth.logout();$('refreshBtn').onclick=loadCases;$('newBtn').onclick=()=>openComposer();
+$('refreshBtn').onclick=loadCases;$('newBtn').onclick=()=>openComposer();
 
 function renderSummary(){const s=vocData.summary||{};const cards=currentUser.role==='admin'
   ? [['전체',Number(s.received||0)+Number(s.in_review||0)+Number(s.answered||0)+Number(s.closed||0),''],['접수완료',s.received,'received'],['검토중',s.in_review,'review'],['답변완료',s.answered,'answered'],['종결',s.closed,'closed']]
@@ -137,7 +130,7 @@ function fitLocalImage(){const image=$('imageView'),stage=$('imageStage');if(!im
 function closeLocalImage(){$('imageModal').classList.add('hidden');$('imageView').src='';localImageUrl=''}
 $('imageFit').onclick=fitLocalImage;$('imageMinus').onclick=()=>{localImageScale=Math.max(10,localImageScale-10);updateLocalImage()};$('imagePlus').onclick=()=>{localImageScale=Math.min(500,localImageScale+10);updateLocalImage()};$('imagePercent').onclick=()=>{localImageScale=100;updateLocalImage()};$('imageClose').onclick=closeLocalImage;$('imageModal').onclick=event=>{if(event.target===$('imageModal'))closeLocalImage()};
 
-(async()=>{try{currentUser=await window.EHSAuth.requireUser();window.__EHS_PAGE_USER=currentUser;document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:currentUser}));const admin=currentUser.role==='admin';$('pageTitle').textContent=admin?'VOC 접수현황':'VOC 건의';$('pageMeta').textContent=admin?'협력사 VOC의 접수내용과 사진을 확인하고 처리합니다.':'EHS 관련 문의와 개선 의견을 접수하고 처리상태를 확인합니다.';$('listTitle').textContent=admin?'전체 VOC 접수현황':'내 VOC 접수내역';$('newBtn').classList.toggle('hidden',admin);if(admin)$('statusFilter').querySelector('option[value="draft"]').remove();$('userLabel').textContent=[currentUser.company_name,currentUser.position,currentUser.name].filter(Boolean).join(' · ')||currentUser.email||'';await loadCases()}catch(error){if(error?.status===401)return;document.querySelector('.shell').innerHTML=`<div class="error">${esc(window.EHSApi?.describe?window.EHSApi.describe(error):error.message)}</div>`}})();
+(async()=>{try{currentUser=await window.EHSAuth.requireUser();window.__EHS_PAGE_USER=currentUser;document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:currentUser}));const admin=currentUser.role==='admin';$('pageTitle').textContent=admin?'VOC 접수현황':'VOC 건의';$('pageMeta').textContent=admin?'협력사 VOC의 접수내용과 사진을 확인하고 처리합니다.':'EHS 관련 문의와 개선 의견을 접수하고 처리상태를 확인합니다.';$('listTitle').textContent=admin?'전체 VOC 접수현황':'내 VOC 접수내역';$('newBtn').classList.toggle('hidden',admin);if(admin)$('statusFilter').querySelector('option[value="draft"]').remove();await loadCases()}catch(error){if(error?.status===401)return;document.querySelector('.shell').innerHTML=`<div class="error">${esc(window.EHSApi?.describe?window.EHSApi.describe(error):error.message)}</div>`}})();
 </script>
 </body>
 </html>

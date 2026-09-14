@@ -383,7 +383,6 @@ input:focus,select:focus,textarea:focus{
 }
 
 /* Unified standalone-page toolbar */
-body.ehs-global-nav-ready>header.header,body.ehs-global-nav-ready>header.app-header{display:none!important}
 .ehs-global-header{height:70px!important;position:sticky;top:0;z-index:200;background:rgba(255,255,255,.97)!important;border-bottom:1px solid var(--ehs-line)!important;box-shadow:0 1px 0 rgba(28,47,60,.02)!important;backdrop-filter:blur(12px)!important}
 .ehs-global-header .hidden{display:none!important}
 .ehs-global-inner{width:min(1400px,calc(100% - 48px));height:100%;margin:0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:28px}

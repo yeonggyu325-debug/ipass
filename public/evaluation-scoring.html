@@ -9,7 +9,6 @@
 <script src="/shared/auth.js?v=3"></script><script src="/shared/api.js?v=3"></script>
 </head>
 <body>
-<header class="header"><div class="header-inner"><button class="brand" id="brand"><img src="/hniruja-logo.png" alt="Hniruja"><span>협력사 EHS 포털</span><span class="chip">i-PaSS 채점</span></button><div class="actions"><span id="user" class="user"></span><button class="btn" id="ipass">i-PaSS</button><button class="btn" id="home">포털 홈</button><button class="btn" id="logout">로그아웃</button></div></div></header>
 <main class="shell"><button class="back" id="back">← 협력사 평가 현황</button><div id="app" class="loading">채점자료를 불러오는 중...</div></main>
 <div id="modal" class="modal hidden"><div class="modal-box"><div class="modal-head"><strong id="modalTitle">파일 미리보기</strong><button class="btn" id="modalClose">닫기</button></div><div id="modalBody" class="modal-body"></div><div class="modal-actions"><button class="btn" id="modalDownload">다운로드</button></div></div></div>
 <script>
@@ -25,6 +24,6 @@ async function save(id){const b=document.querySelector(`[data-save="${CSS.escape
 async function complete(){if(!confirm('모든 채점을 완료 처리할까요?'))return;try{const d=await api(`/api/admin/evaluation-scoring/${encodeURIComponent(targetId)}/complete`,{method:'POST',body:'{}'});workspace=d.workspace;render()}catch(e){alert(e.message)}}
 async function publish(){if(!confirm('평가결과를 협력사에 공개할까요?'))return;try{const d=await api(`/api/admin/evaluation-scoring/${encodeURIComponent(targetId)}/publish`,{method:'POST',body:'{}'});workspace=d.workspace;render()}catch(e){alert(e.message)}}
 async function load(){const d=await api(`/api/admin/evaluation-scoring/${encodeURIComponent(targetId)}`);workspace=d.workspace;render()}
-$('back').onclick=()=>location.href='/ipass/evaluations';$('ipass').onclick=$('brand').onclick=()=>location.href='/ipass';$('home').onclick=()=>location.href='/home';$('logout').onclick=()=>window.EHSAuth.logout();(async()=>{try{targetId=new URLSearchParams(location.search).get('target')||'';if(!targetId)throw new Error('평가 대상 정보가 없습니다.');const u=await window.EHSAuth.requireUser({role:'admin'});$('user').textContent=[u.position,u.name].filter(Boolean).join(' ')||u.email;await load()}catch(e){if(e?.status===401)return;$('app').className='error';$('app').textContent=window.EHSApi.describe(e)}})();
+$('back').onclick=()=>location.href='/ipass/evaluations';(async()=>{try{targetId=new URLSearchParams(location.search).get('target')||'';if(!targetId)throw new Error('평가 대상 정보가 없습니다.');const u=await window.EHSAuth.requireUser({role:'admin'});window.__EHS_PAGE_USER=u;document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:u}));await load()}catch(e){if(e?.status===401)return;$('app').className='error';$('app').textContent=window.EHSApi.describe(e)}})();
 </script>
 </body></html>

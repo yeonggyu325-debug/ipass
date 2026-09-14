@@ -25,9 +25,8 @@
 <script src="/shared/api.js?v=3"></script>
 </head>
 <body>
-<header class="header"><button class="brand" id="homeBtn" type="button"><img src="/hniruja-logo.png" alt="Hniruja"><span>협력사 EHS 포털</span><small>평가표 관리</small></button><div class="head-actions"><span id="userLabel" class="user"></span><button id="refreshBtn" class="icon-btn" type="button" aria-label="새로고침"><svg viewBox="0 0 24 24"><path d="M20 6v5h-5"/><path d="M19 11a7 7 0 1 0 1 5"/></svg></button></div></header>
 <div class="layout">
-<aside class="side"><div class="side-title"><strong>평가표</strong><button id="newBlankBtn" type="button">+ 새 평가표</button></div><div class="side-actions"><button id="copyBtn" type="button">이전 평가표 복사</button><button id="policyJump" type="button">평가표 설정</button></div><div id="templateList"><div class="loading">불러오는 중...</div></div></aside>
+<aside class="side"><div class="side-title"><strong>평가표</strong><button id="newBlankBtn" type="button">+ 새 평가표</button></div><div class="side-actions"><button id="copyBtn" type="button">이전 평가표 복사</button><button id="policyJump" type="button">평가표 설정</button></div><button id="refreshBtn" class="btn" type="button">새로고침</button><div id="templateList"><div class="loading">불러오는 중...</div></div></aside>
 <main class="main">
 <div id="workspace"><div class="loading">평가관리 데이터를 불러오는 중...</div></div>
 </main></div>
@@ -37,7 +36,7 @@ let user=null,data=null,current=null,dirty=false;
 const $=id=>document.getElementById(id);const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 function clone(v){return JSON.parse(JSON.stringify(v))}function statusText(s){return s==='active'?'사용중':s==='locked'?'잠금':'작성중'}function halfText(h){return h==='first'?'상반기':'하반기'}
 const api=(path,opt={})=>window.EHSApi.request(path,opt);
-function goHome(){if(dirty&&!confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))return;location.href='/home'}$('homeBtn').onclick=goHome;$('refreshBtn').onclick=()=>{if(dirty&&!confirm('저장하지 않은 변경사항이 있습니다. 새로고침할까요?'))return;load()};window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+$('refreshBtn').onclick=()=>{if(dirty&&!confirm('저장하지 않은 변경사항이 있습니다. 새로고침할까요?'))return;load()};window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
 function modal(title,body,actions=''){$('modalTitle').textContent=title;$('modalBody').innerHTML=body;$('modalActions').innerHTML=actions;$('modal').classList.remove('hidden')}function closeModal(){$('modal').classList.add('hidden')}$('modalClose').onclick=closeModal;$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()};
 function sortTemplates(list){const by={};for(const t of list||[]){(by[t.year]??=[]).push(t)}return Object.entries(by).sort((a,b)=>Number(b[0])-Number(a[0]))}
 function renderList(){const html=sortTemplates(data?.templates||[]).map(([year,list])=>`<div class="tpl-year">${year}년</div>${list.map(t=>`<button class="tpl ${current?.id===t.id?'active':''}" data-id="${esc(t.id)}" type="button"><div class="tpl-main"><span class="tpl-name">${halfText(t.half)}${Number(t.version)>1?` v${t.version}`:''}</span></div><div class="tpl-meta">평가 ${Number(t.score_total||0)}점 · 가점 +${Number(t.bonus_total||0)}점</div></button>`).join('')}`).join('');$('templateList').innerHTML=html||'<div class="empty">평가표가 없습니다.</div>';$('templateList').querySelectorAll('.tpl').forEach(b=>b.onclick=()=>selectTemplate(b.dataset.id))}
@@ -75,7 +74,7 @@ async function savePolicy(){try{const d=await api('/api/admin/evaluation-managem
 async function previewExemptions(){const y=Number($('previewYear').value);$('exemptList').innerHTML='<div class="exempt-empty">조회 중...</div>';try{const d=await api(`/api/admin/evaluation-management/exemptions?year=${encodeURIComponent(y)}`);$('exemptList').innerHTML=d.companies.length?`<div class="exempt-list">${d.companies.map(c=>`<div class="exempt-row"><span>${esc(c.company_name)}</span><b>${c.previous_ipass_score}점</b></div>`).join('')}</div>`:'<div class="exempt-empty">면제 예상 협력사가 없습니다.</div>'}catch(e){$('exemptList').innerHTML=`<div class="exempt-empty">${esc(e.message)}</div>`}}
 async function selectTemplate(id){if(dirty&&!confirm('저장하지 않은 변경사항이 있습니다. 이동할까요?'))return;dirty=false;await refreshBundle(id)}
 async function refreshBundle(id){$('workspace').innerHTML='<div class="loading">불러오는 중...</div>';const d=await api(`/api/admin/evaluation-management${id?`?template_id=${encodeURIComponent(id)}`:''}`);data=d;current=d.template?clone(d.template):null;if(current)current.status='draft';renderList();renderWorkspace()}
-async function load(){dirty=false;try{user=await window.EHSAuth.requireUser({role:'admin'});$('userLabel').textContent=user.name||user.email||'';await refreshBundle()}catch(e){if(e?.status===401)return;$('workspace').innerHTML=`<div class="card"><div class="empty">${esc(window.EHSApi.describe(e))}</div></div>`}}
+async function load(){dirty=false;try{user=await window.EHSAuth.requireUser({role:'admin'});window.__EHS_PAGE_USER=user;document.dispatchEvent(new CustomEvent('ehs:user-ready',{detail:user}));await refreshBundle()}catch(e){if(e?.status===401)return;$('workspace').innerHTML=`<div class="card"><div class="empty">${esc(window.EHSApi.describe(e))}</div></div>`}}
 load();
 </script>
 </body>
