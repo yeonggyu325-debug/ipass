@@ -1,5 +1,6 @@
 import worker from './worker.js';
 import { handleAdminAccountActions } from './admin-account-actions.js';
+import { handleCommitteeDelegation } from './committee-delegation.js';
 
 const PARTNER_RESET_ID='2026-09-11-reset-partner-portal-accounts-v1';
 const DONGHAE_RESET_ID='2026-09-11-reset-donghae-reregister-v1';
@@ -78,6 +79,7 @@ export default {
   async fetch(request,env,ctx){
     await ensurePartnerAccountReset(env);
     await ensureDonghaeReregisterReset(env);
+    const committeeDelegation=await handleCommitteeDelegation(request,env,ctx,worker);if(committeeDelegation)return normalizeHtmlResponse(committeeDelegation);
     const accountAction=await handleAdminAccountActions(request,env,ctx,worker);if(accountAction)return accountAction;
     const path=new URL(request.url).pathname;
     if(path==='/admin-partners.html'){const next=new URL(request.url);next.pathname='/admin/partners';return Response.redirect(next.toString(),302)}
