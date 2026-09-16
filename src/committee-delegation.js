@@ -40,11 +40,11 @@ async function validateFile(file){
   return valid?{extension,contentType:MIME_BY_EXTENSION[extension]}:{error:'파일 내용과 확장자가 일치하지 않거나 손상된 파일입니다.'};
 }
 
-async function meetingAccess(env,user,meetingId,requireDraft=false){
+async function meetingAccess(env,user,meetingId,requireFinalized=false){
   if(user.role!=='partner'||!user.company_id)return{ok:false,response:json({success:false,error:'협력사 계정이 필요합니다.'},403)};
   const row=await env.partner_evaluation_db.prepare(`SELECT cm.id AS meeting_id,cm.year,cm.meeting_month,cm.meeting_date,cm.title,cm.status AS meeting_status,cpa.attendance_status AS recognized_status,c.company_name FROM committee_meetings cm JOIN committee_partner_attendance cpa ON cpa.meeting_id=cm.id JOIN companies c ON c.id=cpa.company_id WHERE cm.id=? AND cpa.company_id=? LIMIT 1`).bind(meetingId,user.company_id).first();
   if(!row)return{ok:false,response:json({success:false,error:'이 협의체의 대상 협력사가 아닙니다.'},404)};
-  if(requireDraft&&row.meeting_status!=='draft')return{ok:false,response:json({success:false,error:'완료된 협의체에는 위임장을 제출할 수 없습니다.'},409)};
+  if(requireFinalized&&row.meeting_status!=='finalized')return{ok:false,response:json({success:false,error:'협의체 참석자명단이 저장된 후 위임장을 제출할 수 있습니다.'},409)};
   return{ok:true,row};
 }
 async function recordFor(env,meetingId,companyId){return env.partner_evaluation_db.prepare(`SELECT * FROM committee_attendance_records WHERE meeting_id=? AND company_id=? LIMIT 1`).bind(meetingId,companyId).first()}
@@ -71,19 +71,21 @@ async function augmentAdminDetail(response,env){
 
 async function saveDelegation(request,env,user,meetingId){
   const access=await meetingAccess(env,user,meetingId,true);if(!access.ok)return access.response;const record=await recordFor(env,meetingId,user.company_id);
-  if(!record||record.attendance_status!=='present'||!record.attendee_position||!record.attendee_name)return json({success:false,error:'관리자가 직급과 성명을 먼저 입력한 뒤 위임장을 제출할 수 있습니다.'},409);
+  if(!record||record.attendance_status!=='present'||!record.attendee_position||!record.attendee_name)return json({success:false,error:'관리자가 참석자명단을 저장한 뒤 위임장을 제출할 수 있습니다.'},409);
   if(record.attendee_type==='representative')return json({success:false,error:'대표이사 참석 건은 위임장 제출 대상이 아닙니다.'},409);
   const form=await request.formData(),reason=clean(form.get('delegation_reason'),1000);if(!reason)return json({success:false,error:'사업주가 참석하기 어려운 부득이한 사유를 입력하세요.'},400);
   const existing=await submissionFor(env,meetingId,user.company_id),incoming=form.get('file'),hasIncoming=incoming instanceof File&&incoming.name&&incoming.size>0;if(!hasIncoming&&!existing?.delegation_file_id)return json({success:false,error:'대리 참석 위임장을 반드시 첨부하세요.'},400);
   let uploaded=null;if(hasIncoming){if(!env.EVIDENCE_FILES)return json({success:false,error:'위임장 파일 저장소가 연결되지 않았습니다.'},503);const validation=await validateFile(incoming);if(validation.error)return json({success:false,error:validation.error},400);const id=crypto.randomUUID(),name=safeFileName(incoming.name),objectKey=`committee-delegations/${access.row.year}/${String(access.row.meeting_month).padStart(2,'0')}/${user.company_id}/${meetingId}/${id}-${name}`;await env.EVIDENCE_FILES.put(objectKey,incoming.stream(),{httpMetadata:{contentType:validation.contentType},customMetadata:{originalName:name,uploadedBy:String(user.id||''),meetingId,companyId:String(user.company_id)}});uploaded={id,objectKey,name,contentType:validation.contentType,size:incoming.size}}
   const submissionId=existing?.id||`${meetingId}:${user.company_id}`,statements=[
     env.partner_evaluation_db.prepare(`INSERT INTO committee_attendance_submissions (id,meeting_id,company_id,attendee_type,attendee_position,attendee_name,delegation_reason,review_status,review_comment,reviewed_by,reviewed_at,submitted_by,submitted_at,updated_at) VALUES (?,?,?,?,?,?,?,'pending',NULL,NULL,NULL,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT(meeting_id,company_id) DO UPDATE SET attendee_type=excluded.attendee_type,attendee_position=excluded.attendee_position,attendee_name=excluded.attendee_name,delegation_reason=excluded.delegation_reason,review_status='pending',review_comment=NULL,reviewed_by=NULL,reviewed_at=NULL,submitted_by=excluded.submitted_by,submitted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP`).bind(submissionId,meetingId,user.company_id,'delegate',record.attendee_position,record.attendee_name,reason,user.id||null),
+    env.partner_evaluation_db.prepare(`UPDATE committee_partner_attendance SET attendance_status='absent',attendee_position=NULL,attendee_name=NULL,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE meeting_id=? AND company_id=?`).bind(user.id||null,meetingId,user.company_id),
     env.partner_evaluation_db.prepare(`INSERT INTO committee_attendance_submission_logs (id,submission_id,action,detail_json,changed_by) VALUES (?,?,?,?,?)`).bind(crypto.randomUUID(),submissionId,existing?'resubmitted':'submitted',JSON.stringify({delegation_reason:reason,file_replaced:!!uploaded}),user.id||null)
   ];
   if(existing?.delegation_file_id&&uploaded)statements.push(env.partner_evaluation_db.prepare(`UPDATE committee_delegation_files SET deleted_at=CURRENT_TIMESTAMP WHERE id=?`).bind(existing.delegation_file_id));if(uploaded)statements.push(env.partner_evaluation_db.prepare(`INSERT INTO committee_delegation_files (id,submission_id,object_key,file_name,content_type,file_size,uploaded_by) VALUES (?,?,?,?,?,?,?)`).bind(uploaded.id,submissionId,uploaded.objectKey,uploaded.name,uploaded.contentType,uploaded.size,user.id||null));
   try{await env.partner_evaluation_db.batch(statements)}catch(error){if(uploaded)await env.EVIDENCE_FILES.delete(uploaded.objectKey).catch(()=>{});throw error}
   if(existing?.delegation_file_id&&uploaded&&env.EVIDENCE_FILES){const old=await env.partner_evaluation_db.prepare(`SELECT object_key FROM committee_delegation_files WHERE id=?`).bind(existing.delegation_file_id).first();if(old?.object_key)await env.EVIDENCE_FILES.delete(old.object_key).catch(()=>{})}
-  return json({success:true,submission:await submissionFor(env,meetingId,user.company_id)});
+  if(access.row.meeting_status==='finalized')await syncAnnualAbsence(env,user.company_id,Number(access.row.year));
+  return json({success:true,submission:await submissionFor(env,meetingId,user.company_id),recognized_status:'absent'});
 }
 
 function recordChanged(before,after){return['attendance_status','attendee_position','attendee_name','attendee_type'].some(key=>String(before?.[key]??'')!==String(after?.[key]??''))}
